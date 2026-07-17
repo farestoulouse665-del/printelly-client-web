@@ -142,7 +142,7 @@ function getDeliveryPayload(scope){
  const mode=deliveryMode(scope),address=$(scope+"Address").value.trim(),center=state.delivery[scope].selectedCenter;
  if(mode==="home"&&address.length<5)throw new Error("Ajoutez votre adresse exacte.");
  if(mode==="stopdesk"&&!center)throw new Error("Aucun Stop Desk disponible dans cette commune.");
- return {wilaya:w.name,wilaya_code:w.code,commune:c.name,commune_code:c.code,delivery_type:mode,delivery_mode:mode,address:mode==="home"?address:"",preferred_stopdesk_id:mode==="stopdesk"?String(center.id):null,preferred_stopdesk_name:mode==="stopdesk"?center.name:null,preferred_stopdesk_address:mode==="stopdesk"?(center.address||""):null,preferred_stopdesk_commune:mode==="stopdesk"?c.name:null,preferred_stopdesk_wilaya:mode==="stopdesk"?w.name:null,preferred_delivery_updated_at:new Date().toISOString()}
+ return {wilaya:w.name,wilaya_code:w.code,commune:c.name,commune_code:c.code,delivery_type:mode==="home"?"domicile":"stop_desk",delivery_mode:mode,address:mode==="home"?address:"",preferred_stopdesk_id:mode==="stopdesk"?String(center.id):null,preferred_stopdesk_name:mode==="stopdesk"?center.name:null,preferred_stopdesk_address:mode==="stopdesk"?(center.address||""):null,preferred_stopdesk_commune:mode==="stopdesk"?c.name:null,preferred_stopdesk_wilaya:mode==="stopdesk"?w.name:null,preferred_delivery_updated_at:new Date().toISOString()}
 }
 async function initDeliveryProfile(){
  const p=state.profile||{},wilaya=state.delivery.wilayas.find(x=>String(x.id)===String(p.wilaya_code))||state.delivery.wilayas.find(x=>normalizeStatus(x.name)===normalizeStatus(p.wilaya));
