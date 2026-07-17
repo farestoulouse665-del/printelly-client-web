@@ -177,7 +177,7 @@ textarea{resize:vertical}
 .direct-production-note .icon,.safe-note .icon{flex:none;width:15px;height:15px}
 .large{width:100%;margin-top:14px;padding:14px}
 .progress-box{margin-top:13px}.progress-head{display:flex;justify-content:space-between;margin-bottom:7px;color:#7c828d;font-size:8px}.progress{height:8px;overflow:hidden;border-radius:99px;background:#eceef1}.progress i{display:block;width:0;height:100%;background:var(--red);transition:width .25s}
-.notification-read-actions{display:flex;flex-direction:column;align-items:flex-end;gap:6px}.notification-read-actions small{color:var(--muted);font-size:8px}.notification-read-actions button:disabled{opacity:.55;cursor:default}
+.notification-read-actions{display:flex;flex-direction:column;align-items:flex-end;gap:6px}.notification-buttons{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}.notification-read-actions small{color:var(--muted);font-size:8px}.notification-read-actions button:disabled{opacity:.55;cursor:default}.notification-clear-btn{border-color:#f0cbc8;color:var(--danger)}.notification-clear-btn:hover:not(:disabled){background:#fff3f2}
 .notifications-list{display:grid;gap:10px}
 .notification-card{position:relative;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start;padding:16px;background:#fff;border:1px solid var(--line);border-radius:15px}
 .notification-card.unread{border-color:#f2b7b3;background:#fffafa;box-shadow:inset 3px 0 0 var(--red)}
@@ -221,7 +221,7 @@ textarea{resize:vertical}
   .order-details{grid-template-columns:1fr 1fr}.order-details>div:last-child{grid-column:1/-1}
   .delivery-title,.tracking-row{align-items:flex-start;flex-direction:column}.track-btn{width:100%}
   .recent-row{padding:12px 15px}
-  .notification-page-head{display:grid}.notification-read-actions{align-items:stretch}.notification-read-actions button{width:100%}
+  .notification-page-head{display:grid}.notification-read-actions{align-items:stretch}.notification-buttons{display:grid}.notification-read-actions button{width:100%}
   .active-order-head{gap:8px;padding:16px}.active-order-actions small{white-space:normal;text-align:right}
   .notification-card{grid-template-columns:auto 1fr}.notification-card time{grid-column:2}
 }
