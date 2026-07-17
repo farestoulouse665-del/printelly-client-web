@@ -1,0 +1,51 @@
+name: Vérifier le site client publié
+
+on:
+  push:
+    branches:
+      - site-client-professionnel
+    paths:
+      - ".github/workflows/verify-live-site.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Attendre la publication GitHub Pages
+        shell: bash
+        run: |
+          url="https://farestoulouse665-del.github.io/printelly-client-web/?v=b20088f1"
+          ok=0
+          for attempt in $(seq 1 24); do
+            if curl -fsSL "$url" -o /tmp/live.html && grep -q "Accéder à mon espace" /tmp/live.html; then
+              ok=1
+              break
+            fi
+            sleep 5
+          done
+          if [ "$ok" -ne 1 ]; then
+            echo "La nouvelle page n'est pas encore visible"
+            exit 1
+          fi
+
+      - name: Capturer le site publié
+        shell: bash
+        run: |
+          mkdir -p live-verification
+          google-chrome --headless=new --no-sandbox --hide-scrollbars --disable-gpu --user-data-dir=/tmp/chrome-live --virtual-time-budget=3000 --window-size=1440,1000 --screenshot=live-verification/site-publie.png "https://farestoulouse665-del.github.io/printelly-client-web/?v=b20088f1"
+          printf '{"success":true,"url":"https://farestoulouse665-del.github.io/printelly-client-web/","verified_commit":"b20088f1a3f8b4b4c45453f270919da9e1b4b172"}\n' > live-verification/status.json
+
+      - name: Enregistrer la vérification
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add live-verification
+          git commit -m "Confirme la publication du site client"
+          git push
