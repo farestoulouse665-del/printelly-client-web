@@ -225,3 +225,18 @@ textarea{resize:vertical}
   .active-order-head{gap:8px;padding:16px}.active-order-actions small{white-space:normal;text-align:right}
   .notification-card{grid-template-columns:auto 1fr}.notification-card time{grid-column:2}
 }
+
+.delivery-location{margin:4px 0 8px;padding:16px;border:1px solid var(--line);border-radius:16px;background:#fafbfc}
+.delivery-title{margin:0 0 13px;font-size:12px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
+.delivery-choices{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 0 14px}
+.delivery-choice{display:flex;align-items:flex-start;gap:10px;padding:13px;border:1px solid var(--line);border-radius:13px;background:#fff;cursor:pointer;transition:.2s}
+.delivery-choice.selected{border-color:var(--red);box-shadow:0 0 0 2px rgba(239,49,39,.08)}
+.delivery-choice.unavailable{opacity:.5;cursor:not-allowed}
+.delivery-choice input{margin:3px 0 0;accent-color:var(--red)}
+.delivery-choice span{display:grid;gap:3px}.delivery-choice strong{font-size:13px}.delivery-choice small{color:var(--muted);font-size:11px;line-height:1.35}
+.delivery-status{margin:10px 0 0;color:var(--muted);font-size:11px;line-height:1.4}
+.stopdesk-result{display:grid;gap:5px;margin:0 0 10px;padding:13px;border:1px solid #bfe6d7;border-radius:12px;background:#f1fbf7}
+.stopdesk-result strong{font-size:13px}.stopdesk-result small{color:var(--muted);line-height:1.45}
+.stopdesk-badge{width:max-content;padding:4px 7px;border-radius:99px;background:#d9f5e9;color:#087a53;font-size:9px;font-weight:950;letter-spacing:.08em}
+.profile-delivery-editor{margin-top:8px}
+@media(max-width:640px){.delivery-choices{grid-template-columns:1fr}.delivery-location{padding:13px}}
