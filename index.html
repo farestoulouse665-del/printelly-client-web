@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#09090b">
+  <meta name="description" content="Printelly Client — commandes DTF en ligne">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+  <title>Printelly Client</title>
+</head>
+<body>
+  <div class="ambient"></div>
+  <header class="topbar">
+    <a class="brand" href="#home" aria-label="Printelly">
+      <span class="brand-mark">P</span>
+      <span><strong>PRINTELLY</strong><small>CLIENT DTF</small></span>
+    </a>
+    <div id="connectionBadge" class="badge">Connexion…</div>
+  </header>
+
+  <main class="shell">
+    <section id="authView" class="auth-grid">
+      <div class="hero">
+        <p class="eyebrow">IMPRESSION DTF • ALGÉRIE</p>
+        <h1>Vos commandes DTF,<br><span>simples et rapides.</span></h1>
+        <p>Envoyez vos visuels ou vos fichiers prêts en 58 cm, puis suivez la production et la livraison depuis votre téléphone.</p>
+        <div class="hero-points">
+          <span>✓ Plusieurs fichiers</span><span>✓ Reprise automatique</span><span>✓ Suivi instantané</span>
+        </div>
+      </div>
+      <div class="panel auth-panel">
+        <div class="segmented">
+          <button class="active" data-auth-tab="login">Connexion</button>
+          <button data-auth-tab="signup">Créer un compte</button>
+        </div>
+        <form id="loginForm" class="form">
+          <label>Téléphone ou e-mail<input id="loginIdentity" autocomplete="username" required placeholder="0550… ou nom@email.com"></label>
+          <label>Mot de passe<input id="loginPassword" type="password" autocomplete="current-password" required minlength="6"></label>
+          <button class="primary" type="submit">SE CONNECTER</button>
+        </form>
+        <form id="signupForm" class="form hidden">
+          <div class="two"><label>Prénom<input id="signupFirst" required></label><label>Nom<input id="signupLast" required></label></div>
+          <label>Téléphone<input id="signupPhone" inputmode="tel" required placeholder="0550 00 00 00"></label>
+          <label>Atelier<input id="signupWorkshop" placeholder="Nom de votre atelier"></label>
+          <label>Wilaya<input id="signupWilaya" placeholder="Ex. Béjaïa"></label>
+          <label>Mot de passe<input id="signupPassword" type="password" required minlength="6"></label>
+          <button class="primary" type="submit">CRÉER MON COMPTE</button>
+        </form>
+        <p id="authMessage" class="message"></p>
+      </div>
+    </section>
+
+    <section id="appView" class="hidden">
+      <div class="welcome">
+        <div><p class="eyebrow">ESPACE CLIENT</p><h2 id="welcomeName">Bonjour</h2></div>
+        <button id="logoutBtn" class="ghost">Déconnexion</button>
+      </div>
+      <nav class="tabs" aria-label="Navigation">
+        <button class="active" data-view="dashboard">Accueil</button>
+        <button data-view="new-order">Nouvelle commande</button>
+        <button data-view="profile">Mon profil</button>
+      </nav>
+
+      <section id="dashboardView" class="view">
+        <div class="stats">
+          <article><span>Commandes</span><strong id="ordersCount">0</strong></article>
+          <article><span>En production</span><strong id="productionCount">0</strong></article>
+          <article><span>Prêtes / livrées</span><strong id="readyCount">0</strong></article>
+        </div>
+        <div class="section-title"><div><p class="eyebrow">SUIVI RÉEL</p><h3>Mes commandes</h3></div><button id="refreshBtn" class="ghost">Actualiser</button></div>
+        <div id="ordersList" class="orders-list"><div class="empty">Aucune commande pour le moment.</div></div>
+      </section>
+
+      <section id="newOrderView" class="view hidden">
+        <div class="section-title"><div><p class="eyebrow">NOUVELLE COMMANDE</p><h3>Choisissez votre envoi</h3></div></div>
+        <form id="orderForm">
+          <div class="mode-grid">
+            <label class="mode-card selected"><input type="radio" name="orderMode" value="visual" checked><strong>Photos à organiser</strong><span>JPEG / PNG</span></label>
+            <label class="mode-card"><input type="radio" name="orderMode" value="ready"><strong>Fichiers prêts 58 cm</strong><span>PDF / PSD / PNG</span></label>
+          </div>
+          <div class="panel uploader">
+            <input id="fileInput" type="file" multiple accept="image/jpeg,image/png" hidden>
+            <button id="pickFilesBtn" class="pick" type="button"><span>＋</span><strong>Ajouter plusieurs fichiers</strong><small>Galerie ou documents • jusqu’à 1000 fichiers</small></button>
+            <div id="filesEditor" class="files-editor"></div>
+          </div>
+          <label class="note-label">Instructions pour Printelly<textarea id="orderNote" rows="3" placeholder="Couleurs, urgence, remarques…"></textarea></label>
+          <div id="uploadProgress" class="progress-box hidden"><div class="progress-head"><span id="progressText">Préparation…</span><strong id="progressPercent">0%</strong></div><div class="progress"><i id="progressBar"></i></div></div>
+          <button id="submitOrderBtn" class="primary large" type="submit">ENVOYER LA COMMANDE</button>
+          <p id="orderMessage" class="message"></p>
+        </form>
+      </section>
+
+      <section id="profileView" class="view hidden">
+        <div class="section-title"><div><p class="eyebrow">INFORMATIONS</p><h3>Mon profil</h3></div></div>
+        <form id="profileForm" class="panel form">
+          <div class="two"><label>Prénom<input id="profileFirst"></label><label>Nom<input id="profileLast"></label></div>
+          <label>Téléphone<input id="profilePhone"></label>
+          <label>Atelier<input id="profileWorkshop"></label>
+          <div class="two"><label>Wilaya<input id="profileWilaya"></label><label>Commune<input id="profileCommune"></label></div>
+          <label>Adresse<input id="profileAddress"></label>
+          <button class="primary" type="submit">ENREGISTRER</button>
+          <p id="profileMessage" class="message"></p>
+        </form>
+      </section>
+    </section>
+  </main>
+  <footer>PRINTELLY • Production DTF professionnelle</footer>
+  <div id="toast" role="status"></div>
+  <script src="./app.js" defer></script>
+</body>
+</html>
