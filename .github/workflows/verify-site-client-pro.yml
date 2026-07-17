@@ -1,0 +1,71 @@
+name: Vérifier le site client professionnel
+
+on:
+  push:
+    branches:
+      - site-client-professionnel
+    paths-ignore:
+      - "qa-previews/**"
+      - "qa-status.json"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le site
+        uses: actions/checkout@v4
+
+      - name: Vérifier le JavaScript
+        run: node --check app.js
+
+      - name: Vérifier la structure des pages
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          class IDs(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.ids=[]
+              def handle_starttag(self, tag, attrs):
+                  for key,value in attrs:
+                      if key=="id":
+                          self.ids.append(value)
+          p=IDs()
+          p.feed(Path("index.html").read_text(encoding="utf-8"))
+          duplicates=sorted({x for x in p.ids if p.ids.count(x)>1})
+          required={"authView","appView","loginForm","signupForm","dashboardView","ordersView","newOrderView","notificationsView","profileView","orderForm","profileForm","ordersList"}
+          missing=sorted(required-set(p.ids))
+          if duplicates or missing:
+              raise SystemExit(f"IDs dupliqués={duplicates}; IDs manquants={missing}")
+          print(f"Structure valide: {len(p.ids)} identifiants uniques")
+          PY
+
+      - name: Capturer les écrans
+        shell: bash
+        run: |
+          mkdir -p qa-previews
+          python3 -m http.server 8000 >/tmp/printelly-site.log 2>&1 &
+          sleep 2
+          google-chrome --headless=new --no-sandbox --hide-scrollbars --disable-gpu --user-data-dir=/tmp/chrome-auth --virtual-time-budget=2500 --window-size=1440,1000 --screenshot=qa-previews/connexion.png http://127.0.0.1:8000/index.html
+          google-chrome --headless=new --no-sandbox --hide-scrollbars --disable-gpu --user-data-dir=/tmp/chrome-dashboard --virtual-time-budget=3500 --window-size=1440,1200 --screenshot=qa-previews/tableau-de-bord.png http://127.0.0.1:8000/qa-preview.html
+          google-chrome --headless=new --no-sandbox --hide-scrollbars --disable-gpu --user-data-dir=/tmp/chrome-mobile --virtual-time-budget=3500 --window-size=390,844 --screenshot=qa-previews/telephone.png http://127.0.0.1:8000/qa-preview.html
+
+      - name: Enregistrer le diagnostic
+        shell: bash
+        run: |
+          printf '{"success":true,"branch":"site-client-professionnel","checks":["javascript","structure","desktop","mobile"]}\n' > qa-status.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add qa-previews qa-status.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Ajoute les contrôles visuels du site client"
+          git push
