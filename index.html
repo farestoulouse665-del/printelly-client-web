@@ -67,8 +67,21 @@
         <label>Téléphone<input id="signupPhone" inputmode="tel" required placeholder="0550 00 00 00"></label>
         <label>E-mail réel<input id="signupEmail" type="email" autocomplete="email" required placeholder="votre@email.com"></label>
         <label>Atelier<input id="signupWorkshop" placeholder="Nom de votre atelier"></label>
-        <label>Wilaya<input id="signupWilaya" placeholder="Ex. Béjaïa"></label>
-        <label>Mot de passe<input id="signupPassword" type="password" required minlength="6"></label>
+        <div class="delivery-location">
+          <p class="delivery-title">Adresse de livraison</p>
+          <div class="two">
+            <label>Wilaya<select id="signupWilaya" required><option value="">Chargement des wilayas…</option></select></label>
+            <label>Commune<select id="signupCommune" required disabled><option value="">Choisissez d’abord la wilaya</option></select></label>
+          </div>
+          <div class="delivery-choices">
+            <label class="delivery-choice selected"><input type="radio" name="signupDelivery" value="home" checked><span><strong>À domicile</strong><small>Livraison à votre adresse exacte</small></span></label>
+            <label class="delivery-choice" id="signupStopdeskChoice"><input type="radio" name="signupDelivery" value="stopdesk" disabled><span><strong>Stop Desk</strong><small>Bureau disponible dans votre commune</small></span></label>
+          </div>
+          <div id="signupHomeFields"><label>Adresse exacte<input id="signupAddress" required placeholder="Rue, quartier, numéro…"></label></div>
+          <div id="signupStopdeskFields" class="stopdesk-result hidden"></div>
+          <p id="signupDeliveryStatus" class="delivery-status">Choisissez votre wilaya puis votre commune.</p>
+        </div>
+        <label>Mot de passe<input id="signupPassword" type="password" required minlength="8"></label>
         <button class="primary auth-submit" type="submit">CRÉER MON COMPTE</button>
       </form>
       <p id="authMessage" class="message"></p>
@@ -211,8 +224,20 @@
               <div class="two"><label>Prénom<input id="profileFirst"></label><label>Nom<input id="profileLast"></label></div>
               <label>Téléphone<input id="profilePhone"></label>
               <label>Atelier<input id="profileWorkshop"></label>
-              <div class="two"><label>Wilaya<input id="profileWilaya"></label><label>Commune<input id="profileCommune"></label></div>
-              <label>Adresse<input id="profileAddress"></label>
+              <div class="delivery-location profile-delivery-editor">
+                <p class="delivery-title">Préférence de livraison</p>
+                <div class="two">
+                  <label>Wilaya<select id="profileWilaya" required><option value="">Chargement…</option></select></label>
+                  <label>Commune<select id="profileCommune" required disabled><option value="">Choisissez la wilaya</option></select></label>
+                </div>
+                <div class="delivery-choices">
+                  <label class="delivery-choice selected"><input type="radio" name="profileDelivery" value="home" checked><span><strong>À domicile</strong><small>Adresse exacte obligatoire</small></span></label>
+                  <label class="delivery-choice" id="profileStopdeskChoice"><input type="radio" name="profileDelivery" value="stopdesk" disabled><span><strong>Stop Desk</strong><small>Seulement s’il existe dans la commune</small></span></label>
+                </div>
+                <div id="profileHomeFields"><label>Adresse exacte<input id="profileAddress" required placeholder="Rue, quartier, numéro…"></label></div>
+                <div id="profileStopdeskFields" class="stopdesk-result hidden"></div>
+                <p id="profileDeliveryStatus" class="delivery-status">Choisissez votre wilaya puis votre commune.</p>
+              </div>
               <button class="primary" type="submit">ENREGISTRER</button>
               <p id="profileMessage" class="message"></p>
             </form>
