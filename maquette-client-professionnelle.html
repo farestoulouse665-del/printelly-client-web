@@ -45,7 +45,7 @@
     .side-profile strong{display:block;font-size:12px}
     .side-profile small{color:#777e8a;font-size:10px}
     .workspace{min-height:100vh;margin-left:260px}
-    .topbar{height:76px;display:flex;align-items:center;gap:16px;padding:0 34px;background:rgba(255,255,255,.86);backdrop-filter:blur(16px);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+    .mobile-brand{display:none;align-items:center;gap:9px;font-size:12px;font-weight:950;letter-spacing:.12em}.mobile-brand span{display:grid;place-items:center;width:33px;height:33px;border-radius:10px;background:var(--red);color:#fff;font-size:17px;letter-spacing:0}.topbar{height:76px;display:flex;align-items:center;gap:16px;padding:0 34px;background:rgba(255,255,255,.86);backdrop-filter:blur(16px);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
     .search{display:flex;align-items:center;gap:9px;width:min(400px,42vw);padding:10px 13px;background:#f4f5f7;border:1px solid #eceef1;border-radius:12px;color:#9398a2}
     .search input{width:100%;border:0;outline:0;background:transparent;color:var(--ink);font-size:12px}
     .top-spacer{flex:1}
@@ -196,6 +196,7 @@
     body.preview-mobile .sidebar{display:none}
     body.preview-mobile .workspace{margin-left:0}
     body.preview-mobile .topbar{height:66px;padding:0 16px;position:sticky}
+    body.preview-mobile .mobile-brand{display:flex}
     body.preview-mobile .search,body.preview-mobile .online,body.preview-mobile .top-user>div{display:none}
     body.preview-mobile .content{padding:20px 15px 90px}
     body.preview-mobile h1{font-size:23px}
@@ -226,7 +227,7 @@
     @media(max-width:800px){
       .preview-tools,.demo-label{display:none}
       .sidebar{display:none}.workspace{margin-left:0}
-      .topbar{height:66px;padding:0 16px}.search,.online,.top-user>div{display:none}
+      .topbar{height:66px;padding:0 16px}.mobile-brand{display:flex}.search,.online,.top-user>div{display:none}
       .content{padding:21px 15px 92px}h1{font-size:24px}
       .page-head{align-items:flex-start}.page-head p:not(.eyebrow){max-width:230px}
       .stats{grid-template-columns:1fr 1fr;gap:10px}.stat{padding:15px}.stat:last-child{grid-column:1/-1}.stat strong{font-size:23px}
@@ -283,6 +284,7 @@
 
     <main class="workspace">
       <header class="topbar">
+        <div class="mobile-brand"><span>P</span><strong>PRINTELLY</strong></div>
         <div class="search"><svg class="icon"><use href="#i-search"/></svg><input aria-label="Rechercher" placeholder="Rechercher une commande…"></div>
         <div class="top-spacer"></div>
         <div class="online"><i></i>Service en ligne</div>
