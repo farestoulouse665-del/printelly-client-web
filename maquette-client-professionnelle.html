@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111318">
+  <title>PRINTELLY — Maquette espace client</title>
+  <style>
+    :root{
+      --ink:#111318;--ink-2:#1b1e25;--red:#ef3127;--red-dark:#c91f18;
+      --paper:#f4f5f7;--card:#ffffff;--line:#e7e8ec;--muted:#707581;
+      --green:#17a673;--amber:#e99518;--blue:#3478f6;--shadow:0 16px 40px rgba(16,19,28,.08);
+      --radius:20px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:#e8e9ed;color:var(--ink);font-family:Inter,"Segoe UI",Roboto,Arial,sans-serif}
+    button,input,textarea,select{font:inherit}
+    button{cursor:pointer}
+    .icon{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .hidden-symbols{position:absolute;width:0;height:0;overflow:hidden}
+    .preview-tools{position:fixed;z-index:100;right:18px;top:16px;display:flex;gap:5px;padding:5px;background:rgba(17,19,24,.92);border:1px solid rgba(255,255,255,.12);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.22)}
+    .preview-tools button{border:0;background:transparent;color:#aeb2bc;padding:8px 11px;border-radius:10px;font-weight:800;font-size:12px}
+    .preview-tools button.active{background:#fff;color:#17191f}
+    .demo-label{position:fixed;z-index:100;left:50%;top:18px;transform:translateX(-50%);background:#fff;color:#4b505b;border:1px solid #dadde3;border-radius:99px;padding:8px 13px;font-size:11px;font-weight:800;letter-spacing:.06em;box-shadow:0 8px 24px rgba(0,0,0,.08)}
+    .site-frame{position:relative;min-height:100vh;background:var(--paper);overflow-x:hidden}
+    .sidebar{position:fixed;z-index:30;left:0;top:0;bottom:0;width:260px;padding:24px 18px;background:var(--ink);color:#fff;display:flex;flex-direction:column}
+    .brand{display:flex;align-items:center;gap:12px;padding:0 8px 26px;border-bottom:1px solid rgba(255,255,255,.08)}
+    .brand-mark{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:var(--red);font-size:23px;font-weight:950;box-shadow:0 10px 25px rgba(239,49,39,.3)}
+    .brand strong{display:block;font-size:15px;letter-spacing:.13em}
+    .brand small{display:block;color:#999fab;font-size:9px;letter-spacing:.14em;margin-top:3px}
+    .side-caption{color:#686e79;font-size:10px;font-weight:900;letter-spacing:.14em;margin:28px 12px 10px}
+    .nav-list{display:grid;gap:5px}
+    .nav-item{width:100%;display:flex;align-items:center;gap:12px;border:0;background:transparent;color:#a9aeb8;padding:12px 13px;border-radius:13px;text-align:left;font-weight:750;font-size:14px;transition:.2s}
+    .nav-item:hover{background:rgba(255,255,255,.055);color:#fff}
+    .nav-item.active{background:#fff;color:var(--ink);box-shadow:0 8px 22px rgba(0,0,0,.18)}
+    .nav-item .count{margin-left:auto;min-width:22px;height:22px;display:grid;place-items:center;border-radius:99px;background:var(--red);color:#fff;font-size:10px}
+    .side-spacer{flex:1}
+    .help-card{margin:18px 2px;padding:16px;border:1px solid rgba(255,255,255,.09);border-radius:16px;background:linear-gradient(145deg,rgba(255,255,255,.08),rgba(255,255,255,.025))}
+    .help-card strong{display:block;font-size:13px}
+    .help-card p{margin:6px 0 12px;color:#9096a1;font-size:11px;line-height:1.5}
+    .help-card button{width:100%;border:1px solid rgba(255,255,255,.13);border-radius:10px;padding:9px;background:transparent;color:#fff;font-weight:800;font-size:11px}
+    .side-profile{display:flex;align-items:center;gap:10px;padding:15px 7px 2px;border-top:1px solid rgba(255,255,255,.08)}
+    .avatar{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:#2a2e37;color:#fff;font-weight:900}
+    .side-profile strong{display:block;font-size:12px}
+    .side-profile small{color:#777e8a;font-size:10px}
+    .workspace{min-height:100vh;margin-left:260px}
+    .topbar{height:76px;display:flex;align-items:center;gap:16px;padding:0 34px;background:rgba(255,255,255,.86);backdrop-filter:blur(16px);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+    .search{display:flex;align-items:center;gap:9px;width:min(400px,42vw);padding:10px 13px;background:#f4f5f7;border:1px solid #eceef1;border-radius:12px;color:#9398a2}
+    .search input{width:100%;border:0;outline:0;background:transparent;color:var(--ink);font-size:12px}
+    .top-spacer{flex:1}
+    .online{display:flex;align-items:center;gap:7px;color:#555b65;font-size:11px;font-weight:800}
+    .online i{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 4px rgba(23,166,115,.12)}
+    .icon-btn{position:relative;display:grid;place-items:center;width:41px;height:41px;border:1px solid var(--line);border-radius:12px;background:#fff;color:#444a55}
+    .icon-btn .dot{position:absolute;right:8px;top:7px;width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 0 2px #fff}
+    .top-user{display:flex;align-items:center;gap:10px;padding-left:7px}
+    .top-user .avatar{background:var(--ink)}
+    .top-user strong{display:block;font-size:12px}.top-user small{display:block;color:var(--muted);font-size:10px;margin-top:2px}
+    .content{padding:34px;max-width:1500px;margin:auto}
+    .page{display:none;animation:rise .24s ease}.page.active{display:block}
+    @keyframes rise{from{opacity:0;transform:translateY(7px)}}
+    .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:26px}
+    .eyebrow{margin:0 0 7px;color:var(--red);font-size:10px;font-weight:950;letter-spacing:.16em}
+    h1{margin:0;font-size:30px;letter-spacing:-.035em}
+    .page-head p:not(.eyebrow){margin:8px 0 0;color:var(--muted);font-size:13px}
+    .primary,.secondary{display:inline-flex;align-items:center;justify-content:center;gap:9px;border-radius:12px;padding:12px 16px;font-weight:850;font-size:12px}
+    .primary{border:0;background:var(--red);color:#fff;box-shadow:0 10px 24px rgba(239,49,39,.2)}
+    .primary:hover{background:var(--red-dark)}
+    .secondary{border:1px solid var(--line);background:#fff;color:var(--ink)}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:18px}
+    .stat{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:19px;box-shadow:0 10px 26px rgba(19,23,32,.035)}
+    .stat-head{display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:11px;font-weight:750}
+    .stat-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:11px;background:#f4f5f7;color:#4e535e}
+    .stat strong{display:block;margin-top:15px;font-size:27px;letter-spacing:-.03em}
+    .stat footer{display:flex;align-items:center;gap:6px;margin-top:7px;color:#8b909a;font-size:10px}
+    .up{color:var(--green);font-weight:900}
+    .dashboard-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(280px,.75fr);gap:18px}
+    .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 10px 28px rgba(19,23,32,.04)}
+    .card-pad{padding:21px}
+    .card-title{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:18px}
+    .card-title h2{font-size:16px;margin:0}.card-title p{font-size:10px;color:var(--muted);margin:5px 0 0}
+    .quiet-link{border:0;background:transparent;color:var(--red);font-weight:850;font-size:11px;padding:3px}
+    .active-order{overflow:hidden}
+    .active-banner{padding:21px;background:linear-gradient(135deg,#171a20,#282d38);color:#fff}
+    .active-banner-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .active-banner .eyebrow{color:#ff7069}
+    .active-banner h2{margin:0;font-size:20px}
+    .active-banner p{margin:7px 0 0;color:#abb0ba;font-size:11px}
+    .status-pill{display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:8px 11px;background:rgba(233,149,24,.14);color:#ffc45f;font-size:10px;font-weight:900;white-space:nowrap}
+    .status-pill i{width:6px;height:6px;border-radius:50%;background:currentColor}
+    .order-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#eceef1;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+    .order-summary div{background:#fff;padding:15px 20px}
+    .order-summary small{display:block;color:#8b909a;font-size:9px;font-weight:900;letter-spacing:.1em}
+    .order-summary strong{display:block;margin-top:6px;font-size:13px}
+    .timeline-wrap{padding:22px}
+    .timeline{display:grid;grid-template-columns:repeat(5,1fr);position:relative}
+    .timeline:before{content:"";position:absolute;top:13px;left:8%;right:8%;height:3px;background:#e8e9ed}
+    .timeline:after{content:"";position:absolute;top:13px;left:8%;width:48%;height:3px;background:var(--red)}
+    .time-step{position:relative;z-index:1;text-align:center}
+    .time-step b{display:grid;place-items:center;width:28px;height:28px;margin:auto;border-radius:50%;background:#e8e9ed;color:#8e939d;font-size:10px;border:4px solid #fff}
+    .time-step.done b{background:var(--red);color:#fff}.time-step.current b{background:#fff;color:var(--red);border:3px solid var(--red)}
+    .time-step span{display:block;margin-top:8px;color:#888e98;font-size:9px;font-weight:750}.time-step.done span,.time-step.current span{color:#242832}
+    .activity-list{display:grid;gap:3px}
+    .activity{display:grid;grid-template-columns:auto 1fr auto;gap:11px;align-items:start;padding:12px 0;border-bottom:1px solid #f0f1f3}
+    .activity:last-child{border:0;padding-bottom:0}
+    .activity-icon{width:33px;height:33px;display:grid;place-items:center;border-radius:11px;background:#f4f5f7;color:#5e6470}
+    .activity strong{display:block;font-size:11px;line-height:1.4}.activity p{margin:3px 0 0;color:var(--muted);font-size:10px;line-height:1.45}.activity time{color:#a1a5ad;font-size:9px;white-space:nowrap}
+    .delivery-mini{margin-top:18px;padding:18px;background:linear-gradient(135deg,#fff5f4,#fff);border:1px solid #f5d8d5;border-radius:18px}
+    .delivery-mini-head{display:flex;align-items:center;justify-content:space-between}
+    .delivery-mini .provider{font-size:10px;font-weight:950;letter-spacing:.13em;color:var(--red)}
+    .delivery-mini .provider-state{font-size:9px;color:var(--green);font-weight:850}
+    .delivery-mini h3{font-size:14px;margin:14px 0 5px}.delivery-mini p{margin:0;color:var(--muted);font-size:10px;line-height:1.55}
+    .delivery-mini button{width:100%;margin-top:14px;border:1px solid #f1cbc8;background:#fff;color:var(--red);padding:10px;border-radius:11px;font-size:10px;font-weight:900}
+    .orders-table{margin-top:18px;overflow:hidden}
+    .table-head,.table-row{display:grid;grid-template-columns:1.15fr .85fr .55fr .7fr .8fr auto;gap:12px;align-items:center;padding:13px 18px}
+    .table-head{background:#fafafb;color:#8e939c;border-bottom:1px solid var(--line);font-size:9px;font-weight:900;letter-spacing:.09em}
+    .table-row{border-bottom:1px solid #eff0f2;font-size:11px}.table-row:last-child{border:0}
+    .order-id strong{display:block;font-size:11px}.order-id small{display:block;margin-top:3px;color:#969ba4;font-size:9px}
+    .person{display:flex;align-items:center;gap:7px}.person i{width:25px;height:25px;display:grid;place-items:center;border-radius:8px;background:#f0f1f3;font-style:normal;font-size:8px;font-weight:900}
+    .badge{display:inline-flex;align-items:center;gap:5px;width:max-content;padding:6px 8px;border-radius:99px;font-size:9px;font-weight:900}
+    .badge.production{color:#b86d00;background:#fff4df}.badge.shipped{color:#276bd3;background:#eaf2ff}.badge.delivered{color:#0b8a5e;background:#e6f8f1}.badge.received{color:#5b5f69;background:#eff0f2}
+    .more{display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--line);background:#fff;border-radius:9px}
+    .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:17px}
+    .filter{border:1px solid var(--line);background:#fff;color:#777c86;border-radius:99px;padding:8px 12px;font-size:10px;font-weight:850}
+    .filter.active{background:var(--ink);border-color:var(--ink);color:#fff}
+    .orders-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+    .order-card{padding:18px}
+    .order-card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+    .order-card h3{margin:0;font-size:14px}.order-card .date{margin-top:4px;color:var(--muted);font-size:9px}
+    .order-card-data{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}
+    .order-card-data div{padding:11px;background:#f7f8f9;border-radius:12px}
+    .order-card-data small{display:block;color:#8d929b;font-size:8px;font-weight:900;letter-spacing:.08em}
+    .order-card-data strong{display:block;margin-top:5px;font-size:11px}
+    .order-card-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:13px;border-top:1px solid #eff0f2;color:#686e78;font-size:10px}
+    .order-card-footer button{border:0;background:transparent;color:var(--red);font-weight:900;font-size:10px}
+    .wizard{max-width:920px}
+    .stepper{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}
+    .step{position:relative;padding:13px 12px 13px 46px;background:#fff;border:1px solid var(--line);border-radius:14px}
+    .step b{position:absolute;left:12px;top:11px;width:27px;height:27px;display:grid;place-items:center;border-radius:9px;background:#eff0f2;color:#838892;font-size:10px}
+    .step strong{display:block;font-size:10px}.step small{display:block;color:#989da6;font-size:8px;margin-top:3px}
+    .step.active{border-color:#f2aaa6;background:#fff7f6}.step.active b,.step.done b{background:var(--red);color:#fff}
+    .wizard-panel{display:none}.wizard-panel.active{display:block}
+    .wizard-content{padding:22px}
+    .wizard-content h2{margin:0;font-size:17px}.wizard-content>p{margin:7px 0 18px;color:var(--muted);font-size:11px}
+    .choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .choice{display:flex;align-items:flex-start;gap:12px;padding:18px;border:2px solid #e8e9ed;background:#fff;border-radius:16px;text-align:left}
+    .choice.selected{border-color:var(--red);background:#fff8f7}
+    .choice-icon{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:#f1f2f4;color:#555b66}
+    .choice.selected .choice-icon{background:#ffe7e5;color:var(--red)}
+    .choice strong{display:block;font-size:12px}.choice span{display:block;color:var(--muted);font-size:9px;line-height:1.5;margin-top:5px}
+    .dropzone{padding:34px 20px;text-align:center;border:1.5px dashed #cfd2d8;background:#fafafb;border-radius:16px}
+    .dropzone .upload-icon{width:45px;height:45px;display:grid;place-items:center;margin:auto;border-radius:14px;background:#ffe9e7;color:var(--red)}
+    .dropzone strong{display:block;margin-top:12px;font-size:12px}.dropzone p{margin:5px 0;color:#8d929b;font-size:9px}
+    .fake-files{display:grid;gap:8px;margin-top:13px}
+    .fake-file{display:flex;align-items:center;gap:10px;padding:11px;border:1px solid var(--line);border-radius:12px}
+    .fake-file i{width:32px;height:32px;display:grid;place-items:center;border-radius:9px;background:#f0f1f3;font-style:normal;font-size:8px;font-weight:900}
+    .fake-file strong{font-size:10px}.fake-file small{display:block;color:#9297a0;font-size:8px;margin-top:3px}.fake-file span{margin-left:auto;color:var(--green);font-size:9px;font-weight:900}
+    .delivery-choices{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .delivery-choice{padding:17px;border:2px solid var(--line);border-radius:15px}.delivery-choice.selected{border-color:var(--red);background:#fff8f7}
+    .delivery-choice strong{font-size:12px}.delivery-choice p{color:var(--muted);font-size:9px;line-height:1.5}
+    .notice{display:flex;align-items:flex-start;gap:10px;margin-top:15px;padding:13px;background:#f2f7ff;border:1px solid #dbe8ff;border-radius:12px;color:#365f9d;font-size:9px;line-height:1.55}
+    .summary-box{display:grid;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:15px;overflow:hidden}
+    .summary-line{display:flex;align-items:center;justify-content:space-between;gap:20px;background:#fff;padding:13px 15px;font-size:10px}.summary-line strong{font-size:11px}
+    .summary-line.total{background:#fff7f6}.summary-line.total strong{color:var(--red);font-size:15px}
+    .wizard-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 22px;border-top:1px solid var(--line)}
+    .notif-list{display:grid;gap:10px}
+    .notif{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start;padding:17px}
+    .notif.unread{border-color:#f2c4c1;background:#fffafa}
+    .notif .activity-icon{background:#f2f3f5}.notif.unread .activity-icon{background:#ffe7e5;color:var(--red)}
+    .notif h3{margin:0;font-size:12px}.notif p{margin:5px 0;color:var(--muted);font-size:10px;line-height:1.5}.notif time{font-size:9px;color:#9ba0a9}
+    .profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    .profile-card{padding:22px}
+    .profile-card h2{margin:0 0 18px;font-size:15px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+    .field{display:grid;gap:6px}.field.full{grid-column:1/-1}
+    .field label{color:#6e737d;font-size:9px;font-weight:850}
+    .field input,.field select{width:100%;border:1px solid var(--line);background:#fafafb;border-radius:11px;padding:11px 12px;outline:0;color:var(--ink);font-size:11px}
+    .field input:focus,.field select:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(239,49,39,.08)}
+    .profile-actions{display:flex;justify-content:flex-end;margin-top:16px}
+    .mobile-nav{display:none}
+    .modal{position:fixed;z-index:110;inset:0;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(10,12,16,.55);backdrop-filter:blur(5px)}
+    .modal.open{display:flex}
+    .modal-card{width:min(620px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:22px;box-shadow:0 35px 100px rgba(0,0,0,.28)}
+    .modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:21px;border-bottom:1px solid var(--line)}
+    .modal-head h2{margin:0;font-size:18px}.modal-head p{margin:5px 0 0;color:var(--muted);font-size:10px}
+    .modal-close{width:34px;height:34px;border:1px solid var(--line);background:#fff;border-radius:10px;font-size:17px}
+    .modal-body{padding:21px}
+    .detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:17px}
+    .detail-grid div{padding:13px;background:#f6f7f8;border-radius:12px}.detail-grid small{display:block;color:#8c919b;font-size:8px;font-weight:900}.detail-grid strong{display:block;margin-top:5px;font-size:11px}
+    .track-card{padding:16px;border:1px solid #f0cecb;background:#fff8f7;border-radius:15px}.track-card strong{font-size:12px}.track-card p{margin:5px 0;color:#767b85;font-size:9px}.track-card button{margin-top:10px}
+    #toast{position:fixed;z-index:200;left:50%;bottom:26px;transform:translate(-50%,110px);background:#151820;color:#fff;border-radius:13px;padding:12px 16px;box-shadow:0 18px 50px rgba(0,0,0,.25);font-size:11px;font-weight:800;transition:.3s}
+    #toast.show{transform:translate(-50%,0)}
+    body.preview-mobile{padding:76px 0 34px}
+    body.preview-mobile .demo-label{top:18px}
+    body.preview-mobile .site-frame{width:390px;min-height:780px;height:820px;margin:auto;border:8px solid #17191f;border-radius:35px;overflow-y:auto;box-shadow:0 35px 90px rgba(0,0,0,.25)}
+    body.preview-mobile .sidebar{display:none}
+    body.preview-mobile .workspace{margin-left:0}
+    body.preview-mobile .topbar{height:66px;padding:0 16px;position:sticky}
+    body.preview-mobile .search,body.preview-mobile .online,body.preview-mobile .top-user>div{display:none}
+    body.preview-mobile .content{padding:20px 15px 90px}
+    body.preview-mobile h1{font-size:23px}
+    body.preview-mobile .page-head{align-items:flex-start}
+    body.preview-mobile .page-head p:not(.eyebrow){max-width:220px}
+    body.preview-mobile .stats{grid-template-columns:1fr 1fr;gap:9px}
+    body.preview-mobile .stat{padding:14px}
+    body.preview-mobile .stat:last-child{grid-column:1/-1}
+    body.preview-mobile .stat strong{font-size:22px}
+    body.preview-mobile .dashboard-grid{grid-template-columns:1fr}
+    body.preview-mobile .order-summary{grid-template-columns:1fr 1fr}
+    body.preview-mobile .order-summary div:last-child{grid-column:1/-1}
+    body.preview-mobile .timeline-wrap{overflow-x:auto}
+    body.preview-mobile .timeline{min-width:480px}
+    body.preview-mobile .table-head{display:none}
+    body.preview-mobile .table-row{grid-template-columns:1fr auto;gap:8px}
+    body.preview-mobile .table-row>*:not(.order-id):not(.badge):not(.more){display:none}
+    body.preview-mobile .table-row .more{display:none}
+    body.preview-mobile .orders-grid,body.preview-mobile .choice-grid,body.preview-mobile .delivery-choices,body.preview-mobile .profile-grid{grid-template-columns:1fr}
+    body.preview-mobile .stepper{display:flex;overflow:auto}
+    body.preview-mobile .step{min-width:145px}
+    body.preview-mobile .form-grid{grid-template-columns:1fr}
+    body.preview-mobile .field.full{grid-column:auto}
+    body.preview-mobile .mobile-nav{display:grid;position:sticky;bottom:0;z-index:50;grid-template-columns:repeat(5,1fr);background:rgba(255,255,255,.96);border-top:1px solid var(--line);padding:7px 4px calc(7px + env(safe-area-inset-bottom))}
+    body.preview-mobile .mobile-nav button{display:grid;place-items:center;gap:3px;border:0;background:transparent;color:#8b909a;font-size:7px;font-weight:800}
+    body.preview-mobile .mobile-nav button.active{color:var(--red)}
+    body.preview-mobile .mobile-nav .icon{width:18px;height:18px}
+    @media(max-width:800px){
+      .preview-tools,.demo-label{display:none}
+      .sidebar{display:none}.workspace{margin-left:0}
+      .topbar{height:66px;padding:0 16px}.search,.online,.top-user>div{display:none}
+      .content{padding:21px 15px 92px}h1{font-size:24px}
+      .page-head{align-items:flex-start}.page-head p:not(.eyebrow){max-width:230px}
+      .stats{grid-template-columns:1fr 1fr;gap:10px}.stat{padding:15px}.stat:last-child{grid-column:1/-1}.stat strong{font-size:23px}
+      .dashboard-grid{grid-template-columns:1fr}.order-summary{grid-template-columns:1fr 1fr}.order-summary div:last-child{grid-column:1/-1}
+      .timeline-wrap{overflow:auto}.timeline{min-width:480px}
+      .table-head{display:none}.table-row{grid-template-columns:1fr auto}.table-row>*:not(.order-id):not(.badge){display:none}.table-row .more{display:none}
+      .orders-grid,.choice-grid,.delivery-choices,.profile-grid{grid-template-columns:1fr}
+      .stepper{display:flex;overflow:auto}.step{min-width:145px}
+      .form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}
+      .mobile-nav{display:grid;position:fixed;left:0;right:0;bottom:0;z-index:50;grid-template-columns:repeat(5,1fr);background:rgba(255,255,255,.96);backdrop-filter:blur(15px);border-top:1px solid var(--line);padding:7px 4px calc(7px + env(safe-area-inset-bottom))}
+      .mobile-nav button{display:grid;place-items:center;gap:3px;border:0;background:transparent;color:#8b909a;font-size:7px;font-weight:800}.mobile-nav button.active{color:var(--red)}.mobile-nav .icon{width:18px;height:18px}
+    }
+    @media(max-width:420px){.primary,.secondary{padding:11px 12px}.page-head{gap:10px}.stats{grid-template-columns:1fr}.stat:last-child{grid-column:auto}.order-card-data{grid-template-columns:1fr 1fr}.order-card-data div:last-child{grid-column:1/-1}}
+  </style>
+</head>
+<body>
+  <svg class="hidden-symbols" aria-hidden="true">
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-7h6v7"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="m4 7 8-4 8 4-8 4-8-4Z"/><path d="m4 7 8 4 8-4v10l-8 4-8-4V7Z"/><path d="M12 11v10"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4.5 3.5-7 8-7s7.2 2.5 8 7"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M14 7l5 5-5 5"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 15v5h16v-5"/></symbol>
+    <symbol id="i-truck" viewBox="0 0 24 24"><path d="M3 5h11v12H3zM14 9h4l3 4v4h-7z"/><circle cx="7" cy="19" r="2"/><circle cx="18" cy="19" r="2"/></symbol>
+    <symbol id="i-meter" viewBox="0 0 24 24"><path d="M4 18a8 8 0 1 1 16 0"/><path d="m12 14 4-5"/><path d="M6 18h12"/></symbol>
+    <symbol id="i-money" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M7 9H6v1M17 15h1v-1"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  </svg>
+
+  <div class="demo-label">MAQUETTE — DONNÉES DE DÉMONSTRATION</div>
+  <div class="preview-tools" aria-label="Changer l'aperçu">
+    <button class="active" data-preview="desktop">Ordinateur</button>
+    <button data-preview="mobile">Téléphone</button>
+  </div>
+
+  <div class="site-frame" id="siteFrame">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-mark">P</div><div><strong>PRINTELLY</strong><small>ESPACE CLIENT DTF</small></div></div>
+      <div class="side-caption">MENU PRINCIPAL</div>
+      <nav class="nav-list">
+        <button class="nav-item active" data-go="dashboard"><svg class="icon"><use href="#i-home"/></svg>Tableau de bord</button>
+        <button class="nav-item" data-go="new-order"><svg class="icon"><use href="#i-plus"/></svg>Nouvelle commande</button>
+        <button class="nav-item" data-go="orders"><svg class="icon"><use href="#i-box"/></svg>Mes commandes</button>
+        <button class="nav-item" data-go="notifications"><svg class="icon"><use href="#i-bell"/></svg>Notifications<span class="count">3</span></button>
+        <button class="nav-item" data-go="profile"><svg class="icon"><use href="#i-user"/></svg>Mon profil</button>
+      </nav>
+      <div class="side-spacer"></div>
+      <div class="help-card"><strong>Besoin d'aide ?</strong><p>Notre équipe vous accompagne pour vos fichiers et vos commandes DTF.</p><button onclick="showToast('Le contact assistance sera relié ici.')">Contacter PRINTELLY</button></div>
+      <div class="side-profile"><div class="avatar">FK</div><div><strong>Fares Kahoul</strong><small>Atelier FK Création</small></div></div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div class="search"><svg class="icon"><use href="#i-search"/></svg><input aria-label="Rechercher" placeholder="Rechercher une commande…"></div>
+        <div class="top-spacer"></div>
+        <div class="online"><i></i>Service en ligne</div>
+        <button class="icon-btn" data-go="notifications" aria-label="Notifications"><svg class="icon"><use href="#i-bell"/></svg><span class="dot"></span></button>
+        <div class="top-user"><div class="avatar">FK</div><div><strong>Fares Kahoul</strong><small>Client PRINTELLY</small></div></div>
+      </header>
+
+      <div class="content">
+        <section class="page active" data-page="dashboard">
+          <div class="page-head">
+            <div><p class="eyebrow">VENDREDI 17 JUILLET</p><h1>Bonjour Fares 👋</h1><p>Voici l'activité de vos commandes PRINTELLY.</p></div>
+            <button class="primary" data-go="new-order"><svg class="icon"><use href="#i-plus"/></svg>Nouvelle commande</button>
+          </div>
+
+          <div class="stats">
+            <article class="stat"><div class="stat-head"><span>Commandes en cours</span><span class="stat-icon"><svg class="icon"><use href="#i-box"/></svg></span></div><strong>3</strong><footer><span class="up">+1</span> depuis cette semaine</footer></article>
+            <article class="stat"><div class="stat-head"><span>Métrage ce mois</span><span class="stat-icon"><svg class="icon"><use href="#i-meter"/></svg></span></div><strong>48,5 m</strong><footer>Sur 3 commandes confirmées</footer></article>
+            <article class="stat"><div class="stat-head"><span>Montant du mois</span><span class="stat-icon"><svg class="icon"><use href="#i-money"/></svg></span></div><strong>86 350 DA</strong><footer>Prix total de vos commandes</footer></article>
+          </div>
+
+          <div class="dashboard-grid">
+            <div>
+              <article class="card active-order">
+                <div class="active-banner">
+                  <div class="active-banner-top"><div><p class="eyebrow">COMMANDE ACTIVE</p><h2>#PR-260717-084</h2><p>Créée aujourd'hui à 09:42 • Fichiers prêts 58 cm</p></div><span class="status-pill"><i></i>EN PRODUCTION</span></div>
+                </div>
+                <div class="order-summary"><div><small>MÉTRAGE</small><strong>12,5 mètres</strong></div><div><small>PRIX</small><strong>22 500 DA</strong></div><div><small>RESPONSABLE</small><strong>Amine</strong></div></div>
+                <div class="timeline-wrap">
+                  <div class="timeline">
+                    <div class="time-step done"><b><svg class="icon" style="width:12px"><use href="#i-check"/></svg></b><span>Reçue</span></div>
+                    <div class="time-step done"><b><svg class="icon" style="width:12px"><use href="#i-check"/></svg></b><span>Préparation</span></div>
+                    <div class="time-step current"><b>3</b><span>Production</span></div>
+                    <div class="time-step"><b>4</b><span>Expédition</span></div>
+                    <div class="time-step"><b>5</b><span>Livrée</span></div>
+                  </div>
+                </div>
+              </article>
+
+              <article class="card orders-table">
+                <div class="card-title card-pad" style="padding-bottom:0"><div><h2>Dernières commandes</h2><p>Les mises à jour apparaissent automatiquement.</p></div><button class="quiet-link" data-go="orders">Voir tout</button></div>
+                <div class="table-head"><span>COMMANDE</span><span>STATUT</span><span>MÉTRAGE</span><span>PRIX</span><span>RESPONSABLE</span><span></span></div>
+                <div class="table-row"><div class="order-id"><strong>#PR-260717-084</strong><small>Aujourd'hui, 09:42</small></div><span class="badge production">En production</span><strong>12,5 m</strong><strong>22 500 DA</strong><span class="person"><i>AM</i>Amine</span><button class="more" onclick="openOrder()">•••</button></div>
+                <div class="table-row"><div class="order-id"><strong>#PR-260712-061</strong><small>12 juillet, 16:25</small></div><span class="badge shipped">Expédiée</span><strong>8 m</strong><strong>14 400 DA</strong><span class="person"><i>SF</i>Sofiane</span><button class="more" onclick="openOrder()">•••</button></div>
+                <div class="table-row"><div class="order-id"><strong>#PR-260709-044</strong><small>9 juillet, 11:10</small></div><span class="badge delivered">Livrée</span><strong>28 m</strong><strong>49 450 DA</strong><span class="person"><i>AM</i>Amine</span><button class="more" onclick="openOrder()">•••</button></div>
+              </article>
+            </div>
+
+            <aside>
+              <article class="card card-pad">
+                <div class="card-title"><div><h2>Activité récente</h2><p>Vos dernières mises à jour</p></div><button class="quiet-link" data-go="notifications">Tout voir</button></div>
+                <div class="activity-list">
+                  <div class="activity"><span class="activity-icon"><svg class="icon"><use href="#i-meter"/></svg></span><div><strong>Production démarrée</strong><p>La commande #PR-260717-084 est en impression.</p></div><time>10:18</time></div>
+                  <div class="activity"><span class="activity-icon"><svg class="icon"><use href="#i-truck"/></svg></span><div><strong>Colis pris en charge</strong><p>Guepex a récupéré votre commande.</p></div><time>Hier</time></div>
+                  <div class="activity"><span class="activity-icon"><svg class="icon"><use href="#i-check"/></svg></span><div><strong>Commande livrée</strong><p>#PR-260709-044 a été livrée.</p></div><time>14 juil.</time></div>
+                </div>
+              </article>
+              <article class="delivery-mini">
+                <div class="delivery-mini-head"><span class="provider">GUEPEX</span><span class="provider-state">● EN TRANSIT</span></div>
+                <h3>Colis #PR-260712-061</h3><p>Votre colis est arrivé au centre de tri d'Oran. Livraison à domicile prévue demain.</p>
+                <button onclick="openOrder()">Suivre mon colis →</button>
+              </article>
+            </aside>
+          </div>
+        </section>
+
+        <section class="page" data-page="orders">
+          <div class="page-head"><div><p class="eyebrow">HISTORIQUE</p><h1>Mes commandes</h1><p>Consultez la production, les prix et les livraisons.</p></div><button class="primary" data-go="new-order"><svg class="icon"><use href="#i-plus"/></svg>Nouvelle commande</button></div>
+          <div class="filters"><button class="filter active" data-filter="all">Toutes (3)</button><button class="filter" data-filter="production">En cours (1)</button><button class="filter" data-filter="shipped">Expédiées (1)</button><button class="filter" data-filter="delivered">Livrées (1)</button></div>
+          <div class="orders-grid">
+            <article class="card order-card" data-state="production"><div class="order-card-top"><div><h3>#PR-260717-084</h3><div class="date">17 juillet 2026 • 09:42</div></div><span class="badge production">En production</span></div><div class="order-card-data"><div><small>MÉTRAGE</small><strong>12,5 m</strong></div><div><small>PRIX</small><strong>22 500 DA</strong></div><div><small>RESPONSABLE</small><strong>Amine</strong></div></div><div class="order-card-footer"><span>Fichiers prêts 58 cm</span><button onclick="openOrder()">Voir le détail →</button></div></article>
+            <article class="card order-card" data-state="shipped"><div class="order-card-top"><div><h3>#PR-260712-061</h3><div class="date">12 juillet 2026 • 16:25</div></div><span class="badge shipped">Expédiée</span></div><div class="order-card-data"><div><small>MÉTRAGE</small><strong>8 m</strong></div><div><small>PRIX</small><strong>14 400 DA</strong></div><div><small>RESPONSABLE</small><strong>Sofiane</strong></div></div><div class="order-card-footer"><span>Guepex • GXP260712061</span><button onclick="openOrder()">Suivre le colis →</button></div></article>
+            <article class="card order-card" data-state="delivered"><div class="order-card-top"><div><h3>#PR-260709-044</h3><div class="date">9 juillet 2026 • 11:10</div></div><span class="badge delivered">Livrée</span></div><div class="order-card-data"><div><small>MÉTRAGE</small><strong>28 m</strong></div><div><small>PRIX</small><strong>49 450 DA</strong></div><div><small>RESPONSABLE</small><strong>Amine</strong></div></div><div class="order-card-footer"><span>Livrée le 14 juillet</span><button onclick="openOrder()">Voir le détail →</button></div></article>
+          </div>
+        </section>
+
+        <section class="page" data-page="new-order">
+          <div class="page-head"><div><p class="eyebrow">NOUVELLE COMMANDE</p><h1>Préparer votre envoi</h1><p>Un parcours clair en quatre étapes.</p></div></div>
+          <div class="wizard">
+            <div class="stepper">
+              <div class="step active" data-step="1"><b>1</b><strong>Type</strong><small>Choisir l'envoi</small></div>
+              <div class="step" data-step="2"><b>2</b><strong>Fichiers</strong><small>Ajouter les visuels</small></div>
+              <div class="step" data-step="3"><b>3</b><strong>Livraison</strong><small>Vérifier l'adresse</small></div>
+              <div class="step" data-step="4"><b>4</b><strong>Résumé</strong><small>Confirmer</small></div>
+            </div>
+            <article class="card">
+              <div class="wizard-content">
+                <div class="wizard-panel active" data-panel="1"><h2>Quel type de fichiers envoyez-vous ?</h2><p>Choisissez la méthode adaptée à votre commande.</p><div class="choice-grid"><button class="choice selected" onclick="selectChoice(this,event)"><span class="choice-icon"><svg class="icon"><use href="#i-upload"/></svg></span><span><strong>Photos à organiser</strong><span>JPEG ou PNG avec dimensions et quantités.</span></span></button><button class="choice" onclick="selectChoice(this,event)"><span class="choice-icon"><svg class="icon"><use href="#i-meter"/></svg></span><span><strong>Fichiers prêts 58 cm</strong><span>PDF, PSD ou PNG déjà préparés.</span></span></button></div></div>
+                <div class="wizard-panel" data-panel="2"><h2>Ajoutez vos fichiers</h2><p>Les fichiers affichés ici sont uniquement des exemples.</p><div class="dropzone"><span class="upload-icon"><svg class="icon"><use href="#i-upload"/></svg></span><strong>Déposez vos fichiers ici</strong><p>ou cliquez pour choisir depuis votre appareil</p><button class="secondary" onclick="showToast('Sélecteur de fichiers en démonstration')" type="button">Choisir les fichiers</button></div><div class="fake-files"><div class="fake-file"><i>PNG</i><div><strong>collection-ete.png</strong><small>18,4 Mo • 6,5 mètres</small></div><span>✓ Prêt</span></div><div class="fake-file"><i>PDF</i><div><strong>logos-clients.pdf</strong><small>9,7 Mo • 6 mètres</small></div><span>✓ Prêt</span></div></div></div>
+                <div class="wizard-panel" data-panel="3"><h2>Mode de livraison</h2><p>Les informations sont reprises automatiquement depuis votre profil.</p><div class="delivery-choices"><div class="delivery-choice selected"><strong>● Livraison à domicile</strong><p>Hai Yasmine, Bir El Djir<br>Oran, Algérie • 0550 00 00 00</p></div><div class="delivery-choice"><strong>○ Stop Desk</strong><p>Sélection automatique d'une agence ouverte dans votre commune.</p></div></div><div class="notice"><svg class="icon"><use href="#i-truck"/></svg><span>Pour une livraison à domicile, aucun champ Stop Desk ne sera envoyé au transporteur.</span></div></div>
+                <div class="wizard-panel" data-panel="4"><h2>Résumé de la commande</h2><p>Vérifiez les informations avant la confirmation.</p><div class="summary-box"><div class="summary-line"><span>Type d'envoi</span><strong>Fichiers prêts 58 cm</strong></div><div class="summary-line"><span>Fichiers</span><strong>2 fichiers</strong></div><div class="summary-line"><span>Métrage estimé</span><strong>12,5 mètres</strong></div><div class="summary-line"><span>Livraison</span><strong>Domicile • Oran</strong></div><div class="summary-line total"><span>Prix estimé</span><strong>22 500 DA</strong></div></div><div class="notice"><svg class="icon"><use href="#i-check"/></svg><span>Après confirmation, la commande est transmise directement à PRINTELLY pour sa préparation. Aucune validation BAT n'est demandée.</span></div></div>
+              </div>
+              <div class="wizard-actions"><button class="secondary" id="prevStep" onclick="changeStep(-1)" disabled>Retour</button><button class="primary" id="nextStep" onclick="changeStep(1)">Continuer <svg class="icon"><use href="#i-arrow"/></svg></button></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="page" data-page="notifications">
+          <div class="page-head"><div><p class="eyebrow">CENTRE D'ACTIVITÉ</p><h1>Notifications</h1><p>Suivez chaque changement important de vos commandes.</p></div><button class="secondary" onclick="showToast('Toutes les notifications sont marquées comme lues.')">Tout marquer comme lu</button></div>
+          <div class="notif-list">
+            <article class="card notif unread"><span class="activity-icon"><svg class="icon"><use href="#i-meter"/></svg></span><div><h3>Votre commande est en production</h3><p>La commande #PR-260717-084 est maintenant prise en charge par Amine.</p></div><time>Il y a 12 min</time></article>
+            <article class="card notif unread"><span class="activity-icon"><svg class="icon"><use href="#i-truck"/></svg></span><div><h3>Colis arrivé au centre de tri</h3><p>Guepex prépare la livraison de #PR-260712-061 à Oran.</p></div><time>Hier, 18:42</time></article>
+            <article class="card notif unread"><span class="activity-icon"><svg class="icon"><use href="#i-check"/></svg></span><div><h3>Commande livrée</h3><p>La commande #PR-260709-044 a été livrée avec succès.</p></div><time>14 juillet</time></article>
+            <article class="card notif"><span class="activity-icon"><svg class="icon"><use href="#i-box"/></svg></span><div><h3>Commande reçue</h3><p>Vos fichiers ont bien été reçus par PRINTELLY.</p></div><time>12 juillet</time></article>
+          </div>
+        </section>
+
+        <section class="page" data-page="profile">
+          <div class="page-head"><div><p class="eyebrow">MON COMPTE</p><h1>Profil et livraison</h1><p>Ces informations sont partagées avec l'application client.</p></div></div>
+          <div class="profile-grid">
+            <article class="card profile-card"><h2>Informations personnelles</h2><div class="form-grid"><div class="field"><label>PRÉNOM</label><input value="Fares"></div><div class="field"><label>NOM</label><input value="Kahoul"></div><div class="field full"><label>ATELIER</label><input value="FK Création"></div><div class="field"><label>TÉLÉPHONE</label><input value="0550 00 00 00"></div><div class="field"><label>E-MAIL</label><input value="client@exemple.dz"></div></div><div class="profile-actions"><button class="primary" onclick="showToast('Profil enregistré — démonstration')">Enregistrer</button></div></article>
+            <article class="card profile-card"><h2>Préférence de livraison</h2><div class="form-grid"><div class="field full"><label>MODE DE LIVRAISON</label><select><option>Livraison à domicile</option><option>Stop Desk</option></select></div><div class="field"><label>WILAYA</label><input value="Oran"></div><div class="field"><label>COMMUNE</label><input value="Bir El Djir"></div><div class="field full"><label>ADRESSE</label><input value="Hai Yasmine, Bir El Djir"></div></div><div class="notice"><svg class="icon"><use href="#i-check"/></svg><span>Cette adresse sera reprise automatiquement lors de votre prochaine commande.</span></div><div class="profile-actions"><button class="primary" onclick="showToast('Livraison enregistrée — démonstration')">Enregistrer</button></div></article>
+          </div>
+        </section>
+      </div>
+
+      <nav class="mobile-nav" aria-label="Navigation mobile">
+        <button class="active" data-go="dashboard"><svg class="icon"><use href="#i-home"/></svg>Accueil</button>
+        <button data-go="new-order"><svg class="icon"><use href="#i-plus"/></svg>Commander</button>
+        <button data-go="orders"><svg class="icon"><use href="#i-box"/></svg>Commandes</button>
+        <button data-go="notifications"><svg class="icon"><use href="#i-bell"/></svg>Alertes</button>
+        <button data-go="profile"><svg class="icon"><use href="#i-user"/></svg>Profil</button>
+      </nav>
+    </main>
+  </div>
+
+  <div class="modal" id="orderModal" onclick="if(event.target===this)closeOrder()">
+    <article class="modal-card">
+      <header class="modal-head"><div><h2>Commande #PR-260712-061</h2><p>Expédiée • Mise à jour hier à 18:42</p></div><button class="modal-close" onclick="closeOrder()">×</button></header>
+      <div class="modal-body"><div class="detail-grid"><div><small>MÉTRAGE</small><strong>8 mètres</strong></div><div><small>PRIX</small><strong>14 400 DA</strong></div><div><small>RESPONSABLE</small><strong>Sofiane</strong></div></div><div class="track-card"><strong>Guepex • GXP260712061</strong><p>Colis arrivé au centre de tri d'Oran. Livraison à domicile prévue demain.</p><button class="primary" onclick="showToast('Ouverture du suivi Guepex')"><svg class="icon"><use href="#i-truck"/></svg>Suivre mon colis</button></div></div>
+    </article>
+  </div>
+  <div id="toast" role="status"></div>
+
+  <script>
+    var currentStep=1;
+    function goPage(name){
+      document.querySelectorAll('.page').forEach(function(p){p.classList.toggle('active',p.dataset.page===name)});
+      document.querySelectorAll('[data-go]').forEach(function(b){b.classList.toggle('active',b.dataset.go===name)});
+      var frame=document.getElementById('siteFrame'); if(frame) frame.scrollTop=0; window.scrollTo({top:0,behavior:'smooth'});
+    }
+    document.querySelectorAll('[data-go]').forEach(function(button){button.addEventListener('click',function(){goPage(button.dataset.go)})});
+    document.querySelectorAll('[data-preview]').forEach(function(button){button.addEventListener('click',function(){
+      document.querySelectorAll('[data-preview]').forEach(function(b){b.classList.remove('active')});button.classList.add('active');
+      document.body.classList.toggle('preview-mobile',button.dataset.preview==='mobile');
+    })});
+    document.querySelectorAll('[data-filter]').forEach(function(button){button.addEventListener('click',function(){
+      document.querySelectorAll('[data-filter]').forEach(function(b){b.classList.remove('active')});button.classList.add('active');
+      var wanted=button.dataset.filter;document.querySelectorAll('.order-card[data-state]').forEach(function(card){card.style.display=wanted==='all'||card.dataset.state===wanted?'block':'none'});
+    })});
+    function selectChoice(button,event){event.preventDefault();button.parentElement.querySelectorAll('.choice').forEach(function(c){c.classList.remove('selected')});button.classList.add('selected')}
+    function renderStep(){
+      document.querySelectorAll('.step').forEach(function(s){var n=Number(s.dataset.step);s.classList.toggle('active',n===currentStep);s.classList.toggle('done',n<currentStep)});
+      document.querySelectorAll('.wizard-panel').forEach(function(p){p.classList.toggle('active',Number(p.dataset.panel)===currentStep)});
+      document.getElementById('prevStep').disabled=currentStep===1;
+      var next=document.getElementById('nextStep');
+      next.innerHTML=currentStep===4?'Confirmer la commande':'Continuer <svg class="icon"><use href="#i-arrow"/></svg>';
+    }
+    function changeStep(direction){
+      if(currentStep===4&&direction===1){showToast('Maquette : la commande serait confirmée ici.');goPage('dashboard');currentStep=1;renderStep();return}
+      currentStep=Math.max(1,Math.min(4,currentStep+direction));renderStep();
+    }
+    function openOrder(){document.getElementById('orderModal').classList.add('open')}
+    function closeOrder(){document.getElementById('orderModal').classList.remove('open')}
+    function showToast(text){var toast=document.getElementById('toast');toast.textContent=text;toast.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(function(){toast.classList.remove('show')},2600)}
+    document.addEventListener('keydown',function(event){if(event.key==='Escape')closeOrder()});
+  </script>
+</body>
+</html>
