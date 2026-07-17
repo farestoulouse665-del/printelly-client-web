@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111318">
+  <meta name="description" content="PRINTELLY Client — commandes DTF, production et livraison">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+  <title>PRINTELLY — Espace client DTF</title>
+</head>
+<body>
+  <svg class="svg-library" aria-hidden="true">
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-7h6v7"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="m4 7 8-4 8 4-8 4-8-4Z"/><path d="m4 7 8 4 8-4v10l-8 4-8-4V7Z"/><path d="M12 11v10"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4.5 3.5-7 8-7s7.2 2.5 8 7"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 15v5h16v-5"/></symbol>
+    <symbol id="i-truck" viewBox="0 0 24 24"><path d="M3 5h11v12H3zM14 9h4l3 4v4h-7z"/><circle cx="7" cy="19" r="2"/><circle cx="18" cy="19" r="2"/></symbol>
+    <symbol id="i-meter" viewBox="0 0 24 24"><path d="M4 18a8 8 0 1 1 16 0"/><path d="m12 14 4-5"/><path d="M6 18h12"/></symbol>
+    <symbol id="i-money" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M7 8a7 7 0 0 1 11-1l2 5M17 16a7 7 0 0 1-11 1l-2-5"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></symbol>
+    <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 5H4v14h6M14 8l4 4-4 4M8 12h10"/></symbol>
+  </svg>
+
+  <header class="public-topbar">
+    <a class="brand" href="#" aria-label="PRINTELLY">
+      <span class="brand-mark">P</span>
+      <span><strong>PRINTELLY</strong><small>ESPACE CLIENT DTF</small></span>
+    </a>
+    <div id="connectionBadge" class="connection-badge">Connexion…</div>
+  </header>
+
+  <section id="authView" class="auth-view">
+    <div class="auth-hero">
+      <p class="eyebrow">IMPRESSION DTF • ALGÉRIE</p>
+      <h1>Vos commandes DTF,<br><span>claires à chaque étape.</span></h1>
+      <p>Envoyez vos fichiers, consultez le métrage et le prix, puis suivez la production et la livraison depuis un seul espace.</p>
+      <div class="hero-points">
+        <span>✓ Compte partagé avec l’application</span>
+        <span>✓ Suivi Guepex / Yalidine</span>
+        <span>✓ Aucune validation BAT</span>
+      </div>
+    </div>
+
+    <div class="auth-card">
+      <div class="auth-card-head">
+        <p class="eyebrow">BIENVENUE</p>
+        <h2>Accéder à mon espace</h2>
+        <p>Utilisez le même compte que sur l’application PRINTELLY.</p>
+      </div>
+      <div class="segmented">
+        <button class="active" data-auth-tab="login">Connexion</button>
+        <button data-auth-tab="signup">Créer un compte</button>
+      </div>
+      <form id="loginForm" class="form">
+        <label>Téléphone ou e-mail<input id="loginIdentity" autocomplete="username" required placeholder="0550… ou nom@email.com"></label>
+        <label>Mot de passe<input id="loginPassword" type="password" autocomplete="current-password" required minlength="6" placeholder="Votre mot de passe"></label>
+        <button class="primary auth-submit" type="submit">SE CONNECTER</button>
+      </form>
+      <form id="signupForm" class="form hidden">
+        <div class="two"><label>Prénom<input id="signupFirst" required></label><label>Nom<input id="signupLast" required></label></div>
+        <label>Téléphone<input id="signupPhone" inputmode="tel" required placeholder="0550 00 00 00"></label>
+        <label>E-mail réel<input id="signupEmail" type="email" autocomplete="email" required placeholder="votre@email.com"></label>
+        <label>Atelier<input id="signupWorkshop" placeholder="Nom de votre atelier"></label>
+        <label>Wilaya<input id="signupWilaya" placeholder="Ex. Béjaïa"></label>
+        <label>Mot de passe<input id="signupPassword" type="password" required minlength="6"></label>
+        <button class="primary auth-submit" type="submit">CRÉER MON COMPTE</button>
+      </form>
+      <p id="authMessage" class="message"></p>
+    </div>
+  </section>
+
+  <section id="appView" class="app-shell hidden">
+    <aside class="app-sidebar">
+      <div class="sidebar-brand">
+        <span class="brand-mark">P</span>
+        <span><strong>PRINTELLY</strong><small>ESPACE CLIENT DTF</small></span>
+      </div>
+      <p class="nav-caption">MENU PRINCIPAL</p>
+      <nav class="tabs side-nav" aria-label="Navigation principale">
+        <button class="active" data-view="dashboard"><svg class="icon"><use href="#i-home"/></svg>Tableau de bord</button>
+        <button data-view="new-order"><svg class="icon"><use href="#i-plus"/></svg>Nouvelle commande</button>
+        <button data-view="orders"><svg class="icon"><use href="#i-box"/></svg>Mes commandes</button>
+        <button data-view="notifications"><svg class="icon"><use href="#i-bell"/></svg>Notifications<span id="notificationCount" class="nav-count">0</span></button>
+        <button data-view="profile"><svg class="icon"><use href="#i-user"/></svg>Mon profil</button>
+      </nav>
+      <div class="sidebar-spacer"></div>
+      <div class="help-card">
+        <strong>Besoin d’aide ?</strong>
+        <p>L’équipe PRINTELLY vous accompagne pour vos fichiers et vos commandes DTF.</p>
+      </div>
+      <button id="logoutBtn" class="logout-btn"><svg class="icon"><use href="#i-logout"/></svg>Déconnexion</button>
+    </aside>
+
+    <div class="app-workspace">
+      <header class="app-topbar">
+        <div class="mobile-brand"><span>P</span><strong>PRINTELLY</strong></div>
+        <div class="search-box"><svg class="icon"><use href="#i-search"/></svg><input id="orderSearch" placeholder="Rechercher une commande…" aria-label="Rechercher une commande"></div>
+        <div class="top-spacer"></div>
+        <div class="service-online"><i></i>Service en ligne</div>
+        <button class="top-icon" data-view="notifications" aria-label="Notifications"><svg class="icon"><use href="#i-bell"/></svg><span class="alert-dot"></span></button>
+        <div class="top-profile"><span id="profileInitials" class="avatar">CL</span><div><strong id="profileDisplayName">Client PRINTELLY</strong><small>Espace sécurisé</small></div></div>
+      </header>
+
+      <main class="app-content">
+        <section id="dashboardView" class="app-page">
+          <div class="page-head">
+            <div><p class="eyebrow">ESPACE CLIENT</p><h2 id="welcomeName">Bonjour</h2><p>Retrouvez l’activité de vos commandes en un coup d’œil.</p></div>
+            <button class="primary" data-view="new-order"><svg class="icon"><use href="#i-plus"/></svg>Nouvelle commande</button>
+          </div>
+
+          <div class="stats-grid">
+            <article class="stat-card"><div><span>Commandes</span><strong id="ordersCount">0</strong><small>Total de vos commandes</small></div><i><svg class="icon"><use href="#i-box"/></svg></i></article>
+            <article class="stat-card"><div><span>En production</span><strong id="productionCount">0</strong><small><b id="readyCount">0</b> prêtes ou livrées</small></div><i><svg class="icon"><use href="#i-meter"/></svg></i></article>
+            <article class="stat-card"><div><span>Métrage du mois</span><strong id="metersTotal">0 m</strong><small>Commandes de ce mois</small></div><i><svg class="icon"><use href="#i-meter"/></svg></i></article>
+            <article class="stat-card"><div><span>Montant du mois</span><strong id="ordersAmount">0 DA</strong><small>Prix confirmé ou estimé</small></div><i><svg class="icon"><use href="#i-money"/></svg></i></article>
+          </div>
+
+          <div class="dashboard-grid">
+            <div>
+              <div id="activeOrderPanel" class="active-order-panel loading-card">Chargement de votre commande active…</div>
+              <article class="panel recent-panel">
+                <div class="panel-head"><div><h3>Dernières commandes</h3><p>Mises à jour automatiquement.</p></div><button class="text-btn" data-view="orders">Voir tout</button></div>
+                <div id="recentOrdersList" class="recent-list"><div class="empty">Chargement…</div></div>
+              </article>
+            </div>
+            <aside>
+              <article class="panel activity-panel">
+                <div class="panel-head"><div><h3>Activité récente</h3><p>Production et livraison</p></div><button class="text-btn" data-view="notifications">Tout voir</button></div>
+                <div id="activityList" class="activity-list"><div class="empty small-empty">Chargement…</div></div>
+              </article>
+              <div id="deliverySpotlight" class="delivery-spotlight hidden"></div>
+            </aside>
+          </div>
+        </section>
+
+        <section id="ordersView" class="app-page hidden">
+          <div class="page-head">
+            <div><p class="eyebrow">HISTORIQUE</p><h2>Mes commandes</h2><p>Métrage, prix, responsable, production et livraison.</p></div>
+            <button id="refreshBtn" class="secondary"><svg class="icon"><use href="#i-refresh"/></svg>Actualiser</button>
+          </div>
+          <div id="ordersList" class="orders-list"><div class="empty">Chargement de vos commandes…</div></div>
+        </section>
+
+        <section id="newOrderView" class="app-page hidden">
+          <div class="page-head">
+            <div><p class="eyebrow">NOUVELLE COMMANDE</p><h2>Préparer votre envoi</h2><p>Ajoutez vos fichiers puis transmettez la commande directement à PRINTELLY.</p></div>
+          </div>
+          <div class="order-steps"><span class="active"><b>1</b>Type</span><span><b>2</b>Fichiers</span><span><b>3</b>Livraison</span><span><b>4</b>Envoi</span></div>
+          <form id="orderForm" class="order-form-layout">
+            <div>
+              <article class="panel form-section">
+                <div class="section-label">1. CHOISISSEZ VOTRE ENVOI</div>
+                <div class="mode-grid">
+                  <label class="mode-card selected"><input type="radio" name="orderMode" value="visual" checked><span class="mode-icon"><svg class="icon"><use href="#i-upload"/></svg></span><strong>Photos à organiser</strong><span>JPEG / PNG avec dimensions et quantités</span></label>
+                  <label class="mode-card"><input type="radio" name="orderMode" value="ready"><span class="mode-icon"><svg class="icon"><use href="#i-meter"/></svg></span><strong>Fichiers prêts 58 cm</strong><span>PDF / PSD / PNG déjà préparés</span></label>
+                </div>
+              </article>
+
+              <article class="panel form-section">
+                <div class="section-label">2. AJOUTEZ VOS FICHIERS</div>
+                <input id="fileInput" type="file" multiple accept="image/jpeg,image/png" hidden>
+                <button id="pickFilesBtn" class="pick" type="button"><span class="upload-circle"><svg class="icon"><use href="#i-upload"/></svg></span><strong>Ajouter plusieurs fichiers</strong><small>Galerie ou documents • jusqu’à 1000 fichiers</small></button>
+                <div id="filesEditor" class="files-editor"></div>
+              </article>
+
+              <article class="panel form-section">
+                <div class="section-label">3. INSTRUCTIONS</div>
+                <label class="note-label">Remarques pour l’équipe PRINTELLY<textarea id="orderNote" rows="4" placeholder="Couleurs, urgence, remarques…"></textarea></label>
+              </article>
+            </div>
+
+            <aside class="order-summary-side">
+              <article class="panel sticky-summary">
+                <div class="section-label">LIVRAISON</div>
+                <div id="orderDeliverySummary" class="profile-delivery-summary">Les informations de votre profil seront utilisées.</div>
+                <div class="direct-production-note"><svg class="icon"><use href="#i-check"/></svg><span>Après confirmation, la commande est transmise directement à PRINTELLY. Aucune validation BAT n’est demandée.</span></div>
+                <div id="uploadProgress" class="progress-box hidden"><div class="progress-head"><span id="progressText">Préparation…</span><strong id="progressPercent">0%</strong></div><div class="progress"><i id="progressBar"></i></div></div>
+                <button id="submitOrderBtn" class="primary large" type="submit">ENVOYER LA COMMANDE</button>
+                <p id="orderMessage" class="message"></p>
+              </article>
+            </aside>
+          </form>
+        </section>
+
+        <section id="notificationsView" class="app-page hidden">
+          <div class="page-head"><div><p class="eyebrow">CENTRE D’ACTIVITÉ</p><h2>Notifications</h2><p>Les changements importants de vos commandes.</p></div></div>
+          <div id="notificationsList" class="notifications-list"><div class="empty">Chargement…</div></div>
+        </section>
+
+        <section id="profileView" class="app-page hidden">
+          <div class="page-head"><div><p class="eyebrow">MON COMPTE</p><h2>Profil et livraison</h2><p>Ces informations sont partagées avec l’application client.</p></div></div>
+          <div class="profile-layout">
+            <form id="profileForm" class="panel form profile-form">
+              <h3>Informations personnelles</h3>
+              <div class="two"><label>Prénom<input id="profileFirst"></label><label>Nom<input id="profileLast"></label></div>
+              <label>Téléphone<input id="profilePhone"></label>
+              <label>Atelier<input id="profileWorkshop"></label>
+              <div class="two"><label>Wilaya<input id="profileWilaya"></label><label>Commune<input id="profileCommune"></label></div>
+              <label>Adresse<input id="profileAddress"></label>
+              <button class="primary" type="submit">ENREGISTRER</button>
+              <p id="profileMessage" class="message"></p>
+            </form>
+            <article class="panel delivery-profile-card">
+              <p class="section-label">LIVRAISON ENREGISTRÉE</p>
+              <div id="profileDeliverySummary" class="profile-delivery-summary">Chargement de votre préférence…</div>
+              <div class="safe-note"><svg class="icon"><use href="#i-check"/></svg><span>La prochaine commande utilisera la préférence enregistrée dans votre profil client.</span></div>
+            </article>
+          </div>
+        </section>
+      </main>
+
+      <nav class="tabs mobile-nav" aria-label="Navigation mobile">
+        <button class="active" data-view="dashboard"><svg class="icon"><use href="#i-home"/></svg><span>Accueil</span></button>
+        <button data-view="new-order"><svg class="icon"><use href="#i-plus"/></svg><span>Commander</span></button>
+        <button data-view="orders"><svg class="icon"><use href="#i-box"/></svg><span>Commandes</span></button>
+        <button data-view="notifications"><svg class="icon"><use href="#i-bell"/></svg><span>Alertes</span></button>
+        <button data-view="profile"><svg class="icon"><use href="#i-user"/></svg><span>Profil</span></button>
+      </nav>
+    </div>
+  </section>
+
+  <footer class="public-footer">PRINTELLY • Production DTF professionnelle</footer>
+  <div id="toast" role="status"></div>
+  <script src="./app.js" defer></script>
+<script>
+window.addEventListener("load",()=>setTimeout(()=>{
+  state.session={access_token:"demo",user:{id:"demo"}};
+  state.profile={first_name:"Fares",last_name:"Kahoul",full_name:"Fares Kahoul",workshop:"FK Création",phone:"0550 00 00 00",wilaya:"Oran",commune:"Bir El Djir",address:"Hai Yasmine, Bir El Djir",delivery_type:"home"};
+  state.orders=[
+    {id:"2607170840000000",status:"confirmed",production_status:"in_production",total_meters:12.5,final_price:22500,mode:"ready",created_at:"2026-07-17T09:42:00Z",verified_file_count:2,expected_file_count:2,assigned_designer:"Amine",delivery_shipments:[]},
+    {id:"2607120610000000",status:"shipped",production_status:"shipped",total_meters:8,final_price:14400,mode:"visual",created_at:"2026-07-12T16:25:00Z",verified_file_count:5,expected_file_count:5,assigned_designer:"Sofiane",delivery_shipments:[{provider:"Guepex",tracking:"GXP260712061",status_text:"Colis arrivé au centre de tri d’Oran"}]},
+    {id:"2607090440000000",status:"delivered",production_status:"delivered",total_meters:28,final_price:49450,mode:"ready",created_at:"2026-07-09T11:10:00Z",verified_file_count:3,expected_file_count:3,assigned_designer:"Amine",delivery_shipments:[{provider:"Yalidine",tracking:"YAL260709044",status_text:"Livrée"}]}
+  ];
+  fillProfile();updateProfileUI();renderDeliveryProfile();renderOrders();showApp();
+},250));
+</script>
+</body>
+</html>
