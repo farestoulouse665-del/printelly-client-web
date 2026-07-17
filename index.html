@@ -24,6 +24,7 @@
     <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M7 8a7 7 0 0 1 11-1l2 5M17 16a7 7 0 0 1-11 1l-2-5"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></symbol>
     <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 5H4v14h6M14 8l4 4-4 4M8 12h10"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></symbol>
   </svg>
 
   <header class="public-topbar">
@@ -192,7 +193,10 @@
           <div class="page-head notification-page-head">
             <div><p class="eyebrow">CENTRE D’ACTIVITÉ</p><h2>Notifications</h2><p>Chaque étape envoyée par l’Admin apparaît ici.</p></div>
             <div class="notification-read-actions">
-              <button id="markAllReadBtn" class="secondary" type="button"><svg class="icon"><use href="#i-check"/></svg>Tout marquer comme lu</button>
+              <div class="notification-buttons">
+                <button id="markAllReadBtn" class="secondary" type="button"><svg class="icon"><use href="#i-check"/></svg>Tout marquer comme lu</button>
+                <button id="clearNotificationsBtn" class="secondary notification-clear-btn" type="button"><svg class="icon"><use href="#i-trash"/></svg>Effacer les notifications</button>
+              </div>
               <small id="notificationUnreadText">Chargement…</small>
             </div>
           </div>
