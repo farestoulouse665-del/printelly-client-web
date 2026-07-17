@@ -102,6 +102,7 @@
         <div class="search-box"><svg class="icon"><use href="#i-search"/></svg><input id="orderSearch" placeholder="Rechercher une commande…" aria-label="Rechercher une commande"></div>
         <div class="top-spacer"></div>
         <div class="service-online"><i></i>Service en ligne</div>
+        <button id="globalRefreshBtn" class="secondary top-refresh js-refresh" type="button" aria-label="Actualiser les commandes"><svg class="icon"><use href="#i-refresh"/></svg><span>Actualiser</span></button>
         <button class="top-icon" data-view="notifications" aria-label="Notifications"><svg class="icon"><use href="#i-bell"/></svg><span class="alert-dot"></span></button>
         <div class="top-profile"><span id="profileInitials" class="avatar">CL</span><div><strong id="profileDisplayName">Client PRINTELLY</strong><small>Espace sécurisé</small></div></div>
       </header>
@@ -141,7 +142,7 @@
         <section id="ordersView" class="app-page hidden">
           <div class="page-head">
             <div><p class="eyebrow">HISTORIQUE</p><h2>Mes commandes</h2><p>Métrage, prix, responsable, production et livraison.</p></div>
-            <button id="refreshBtn" class="secondary"><svg class="icon"><use href="#i-refresh"/></svg>Actualiser</button>
+            <button id="refreshBtn" class="secondary js-refresh" type="button"><svg class="icon"><use href="#i-refresh"/></svg>Actualiser</button>
           </div>
           <div id="ordersList" class="orders-list"><div class="empty">Chargement de vos commandes…</div></div>
         </section>
