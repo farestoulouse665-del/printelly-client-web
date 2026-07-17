@@ -189,7 +189,13 @@
         </section>
 
         <section id="notificationsView" class="app-page hidden">
-          <div class="page-head"><div><p class="eyebrow">CENTRE D’ACTIVITÉ</p><h2>Notifications</h2><p>Les changements importants de vos commandes.</p></div></div>
+          <div class="page-head notification-page-head">
+            <div><p class="eyebrow">CENTRE D’ACTIVITÉ</p><h2>Notifications</h2><p>Chaque étape envoyée par l’Admin apparaît ici.</p></div>
+            <div class="notification-read-actions">
+              <button id="markAllReadBtn" class="secondary" type="button"><svg class="icon"><use href="#i-check"/></svg>Tout marquer comme lu</button>
+              <small id="notificationUnreadText">Chargement…</small>
+            </div>
+          </div>
           <div id="notificationsList" class="notifications-list"><div class="empty">Chargement…</div></div>
         </section>
 
