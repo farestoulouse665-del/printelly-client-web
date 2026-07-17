@@ -1,0 +1,46 @@
+name: Render maquette client
+
+on:
+  push:
+    branches:
+      - maquette-client-pro
+    paths-ignore:
+      - "maquette-previews/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  render:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer la maquette
+        uses: actions/checkout@v4
+
+      - name: Démarrer l’aperçu
+        shell: bash
+        run: |
+          python3 -m http.server 8000 >/tmp/printelly-preview.log 2>&1 &
+          echo $! > /tmp/printelly-preview.pid
+          sleep 2
+
+      - name: Capturer ordinateur et téléphone
+        shell: bash
+        run: |
+          mkdir -p maquette-previews
+          google-chrome --headless=new --no-sandbox --hide-scrollbars --disable-gpu --virtual-time-budget=2500 --window-size=1440,1200 --screenshot=maquette-previews/ordinateur.png http://127.0.0.1:8000/maquette-client-professionnelle.html
+          google-chrome --headless=new --no-sandbox --hide-scrollbars --disable-gpu --virtual-time-budget=2500 --window-size=390,844 --screenshot=maquette-previews/telephone.png http://127.0.0.1:8000/maquette-client-professionnelle.html
+
+      - name: Enregistrer les aperçus
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add maquette-previews
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Ajoute les aperçus de la maquette client"
+          git push
