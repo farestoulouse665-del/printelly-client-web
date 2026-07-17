@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
   pages: write
   id-token: write
 
@@ -21,6 +22,10 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
+      - name: Report deployment start
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue comment --repo "${{ github.repository }}" 1 --body "PRINTELLY_WEB_STARTED run_id=${{ github.run_id }} run_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       - uses: actions/checkout@v4
       - name: Validate website
         run: |
@@ -44,3 +49,8 @@ jobs:
       - name: Deploy website
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Report deployment result
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue comment --repo "${{ github.repository }}" 1 --body "PRINTELLY_WEB_FINISHED status=${{ job.status }} run_id=${{ github.run_id }} url=${{ steps.deployment.outputs.page_url }}"
