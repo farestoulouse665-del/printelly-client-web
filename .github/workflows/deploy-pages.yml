@@ -1,0 +1,46 @@
+name: Deploy Printelly Client Website
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: printelly-client-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate website
+        run: |
+          test -s index.html
+          test -s styles.css
+          test -s app.js
+          test -s manifest.webmanifest
+          test -s sw.js
+          node --check app.js
+          grep -Fq "jitxplfujyypfepiajgz.supabase.co" app.js
+          if grep -Eqi "service_role|SUPABASE_SERVICE" app.js; then
+            echo "Privileged Supabase key detected"
+            exit 1
+          fi
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - name: Deploy website
+        id: deployment
+        uses: actions/deploy-pages@v4
