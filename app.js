@@ -181,10 +181,77 @@ $("profileForm").onsubmit=async e=>{e.preventDefault();const btn=e.submitter;btn
 document.querySelectorAll('input[name="orderMode"]').forEach(r=>r.onchange=()=>{state.mode=r.value;document.querySelectorAll(".mode-card").forEach(x=>x.classList.toggle("selected",x.contains(r)));$("fileInput").accept=state.mode==="visual"?"image/jpeg,image/png":".pdf,.psd,.png,application/pdf,image/png";state.files=[];$("fileInput").value="";renderFiles()});
 $("pickFilesBtn").onclick=()=>$("fileInput").click();
 $("fileInput").onchange=e=>{const allowed=state.mode==="visual"?/\.(jpe?g|png)$/i:/\.(pdf|psd|png)$/i;const incoming=[...e.target.files].filter(f=>allowed.test(f.name));state.files.push(...incoming.map(file=>({id:uuid(),file,width:10,height:10,quantity:1,length:1,copies:1,rotation:true})));renderFiles();e.target.value=""};
-function renderFiles(){const box=$("filesEditor");box.innerHTML=state.files.map((f,i)=>`<div class="file-row" data-i="${i}"><div><div class="file-name">${escapeHtml(f.file.name)}</div><div class="file-size">${formatBytes(f.file.size)}</div><div class="file-options">${state.mode==="visual"?`<label>L <input data-k="width" type="number" min=".1" max="58" step=".1" value="${f.width}"> cm</label><label>H <input data-k="height" type="number" min=".1" step=".1" value="${f.height}"> cm</label><label>Qté <input data-k="quantity" type="number" min="1" max="1000" value="${f.quantity}"></label>`:`<label>Longueur <input data-k="length" type="number" min=".01" step=".01" value="${f.length}"> m</label><label>Copies <input data-k="copies" type="number" min="1" max="1000" value="${f.copies}"></label>`}</div></div><button type="button" class="remove-file" data-remove="${i}">×</button></div>`).join("");box.querySelectorAll("input[data-k]").forEach(inp=>inp.oninput=()=>{const row=+inp.closest(".file-row").dataset.i;state.files[row][inp.dataset.k]=+inp.value});box.querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{state.files.splice(+b.dataset.remove,1);renderFiles()})}
+function renderFiles(){const box=$("filesEditor");box.innerHTML=state.files.map((f,i)=>`<div class="file-row" data-i="${i}"><div><div class="file-name">${escapeHtml(f.file.name)}</div><div class="file-size">${formatBytes(f.file.size)}</div><div class="file-options">${state.mode==="visual"?`<label>L <input data-k="width" type="number" min=".1" max="58" step=".1" value="${f.width}"> cm</label><label>H <input data-k="height" type="number" min=".1" step=".1" value="${f.height}"> cm</label><label>Qté <input data-k="quantity" type="number" min="1" max="1000" value="${f.quantity}"></label>`:`<label>Longueur <input data-k="length" type="number" min=".01" step=".01" value="${f.length}"> m</label><label>Copies <input data-k="copies" type="number" min="1" max="1000" value="${f.copies}"></label>`}</div></div><button type="button" class="remove-file" data-remove="${i}">×</button></div>`).join("");box.querySelectorAll("input[data-k]").forEach(inp=>inp.oninput=()=>{const row=+inp.closest(".file-row").dataset.i;state.files[row][inp.dataset.k]=+inp.value;updateOrderEstimate()});box.querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{state.files.splice(+b.dataset.remove,1);renderFiles()});updateOrderEstimate()}
 function formatBytes(n){if(n<1024)return n+" o";if(n<1048576)return(n/1024).toFixed(1)+" Kio";return(n/1048576).toFixed(1)+" Mio"}
 async function shaText(value){const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value));return[...new Uint8Array(buf)].map(x=>x.toString(16).padStart(2,"0")).join("")}
-function buildPlacements(entries){const out=[];if(state.mode==="ready"){let y=0;entries.forEach(e=>{for(let n=1;n<=e.ready_copies;n++){const h=e.ready_length_m*100;out.push({file_id:e.file_id,piece_number:n,x_cm:0,y_cm:y,width_cm:58,height_cm:h,rotated:false});y+=h}});return out}let x=0,y=0,rowH=0;entries.forEach(e=>{for(let n=1;n<=e.quantity;n++){let w=e.width_cm,h=e.height_cm,rotated=false;if(w>58&&h<=58){[w,h]=[h,w];rotated=true}if(w>58)throw new Error(e.file_name+" dépasse la largeur de 58 cm");if(x>0&&x+w>58){x=0;y+=rowH+.5;rowH=0}out.push({file_id:e.file_id,piece_number:n,x_cm:x,y_cm:y,width_cm:w,height_cm:h,rotated});x+=w+.5;rowH=Math.max(rowH,h)}});return out}
+const ROLL_WIDTH_CM=58,LAYOUT_GAP_CM=.5;
+function pieceOrientations(piece){
+ const choices=[];
+ const add=(w,h,rotated)=>{w=Number(w);h=Number(h);if(!(w>0&&h>0)||w>ROLL_WIDTH_CM+1e-9)return;if(!choices.some(x=>Math.abs(x.width_cm-w)<1e-9&&Math.abs(x.height_cm-h)<1e-9))choices.push({width_cm:w,height_cm:h,rotated})};
+ add(piece.width_cm,piece.height_cm,false);
+ if(piece.rotation_allowed!==false)add(piece.height_cm,piece.width_cm,true);
+ return choices
+}
+function sortVisualPieces(pieces,strategy){
+ const score=p=>strategy==="area"?p.width_cm*p.height_cm:strategy==="height"?Math.max(p.height_cm,p.width_cm<=ROLL_WIDTH_CM?p.width_cm:0):strategy==="width"?Math.max(p.width_cm,p.height_cm<=ROLL_WIDTH_CM?p.height_cm:0):Math.max(p.width_cm,p.height_cm);
+ return [...pieces].sort((a,b)=>score(b)-score(a)||b.width_cm*b.height_cm-a.width_cm*a.height_cm||String(a.file_id).localeCompare(String(b.file_id))||a.piece_number-b.piece_number)
+}
+function packVisualPieces(pieces,strategy){
+ const shelves=[],placements=[];
+ for(const piece of sortVisualPieces(pieces,strategy)){
+  const orientations=pieceOrientations(piece);
+  if(!orientations.length)throw new Error(piece.file_name+" dépasse la largeur de 58 cm, même après rotation");
+  let best=null;
+  shelves.forEach((shelf,shelfIndex)=>orientations.forEach(o=>{
+   const gap=shelf.used_width>0?LAYOUT_GAP_CM:0,x=shelf.used_width+gap;
+   if(x+o.width_cm<=ROLL_WIDTH_CM+1e-9&&o.height_cm<=shelf.height_cm+1e-9){
+    const score=(ROLL_WIDTH_CM-x-o.width_cm)+(shelf.height_cm-o.height_cm)*.25;
+    if(!best||score<best.score)best={score,shelfIndex,x,...o}
+   }
+  }));
+  if(best){
+   const shelf=shelves[best.shelfIndex];
+   placements.push({file_id:piece.file_id,piece_number:piece.piece_number,x_cm:best.x,y_cm:shelf.y_cm,width_cm:best.width_cm,height_cm:best.height_cm,rotated:best.rotated});
+   shelf.used_width=best.x+best.width_cm
+  }else{
+   const o=[...orientations].sort((a,b)=>a.height_cm-b.height_cm||b.width_cm-a.width_cm)[0];
+   const previous=shelves[shelves.length-1],y=previous?previous.y_cm+previous.height_cm+LAYOUT_GAP_CM:0;
+   shelves.push({y_cm:y,height_cm:o.height_cm,used_width:o.width_cm});
+   placements.push({file_id:piece.file_id,piece_number:piece.piece_number,x_cm:0,y_cm:y,width_cm:o.width_cm,height_cm:o.height_cm,rotated:o.rotated})
+  }
+ }
+ return{placements,length_cm:shelves.length?shelves[shelves.length-1].y_cm+shelves[shelves.length-1].height_cm:0}
+}
+function buildPlacements(entries){
+ if(state.mode==="ready"){
+  const out=[];let y=0;
+  entries.forEach(e=>{for(let n=1;n<=Math.floor(Number(e.ready_copies)||0);n++){const h=Number(e.ready_length_m)*100;if(!(h>0))throw new Error("Longueur invalide pour "+e.file_name);out.push({file_id:e.file_id,piece_number:n,x_cm:0,y_cm:y,width_cm:ROLL_WIDTH_CM,height_cm:h,rotated:false});y+=h}});
+  return out
+ }
+ const pieces=[];
+ entries.forEach(e=>{
+  const width=Number(e.width_cm),height=Number(e.height_cm),quantity=Math.floor(Number(e.quantity)||0);
+  if(!(width>0&&height>0&&quantity>0))throw new Error("Dimensions ou quantité invalides pour "+e.file_name);
+  for(let n=1;n<=quantity;n++)pieces.push({file_id:e.file_id,file_name:e.file_name,piece_number:n,width_cm:width,height_cm:height,rotation_allowed:e.rotation_allowed!==false})
+ });
+ const candidates=["max","area","height","width"].map(strategy=>packVisualPieces(pieces,strategy));
+ candidates.sort((a,b)=>a.length_cm-b.length_cm||a.placements.filter(x=>x.rotated).length-b.placements.filter(x=>x.rotated).length);
+ return candidates[0].placements
+}
+function placementLengthCm(placements){return placements.reduce((max,p)=>Math.max(max,Number(p.y_cm)+Number(p.height_cm)),0)}
+function currentEstimateEntries(){return state.files.map((f,i)=>state.mode==="visual"?{file_id:f.id,file_name:f.file.name,width_cm:Number(f.width),height_cm:Number(f.height),quantity:Number(f.quantity),rotation_allowed:true,sort_order:i}:{file_id:f.id,file_name:f.file.name,ready_length_m:Number(f.length),ready_copies:Number(f.copies),quantity:Number(f.copies),rotation_allowed:false,sort_order:i})}
+function updateOrderEstimate(){
+ const metersEl=$("estimatedMeters"),piecesEl=$("estimatedPieces"),lengthEl=$("estimatedLength"),noteEl=$("estimatedNote");
+ if(!metersEl)return;
+ if(!state.files.length){metersEl.textContent="0,00 m";piecesEl.textContent="0";lengthEl.textContent="0 cm";if(noteEl)noteEl.textContent="Ajoutez vos fichiers et leurs dimensions.";return}
+ try{
+  const entries=currentEstimateEntries(),placements=buildPlacements(entries),lengthCm=placementLengthCm(placements),pieces=placements.length;
+  metersEl.textContent=(lengthCm/100).toLocaleString("fr-DZ",{minimumFractionDigits:2,maximumFractionDigits:2})+" m";
+  piecesEl.textContent=pieces.toLocaleString("fr-DZ");
+  lengthEl.textContent=lengthCm.toLocaleString("fr-DZ",{maximumFractionDigits:1})+" cm";
+  if(noteEl)noteEl.textContent=state.mode==="visual"?"Placement optimisé avec rotation et espacement de 0,5 cm.":"Longueur totale des fichiers prêts.";
+ }catch(err){metersEl.textContent="—";piecesEl.textContent="—";lengthEl.textContent="—";if(noteEl)noteEl.textContent=err.message}
+}
 function setProgress(done,total,text){const pct=Math.max(0,Math.min(100,Math.round(done/Math.max(total,1)*100)));$("uploadProgress").classList.remove("hidden");$("progressText").textContent=text;$("progressPercent").textContent=pct+"%";$("progressBar").style.width=pct+"%"}
 function b64(s){return btoa(unescape(encodeURIComponent(s)))}
 async function uploadFile(file,path,onProgress){if(file.size<=6*1024*1024){const r=await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${pathEncode(path)}`,{method:"POST",headers:{...headers(false),"Content-Type":file.type||"application/octet-stream","x-upsert":"false"},body:file});if(!r.ok)throw new Error((await r.text())||"Échec upload");onProgress(file.size);return}
