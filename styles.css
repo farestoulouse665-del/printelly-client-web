@@ -240,3 +240,11 @@ textarea{resize:vertical}
 .stopdesk-badge{width:max-content;padding:4px 7px;border-radius:99px;background:#d9f5e9;color:#087a53;font-size:9px;font-weight:950;letter-spacing:.08em}
 .profile-delivery-editor{margin-top:8px}
 @media(max-width:640px){.delivery-choices{grid-template-columns:1fr}.delivery-location{padding:13px}}
+
+.layout-estimate{padding:16px;border:1px solid #f1cbc8;border-radius:14px;background:linear-gradient(135deg,#fff7f6,#fff);text-align:center}
+.layout-estimate small{display:block;color:var(--red);font-size:8px;font-weight:950;letter-spacing:.12em}
+.layout-estimate>strong{display:block;margin:7px 0 5px;font-size:29px;letter-spacing:-.04em}
+.layout-estimate>span{display:block;color:#646a74;font-size:9px}
+.layout-estimate>span b{color:var(--ink)}
+.layout-estimate p{margin:9px 0 0;padding-top:9px;border-top:1px solid #f2dddb;color:#858b95;font-size:8px;line-height:1.45}
+.delivery-summary-label{margin-top:17px}
