@@ -287,7 +287,7 @@
       try{
         remover.background=hexToRgb(ui.bgColor.value);
         var result=buildBaseMask(remover.sourceData,remover.previewWidth,remover.previewHeight,remover.background,Number(ui.tolerance.value));
-        remover.baseMask=result.mask;remover.removed=result.removed;remover.actions=[];remover.redo=[];
+        remover.baseMask=result.mask;remover.removed=result.removed;
         updateButtons();renderPreview()
       }catch(error){setMessage("Analyse impossible : "+error.message,"error")}
     },20)
@@ -356,7 +356,7 @@
     document.querySelectorAll("[data-br-tool]").forEach(function(button){
       var active=button.dataset.brTool===tool;button.classList.toggle("active",active);button.setAttribute("aria-pressed",active?"true":"false")
     });
-    ui.cursor.classList.toggle("hidden",tool==="pan")
+    ui.cursor.classList.add("hidden")
   }
 
   function canvasPoint(event){
