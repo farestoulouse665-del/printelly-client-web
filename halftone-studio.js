@@ -267,8 +267,7 @@
     if(!width||!height)throw new Error("Dimensions de l’image introuvables.");
     if(width*height>80000000)throw new Error("L’image est trop grande. Maximum conseillé : 80 mégapixels.");
     studio.file=file;studio.image=image;studio.originalWidth=width;studio.originalHeight=height;
-    var scale=Math.min(1,1600/Math.max(width,height),2500000/(width*height));
-    scale=Math.min(1,Math.sqrt(scale));
+    var scale=Math.min(1,1600/Math.max(width,height),Math.sqrt(2500000/(width*height)));
     var previewWidth=Math.max(1,Math.round(width*scale)),previewHeight=Math.max(1,Math.round(height*scale));
     var source=document.createElement("canvas"),ctx=source.getContext("2d",{willReadFrequently:true});
     source.width=previewWidth;source.height=previewHeight;ctx.drawImage(image,0,0,previewWidth,previewHeight);
