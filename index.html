@@ -7,6 +7,7 @@
   <meta name="description" content="PRINTELLY Client — commandes DTF, production et livraison">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./halftone-studio.css">
   <title>PRINTELLY — Espace client DTF</title>
 </head>
 <body>
@@ -25,6 +26,7 @@
     <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></symbol>
     <symbol id="i-logout" viewBox="0 0 24 24"><path d="M10 5H4v14h6M14 8l4 4-4 4M8 12h10"/></symbol>
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5"/></symbol>
+    <symbol id="i-halftone" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="14" cy="6" r="1.7"/><circle cx="20" cy="6" r=".8"/><circle cx="6" cy="14" r="1.7"/><circle cx="14" cy="14" r="2.5"/><circle cx="20" cy="14" r="1.2"/><circle cx="6" cy="20" r=".8"/><circle cx="14" cy="20" r="1.2"/><circle cx="20" cy="20" r="2.2"/></symbol>
   </svg>
 
   <header class="public-topbar">
@@ -98,6 +100,7 @@
       <nav class="tabs side-nav" aria-label="Navigation principale">
         <button class="active" data-view="dashboard"><svg class="icon"><use href="#i-home"/></svg>Tableau de bord</button>
         <button data-view="new-order"><svg class="icon"><use href="#i-plus"/></svg>Nouvelle commande</button>
+        <button class="js-halftone-nav" data-view="halftone"><svg class="icon"><use href="#i-halftone"/></svg>Studio Halftone</button>
         <button data-view="orders"><svg class="icon"><use href="#i-box"/></svg>Mes commandes</button>
         <button data-view="notifications"><svg class="icon"><use href="#i-bell"/></svg>Notifications<span id="notificationCount" class="nav-count">0</span></button>
         <button data-view="profile"><svg class="icon"><use href="#i-user"/></svg>Mon profil</button>
@@ -209,6 +212,83 @@
           </form>
         </section>
 
+        <section id="halftoneView" class="app-page ht-page hidden">
+          <div class="page-head">
+            <div><p class="eyebrow">OUTIL GRATUIT • TRAITEMENT LOCAL</p><h2>Studio Halftone</h2><p>Préparez un PNG tramé, transparent et prêt pour l’impression DTF.</p></div>
+          </div>
+          <div class="ht-local-note"><svg class="icon"><use href="#i-check"/></svg><span>Votre image reste sur votre appareil. Le fond est détecté uniquement depuis les bords : un texte noir isolé au milieu d’un fond noir reste protégé.</span></div>
+
+          <div class="ht-workspace">
+            <aside class="panel ht-controls">
+              <section class="ht-control-section">
+                <div class="ht-section-head"><div><h3>1. Votre image</h3><p>PNG, JPG ou WebP • maximum 45 Mo</p></div></div>
+                <input id="htFileInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
+                <div id="htDropzone" class="ht-dropzone">
+                  <span class="upload-circle"><svg class="icon"><use href="#i-upload"/></svg></span>
+                  <strong>Déposez votre design ici</strong>
+                  <span>ou sélectionnez-le depuis votre appareil</span>
+                  <button id="htPickFile" class="secondary" type="button">CHOISIR UNE IMAGE</button>
+                </div>
+              </section>
+
+              <section class="ht-control-section">
+                <div class="ht-section-head"><div><h3>2. Fond intelligent</h3><p>Suppression connectée aux bords uniquement</p></div></div>
+                <label class="ht-switch"><input id="htRemoveBackground" type="checkbox" checked><span><strong>Retirer le fond extérieur</strong><small>Les éléments de même couleur au centre sont conservés.</small></span></label>
+                <div class="ht-color-row">
+                  <label>Couleur du fond<div class="ht-color-field"><input id="htBackgroundColor" type="color" value="#000000"><span>Couleur détectée</span></div></label>
+                  <button id="htAutoBackground" class="secondary ht-auto-btn" type="button">AUTO</button>
+                </div>
+                <label class="ht-range"><span>Tolérance du fond <output id="htToleranceValue">18 %</output></span><input id="htTolerance" type="range" min="0" max="60" value="18"></label>
+                <div class="ht-protect-note"><svg class="icon"><use href="#i-check"/></svg><span>Protection intérieure active : la couleur n’est jamais supprimée dans toute l’image.</span></div>
+              </section>
+
+              <section class="ht-control-section">
+                <div class="ht-section-head"><div><h3>3. Trame professionnelle</h3><p>Réglez la précision et le rendu d’impression</p></div></div>
+                <div class="ht-presets">
+                  <button type="button" data-ht-preset="fine">DÉTAILLÉ</button>
+                  <button type="button" data-ht-preset="standard">STANDARD</button>
+                  <button type="button" data-ht-preset="strong">FORT</button>
+                </div>
+                <label class="ht-range"><span>Finesse des points <output id="htCellSizeValue">10 px</output></span><input id="htCellSize" type="range" min="4" max="24" value="10"></label>
+                <label class="ht-range"><span>Angle de trame <output id="htAngleValue">22°</output></span><input id="htAngle" type="range" min="-45" max="90" value="22"></label>
+                <label class="ht-range"><span>Couverture d’encre <output id="htCoverageValue">78 %</output></span><input id="htCoverage" type="range" min="30" max="100" value="78"></label>
+                <div class="ht-select-grid">
+                  <label>Forme<select id="htShape"><option value="circle">Points ronds</option><option value="square">Carrés</option><option value="diamond">Losanges</option></select></label>
+                  <label>Couleurs<select id="htColorMode"><option value="color">Couleurs originales</option><option value="mono">Monochrome noir</option></select></label>
+                </div>
+              </section>
+            </aside>
+
+            <div class="ht-preview-column">
+              <article class="panel ht-preview-panel">
+                <div class="ht-preview-toolbar">
+                  <div class="ht-view-tabs"><button class="active" type="button" data-ht-view="result">RÉSULTAT</button><button type="button" data-ht-view="original">ORIGINAL</button></div>
+                  <span id="htImageMeta" class="ht-image-meta">Aucune image chargée</span>
+                </div>
+                <div class="ht-canvas-shell">
+                  <canvas id="htOriginalCanvas" class="hidden" aria-label="Aperçu original"></canvas>
+                  <canvas id="htResultCanvas" class="hidden" aria-label="Aperçu Halftone"></canvas>
+                  <div id="htPreviewEmpty" class="ht-preview-empty"><strong>Votre aperçu apparaîtra ici</strong><span>Le damier représente la transparence qui sera conservée dans le PNG.</span></div>
+                </div>
+                <div class="ht-preview-footer"><span id="htResultInfo">Ajoutez une image pour commencer.</span><span>PNG • transparence • 300 DPI</span></div>
+              </article>
+
+              <article class="panel">
+                <div class="ht-summary">
+                  <div id="htBackgroundInfo" class="ht-info-card"><svg class="icon"><use href="#i-halftone"/></svg><div><strong>Fond intelligent</strong><span>En attente d’une image.</span></div></div>
+                  <div id="htQualityInfo" class="ht-info-card"><svg class="icon"><use href="#i-meter"/></svg><div><strong>Qualité d’impression</strong><span>Les dimensions seront vérifiées automatiquement.</span></div></div>
+                </div>
+                <div class="ht-actions">
+                  <button id="htReset" class="secondary" type="button">RÉINITIALISER</button>
+                  <button id="htDownload" class="secondary" type="button" disabled>TÉLÉCHARGER LE PNG</button>
+                  <button id="htAddToOrder" class="primary" type="button" disabled>AJOUTER À MA COMMANDE</button>
+                </div>
+                <p id="htMessage" class="ht-message"></p>
+              </article>
+            </div>
+          </div>
+        </section>
+
         <section id="notificationsView" class="app-page hidden">
           <div class="page-head notification-page-head">
             <div><p class="eyebrow">CENTRE D’ACTIVITÉ</p><h2>Notifications</h2><p>Chaque étape envoyée par l’Admin apparaît ici.</p></div>
@@ -260,6 +340,7 @@
       <nav class="tabs mobile-nav" aria-label="Navigation mobile">
         <button class="active" data-view="dashboard"><svg class="icon"><use href="#i-home"/></svg><span>Accueil</span></button>
         <button data-view="new-order"><svg class="icon"><use href="#i-plus"/></svg><span>Commander</span></button>
+        <button class="js-halftone-nav" data-view="halftone"><svg class="icon"><use href="#i-halftone"/></svg><span>Halftone</span></button>
         <button data-view="orders"><svg class="icon"><use href="#i-box"/></svg><span>Commandes</span></button>
         <button data-view="notifications"><svg class="icon"><use href="#i-bell"/></svg><span>Alertes</span></button>
         <button data-view="profile"><svg class="icon"><use href="#i-user"/></svg><span>Profil</span></button>
@@ -270,5 +351,6 @@
   <footer class="public-footer">PRINTELLY • Production DTF professionnelle</footer>
   <div id="toast" role="status"></div>
   <script src="./app.js" defer></script>
+  <script src="./halftone-studio.js" defer></script>
 </body>
 </html>
