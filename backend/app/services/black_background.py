@@ -80,6 +80,11 @@ def _smart_components(
         cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3),
         cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3),
     )
+    near_bright = cv2.dilate(
+        (gray >= 112.0).astype(np.uint8),
+        np.ones((9, 9), np.uint8),
+        iterations=1,
+    ).astype(bool)
     selected = np.zeros(count, dtype=bool)
     minimum_region = max(48, int(pixel_count * 0.00035))
     dominant_region = max(minimum_region, int(pixel_count * 0.01))
@@ -94,6 +99,15 @@ def _smart_components(
         region = labels == label
         semantic_mean = float(np.mean(semantic_mask[region]))
         edge_fraction = float(np.mean(gradient[region] >= 20.0))
+        bright_contact = float(np.mean(near_bright[region]))
+        component_width = int(stats[label, cv2.CC_STAT_WIDTH])
+        component_height = int(stats[label, cv2.CC_STAT_HEIGHT])
+        thin_limit = max(10, round(min(height, width) * 0.04))
+        if (
+            bright_contact >= 0.45
+            and min(component_width, component_height) <= thin_limit
+        ):
+            continue
         if semantic_mean < 0.08 and (
             area >= dominant_region or edge_fraction < 0.18
         ):
