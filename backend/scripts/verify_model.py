@@ -20,7 +20,7 @@ def main() -> int:
     parser.add_argument(
         "--model",
         type=Path,
-        default=Path("../models/background-removal.onnx"),
+        default=Path(__file__).resolve().parents[2] / "models/background-removal.onnx",
     )
     parser.add_argument("--sha256", default="")
     parser.add_argument("--load", action="store_true", help="Charge aussi le graphe ONNX.")
