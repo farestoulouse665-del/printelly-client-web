@@ -55,6 +55,7 @@ test("quality inspector finds enclosed transparent holes", () => {
   const height = 7;
   const alpha = new Float32Array(width * height).fill(1);
   alpha[3 * width + 3] = 0;
+  alpha[3 * width + 4] = 0;
   const report = inspector.inspect(pixels(width, height), alpha, width, height, { microPixelLimit: 2 });
   assert.equal(report.holes.length, 1);
   assert.ok(report.issues.some(issue => issue.type === "holes"));
