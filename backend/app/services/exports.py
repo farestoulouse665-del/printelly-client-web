@@ -31,8 +31,29 @@ class ExportService:
                 y1, x1 = positions.max(axis=0)
                 image = image.crop((int(x0), int(y0), int(x1) + 1, int(y1) + 1))
 
+        export_dpi = float(request.dpi)
+        if request.scale_factor > 1:
+            scaled_width = max(1, round(image.width * request.scale_factor))
+            scaled_height = max(1, round(image.height * request.scale_factor))
+            image = image.resize(
+                (scaled_width, scaled_height),
+                Image.Resampling.LANCZOS,
+            )
+            if request.width_cm:
+                export_dpi = image.width / (request.width_cm / 2.54)
+        elif request.width_cm and request.resize_to_target:
+            width_pixels = max(1, round(request.width_cm / 2.54 * request.dpi))
+            height_pixels = max(1, round(image.height * width_pixels / image.width))
+            image = image.resize(
+                (width_pixels, height_pixels),
+                Image.Resampling.LANCZOS,
+            )
+        elif request.width_cm:
+            # Keep exact pixels and encode their honest physical resolution.
+            export_dpi = image.width / (request.width_cm / 2.54)
+
         if request.margin_mm > 0:
-            margin = round(request.margin_mm / 25.4 * request.dpi)
+            margin = round(request.margin_mm / 25.4 * export_dpi)
             canvas = Image.new(
                 "RGBA",
                 (image.width + margin * 2, image.height + margin * 2),
@@ -40,11 +61,6 @@ class ExportService:
             )
             canvas.alpha_composite(image, (margin, margin))
             image = canvas
-
-        if request.width_cm:
-            width_pixels = max(1, round(request.width_cm / 2.54 * request.dpi))
-            height_pixels = max(1, round(image.height * width_pixels / image.width))
-            image = image.resize((width_pixels, height_pixels), Image.Resampling.LANCZOS)
 
         output = BytesIO()
         if request.format == "dtf_report_json":
@@ -88,10 +104,15 @@ class ExportService:
         if request.format == "pdf_preview":
             background = Image.new("RGB", image.size, (255, 255, 255))
             background.paste(image, mask=image.getchannel("A"))
-            background.save(output, format="PDF", resolution=request.dpi)
+            background.save(output, format="PDF", resolution=export_dpi)
             return output.getvalue(), "application/pdf", ".preview.pdf"
 
-        image.save(output, format="PNG", optimize=True, dpi=(request.dpi, request.dpi))
+        image.save(
+            output,
+            format="PNG",
+            optimize=True,
+            dpi=(export_dpi, export_dpi),
+        )
         return output.getvalue(), "image/png", ".png"
 
     @staticmethod
