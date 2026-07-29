@@ -43,3 +43,25 @@ def test_export_can_return_an_empty_preview_for_manual_restoration():
     payload = export_png(image, np.zeros((2, 2), dtype=np.float32), decontaminate=False)
     with Image.open(BytesIO(payload)) as result:
         assert result.getchannel("A").getextrema() == (0, 0)
+
+
+
+def test_export_recovers_foreground_rgb_from_a_white_matte():
+    image = Image.new("RGB", (7, 7), "white")
+    image.putpixel((3, 3), (255, 128, 128))
+    alpha = np.zeros((7, 7), dtype=np.float32)
+    alpha[3, 3] = 0.5
+
+    payload = export_png(
+        image,
+        alpha,
+        decontaminate=False,
+        recover_spill=True,
+    )
+
+    with Image.open(BytesIO(payload)) as result:
+        red, green, blue, opacity = result.getpixel((3, 3))
+        assert red >= 250
+        assert green < 40
+        assert blue < 40
+        assert 126 <= opacity <= 129
