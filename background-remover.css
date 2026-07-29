@@ -356,13 +356,31 @@ body.br-studio-active .br-workspace{
   min-height:0;
   max-height:none;
 }
-.br-panel-toggles .br-exit-studio{
-  margin-left:auto;
-  border-color:#20242a;
-  background:#20242a;
+.br-canvas-fullscreen{
+  position:absolute;
+  z-index:6;
+  top:12px;
+  right:12px;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  min-height:34px;
+  padding:8px 12px;
+  border:1px solid rgba(17,19,24,.18);
+  border-radius:10px;
+  background:rgba(32,36,42,.94);
   color:#fff;
+  box-shadow:0 7px 20px rgba(17,19,24,.18);
+  backdrop-filter:blur(10px);
+  font-size:7px;
+  font-weight:950;
+  letter-spacing:.06em;
+  cursor:pointer;
 }
-.br-panel-toggles .br-exit-studio:hover{border-color:var(--red);background:var(--red);color:#fff}
+.br-canvas-fullscreen span{font-size:14px;line-height:1}
+.br-canvas-fullscreen:hover,.br-canvas-fullscreen.active{border-color:var(--red);background:var(--red);color:#fff}
+.br-canvas-fullscreen:focus-visible{outline:3px solid rgba(214,49,43,.25);outline-offset:2px}
+@media(max-width:600px){.br-canvas-fullscreen{top:8px;right:8px;min-height:32px;padding:7px 10px}}
 @media(max-width:1100px){
   body.br-studio-active .app-content{padding:6px;overflow:auto}
   body.br-studio-active #bgRemoverView{height:auto;min-height:100dvh}
