@@ -31,6 +31,28 @@ def serialize_quote(quote: Quote) -> QuoteOut:
     )
 
 
+@router.post("/quotes/preview", response_model=QuoteOut)
+def preview_quote(
+    body: QuoteCreateIn,
+    guest: GuestSession = Depends(current_guest),
+    database: Session = Depends(get_db),
+) -> QuoteOut:
+    for line in body.lines:
+        asset_service.owned_asset(database, line.asset_id, guest.id)
+    calculated = pricing_service.calculate(body)
+    return QuoteOut(
+        id="preview",
+        currency="DZD",
+        subtotal_dzd=calculated.subtotal_dzd,
+        discount_dzd=calculated.discount_dzd,
+        fees_dzd=calculated.fees_dzd,
+        delivery_dzd=calculated.delivery_dzd,
+        total_dzd=calculated.total_dzd,
+        breakdown=calculated.breakdown,
+        expires_at=calculated.expires_at,
+    )
+
+
 @router.post("/quotes", response_model=QuoteOut, status_code=201)
 def create_quote(
     body: QuoteCreateIn,
