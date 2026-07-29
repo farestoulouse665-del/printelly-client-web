@@ -319,3 +319,26 @@ class HealthOut(BaseModel):
     model_name: str
     execution_provider: str | None
     privacy: str = "Aucun fichier client n’est envoyé à un service tiers."
+
+
+class ExportCreateIn(BaseModel):
+    asset_id: str
+    format: Literal["png", "alpha_png", "preview_jpg", "underbase_jpg"] = "png"
+    preserve_canvas: bool = True
+    crop_to_content: bool = False
+    margin_mm: float = Field(default=0, ge=0, le=100)
+    width_cm: float | None = Field(default=None, gt=0, le=2000)
+    dpi: int = Field(default=300, ge=36, le=1200)
+    remove_sensitive_metadata: bool = True
+    quantity: int = Field(default=1, ge=1, le=10000)
+
+
+class ExportOut(BaseModel):
+    id: str
+    asset_id: str
+    format: str
+    status: str
+    filename: str
+    byte_size: int
+    download_url: str
+    created_at: datetime
