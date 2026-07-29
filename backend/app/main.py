@@ -54,7 +54,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.state.processing_slots = asyncio.Semaphore(max(1, settings.max_concurrent_jobs))
-app.state.rate_limiter = LocalRateLimiter(\n    settings.rate_limit_per_minute,\n    trust_proxy_headers=settings.trust_proxy_headers,\n)
+app.state.rate_limiter = LocalRateLimiter(
+    settings.rate_limit_per_minute,
+    trust_proxy_headers=settings.trust_proxy_headers,
+)
 
 app.add_middleware(
     CORSMiddleware,
