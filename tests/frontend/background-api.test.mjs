@@ -4,6 +4,7 @@ import test from "node:test";
 import vm from "node:vm";
 
 const source = await readFile(new URL("../../background-removal-api.js", import.meta.url), "utf8");
+const editorSource = await readFile(new URL("../../background-remover.js", import.meta.url), "utf8");
 
 test("typed client sends semantic mode and refinement options", async () => {
   let captured;
@@ -60,4 +61,11 @@ test("service worker excludes private API responses from cache", async () => {
   const worker = await readFile(new URL("../../sw.js", import.meta.url), "utf8");
   assert.match(worker, /pathname\.startsWith\("\/api\/"\)/);
   assert.match(worker, /printelly-client-v35/);
+});
+
+
+test("private HTTPS sharing uses the frontend origin for API requests", () => {
+  assert.match(editorSource, /return window\.location\.origin/);
+  assert.match(editorSource, /!isLocalPage && savedIsLocal/);
+  assert.doesNotMatch(editorSource, /if \(saved !== null\) return saved;\s*return "http:\/\/localhost:8000";/);
 });
