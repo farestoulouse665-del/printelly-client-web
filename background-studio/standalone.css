@@ -1,0 +1,81 @@
+:root{color-scheme:light}
+
+body.br-standalone{
+  min-height:100dvh;
+  margin:0;
+  background:
+    radial-gradient(circle at 15% -10%,rgba(214,49,43,.10),transparent 30rem),
+    #eef0f3;
+}
+
+.br-standalone-header{
+  position:sticky;
+  top:0;
+  z-index:40;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  border-bottom:1px solid rgba(17,19,24,.08);
+  background:rgba(255,255,255,.94);
+  backdrop-filter:blur(14px);
+}
+
+.br-standalone-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:10px;
+}
+
+.br-standalone-actions .secondary{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:36px;
+  padding:0 14px;
+  text-decoration:none;
+}
+
+.br-standalone-main{
+  box-sizing:border-box;
+  width:100%;
+  max-width:1920px;
+  margin:0 auto;
+  padding:18px clamp(10px,2vw,30px) 30px;
+}
+
+.br-standalone #bgRemoverView{
+  display:flex;
+  flex-direction:column;
+  width:100%;
+}
+
+.br-standalone #brAddToOrder{
+  display:none!important;
+}
+
+body.br-studio-active .br-standalone-main{
+  width:100%;
+  max-width:none;
+  height:100dvh;
+  margin:0;
+  padding:8px;
+  overflow:hidden;
+}
+
+body.br-studio-active .br-standalone-header{
+  display:none!important;
+}
+
+@media(max-width:760px){
+  .br-standalone-header{align-items:flex-start;padding:12px}
+  .br-standalone-actions{align-items:flex-end;flex-direction:column}
+  .br-standalone-actions .connection-badge{font-size:7px}
+  .br-standalone-main{padding:12px 8px 24px}
+}
+
+@media(max-width:480px){
+  .br-standalone-header .brand small{display:none}
+  .br-standalone-actions .connection-badge{display:none}
+}
