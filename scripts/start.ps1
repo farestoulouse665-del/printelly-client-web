@@ -23,4 +23,4 @@ if ($Gpu) {
     docker compose up -d --build
 }
 docker compose ps
-Write-Host "PRINTELLY Background Studio: http://localhost:8080"
+Write-Host "TransferLab: http://localhost:8080"
