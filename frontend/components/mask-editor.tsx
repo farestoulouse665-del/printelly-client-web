@@ -94,7 +94,8 @@ export function MaskEditor({ assetId }: { assetId: string }) {
   const [viewport, setViewport] = useState({ width: 900, height: 650 });
   const [tool, setTool] = useState<Tool>("restore_brush");
   const [preview, setPreview] = useState<Preview>("result");
-  const [background, setBackground] = useState<"checker" | "white" | "black" | "gray">("checker");
+  const [background, setBackground] = useState<"checker" | "white" | "black" | "gray" | "custom">("checker");
+  const [customBackground, setCustomBackground] = useState("#365cf5");
   const [zoom, setZoom] = useState(1);
   const [brushSize, setBrushSize] = useState(0.035);
   const [hardness, setHardness] = useState(0.8);
@@ -251,7 +252,7 @@ export function MaskEditor({ assetId }: { assetId: string }) {
         <div ref={container} className={`editor-canvas ${background}`}>
           <Stage ref={stage} width={viewport.width} height={viewport.height} onMouseDown={begin} onTouchStart={begin} onMouseMove={move} onTouchMove={move} onMouseUp={() => setDrawing(false)} onTouchEnd={() => setDrawing(false)} onWheel={(event) => { event.evt.preventDefault(); setZoom((value) => Math.max(0.25, Math.min(4, value + (event.evt.deltaY < 0 ? 0.1 : -0.1)))); }}>
             <Layer>
-              {background !== "checker" && <Rect x={frame.x} y={frame.y} width={frame.width} height={frame.height} fill={background === "white" ? "#fff" : background === "black" ? "#111" : "#888"} />}
+              {background !== "checker" && <Rect x={frame.x} y={frame.y} width={frame.width} height={frame.height} fill={background === "white" ? "#fff" : background === "black" ? "#111" : background === "gray" ? "#888" : customBackground} />}
               {visibleImage && <KonvaImage image={visibleImage} {...frame} />}
               {overlay && <KonvaImage image={overlay} {...frame} />}
               {linePoints.length >= 2 && <Line points={linePoints} stroke={stroke} strokeWidth={Math.max(2, brushSize * Math.min(frame.width, frame.height) * 2)} opacity={0.55} lineCap="round" lineJoin="round" closed={tool.startsWith("lasso")} />}
@@ -259,7 +260,7 @@ export function MaskEditor({ assetId }: { assetId: string }) {
             </Layer>
           </Stage>
         </div>
-        <div className="editor-bottombar"><span>Aperçu du fond</span>{(["checker", "white", "black", "gray"] as const).map((value) => <button type="button" key={value} className={`${value} ${background === value ? "active" : ""}`} onClick={() => setBackground(value)} aria-label={`Fond ${value}`} />)}<span className="editor-message" aria-live="polite">{message}</span></div>
+        <div className="editor-bottombar"><span>Aperçu du fond</span>{(["checker", "white", "black", "gray"] as const).map((value) => <button type="button" key={value} className={`${value} ${background === value ? "active" : ""}`} onClick={() => setBackground(value)} aria-label={`Fond ${value}`} />)}<input type="color" value={customBackground} onChange={(event) => { setCustomBackground(event.target.value); setBackground("custom"); }} aria-label="Choisir une couleur de prévisualisation" title="Fond personnalisé" /><span className="editor-message" aria-live="polite">{message}</span></div>
       </section>
     </div>
   );
