@@ -11,9 +11,9 @@ from app.models.entities import User
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Crée ou promeut un administrateur PRINTELLY.")
+    parser = argparse.ArgumentParser(description="Crée ou promeut un administrateur TransferLab.")
     parser.add_argument("--email", required=True)
-    parser.add_argument("--name", default="Administrateur PRINTELLY")
+    parser.add_argument("--name", default="Administrateur TransferLab")
     parser.add_argument("--password", default="")
     args = parser.parse_args()
 
