@@ -20,7 +20,10 @@ FastAPI
   -> masque sémantique du premier plan
   -> protection des objets, textes, logos et couleurs internes
   -> détection structurelle des fonds unis connectés aux bords
-  -> trimap et affinage alpha guidé par les contours de l'image
+  -> estimation de la couleur réelle du fond depuis les bords
+  -> récupération du matte alpha (voiles blancs, noirs ou colorés)
+  -> protection sémantique des micro-détails et couleurs identiques au fond
+  -> affinage alpha guidé par les contours et décontamination localisée
   -> fusion avec l'alpha déjà présent
   -> vérification du PNG RGBA
   -> suppression du fichier temporaire
@@ -147,7 +150,8 @@ serveur ».
 | `REQUEST_TIMEOUT_SECONDS` | `180` | délai maximal |
 | `CORS_ORIGINS` | origines locales + site PRINTELLY | liste séparée par virgules |
 | `ONNX_INTRA_OP_THREADS` | `0` | réglage automatique ONNX |
-| `ENABLE_API_DOCS` | `false` | active `/docs` en développement |\n| `TRUST_PROXY_HEADERS` | `false` | fait confiance à `X-Forwarded-For` seulement derrière un proxy contrôlé |
+| `ENABLE_API_DOCS` | `false` | active `/docs` en développement |
+| `TRUST_PROXY_HEADERS` | `false` | fait confiance à `X-Forwarded-For` seulement derrière un proxy contrôlé |
 
 Pour le GPU, installer `backend/requirements-gpu.txt` dans un environnement compatible
 CUDA/CuDNN et définir `BACKGROUND_DEVICE=cuda`. Le CPU reste la configuration de référence.
@@ -183,7 +187,9 @@ npm run test:frontend
 La CI exécute les tests sans poids ONNX grâce à un fournisseur factice. Elle couvre la
 validation, le nettoyage en erreur, la conservation des dimensions/RGB, l'alpha existant,
 le fond noir avec design blanc, les couleurs de fond présentes dans un sujet protégé,
-les designs multicolores, le pipeline, les en-têtes de sécurité, le client typé et le cache PWA.
+les designs multicolores, les halos blancs issus d'un ancien fond, les micro-détails,
+la récupération des couleurs de bord, le score de résidus, le pipeline, les en-têtes de
+sécurité, le client typé et le cache PWA.
 
 Les 20 images de recette ne sont pas fournies pour des raisons de droit et de
 confidentialité. Leur convention et les mesures attendues sont décrites dans
@@ -208,8 +214,10 @@ production.
   texture ni contexte, aucun modèle ne peut retrouver une information absente;
 - un JPEG aplati ne contient pas de vraie transparence : elle est estimée;
 - le modèle tiny privilégie le CPU et peut être moins précis que les variantes plus lourdes;
-- le nettoyage de halo est désactivé par défaut car il modifie volontairement le RGB des
-  seuls pixels de bord;
+- la récupération de matte est conservatrice; utilisez le niveau « Fort » et, si nécessaire,
+  la couleur de fond forcée pour un ancien fond blanc/noir particulièrement tenace;
+- la décontamination modifie uniquement le RGB des pixels semi-transparents du bord; le centre
+  du sujet et ses couleurs restent inchangés;
 - la sélection de plusieurs instances et le guidage par clic nécessitent un second modèle
   interactif; le pinceau manuel permet déjà de restaurer ou retirer localement le masque;
 - la recette visuelle réelle reste obligatoire pour les vêtements, cheveux, dentelles,
