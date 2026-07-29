@@ -32,6 +32,14 @@ def _detect_format(header: bytes) -> str | None:
     return None
 
 
+def _safe_unlink(path: Path) -> None:
+    """Best-effort cleanup that never hides the original upload error."""
+    try:
+        path.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
 def safe_output_name(filename: str | None) -> str:
     stem = Path(filename or "image").stem
     stem = re.sub(r"[^a-zA-Z0-9._-]+", "-", stem).strip("._-")[:80] or "image"
@@ -46,22 +54,37 @@ async def validate_upload(upload: UploadFile, config: Settings) -> ValidatedImag
             detail="Format refusé. Utilisez PNG, JPEG ou WEBP.",
         )
 
-    config.temp_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        config.temp_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Le stockage temporaire du serveur est inaccessible.",
+        ) from exc
+
     temp_path = config.temp_dir / f"{secrets.token_hex(16)}.upload"
     total = 0
     header = b""
     try:
-        with temp_path.open("wb") as target:
-            while chunk := await upload.read(1024 * 1024):
-                total += len(chunk)
-                if total > config.max_upload_bytes:
-                    raise HTTPException(
-                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                        detail=f"Le fichier dépasse {config.max_upload_mb} Mo.",
-                    )
-                if len(header) < 16:
-                    header = (header + chunk)[:16]
-                target.write(chunk)
+        try:
+            with temp_path.open("wb") as target:
+                while chunk := await upload.read(1024 * 1024):
+                    total += len(chunk)
+                    if total > config.max_upload_bytes:
+                        raise HTTPException(
+                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            detail=f"Le fichier dépasse {config.max_upload_mb} Mo.",
+                        )
+                    if len(header) < 16:
+                        header = (header + chunk)[:16]
+                    target.write(chunk)
+        except HTTPException:
+            raise
+        except OSError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Le serveur ne peut pas écrire le fichier temporaire.",
+            ) from exc
 
         detected = _detect_format(header)
         if detected is None:
@@ -104,7 +127,7 @@ async def validate_upload(upload: UploadFile, config: Settings) -> ValidatedImag
             temp_path=temp_path,
         )
     except Exception:
-        temp_path.unlink(missing_ok=True)
+        _safe_unlink(temp_path)
         raise
     finally:
         await upload.close()
