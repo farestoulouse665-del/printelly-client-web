@@ -41,3 +41,32 @@ def test_quality_warnings_cover_empty_and_opaque_masks():
     opaque = mask_warnings(np.ones((10, 10), dtype=np.float32))
     assert any("vide" in warning for warning in empty)
     assert any("peu" in warning for warning in opaque)
+
+
+class FailingIfCalledProvider:
+    name = "must-not-run"
+    device = "cpu"
+
+    def predict_mask(self, image: Image.Image, mode: RemovalMode) -> np.ndarray:
+        raise AssertionError("The model must not run for an already transparent PNG")
+
+
+def test_pipeline_preserves_a_real_source_alpha_without_resegmenting():
+    image = Image.new("RGBA", (20, 16), (0, 0, 0, 0))
+    for y in range(4, 12):
+        for x in range(5, 15):
+            image.putpixel((x, y), (20, 140, 230, 255))
+
+    pipeline = BackgroundRemovalPipeline(FailingIfCalledProvider())
+    result = pipeline.process(
+        image,
+        RemovalMode.auto,
+        RefinementOptions(refine=True, feather=1, edge_shift=0),
+        decontaminate=True,
+    )
+
+    assert result.report.source_alpha_preserved is True
+    with Image.open(BytesIO(result.png)) as exported:
+        exported.load()
+        assert exported.getpixel((0, 0))[3] == 0
+        assert exported.getpixel((10, 8)) == (20, 140, 230, 255)
