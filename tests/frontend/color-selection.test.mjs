@@ -5,7 +5,7 @@ import vm from "node:vm";
 
 const source = await readFile(new URL("../../background-color-selection.js", import.meta.url), "utf8");
 const editorSource = await readFile(new URL("../../background-remover.js", import.meta.url), "utf8");
-const htmlSource = await readFile(new URL("../../index.html", import.meta.url), "utf8");
+const htmlSource = await readFile(new URL("../../background-studio/index.html", import.meta.url), "utf8");
 const dockerfileSource = await readFile(new URL("../../Dockerfile.frontend", import.meta.url), "utf8");
 
 function loadEngine() {
