@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from app.models.schemas import RemovalMode
+from app.models.schemas import BackgroundCleanup, RemovalMode
 
 
 @dataclass(frozen=True)
@@ -14,6 +14,17 @@ class RefinementOptions:
     refine: bool = True
     feather: float = 1.0
     edge_shift: int = 0
+    background_cleanup: BackgroundCleanup = BackgroundCleanup.normal
+    protect_details: bool = True
+    remove_haze: bool = True
+    background_color: str | None = None
+
+
+@dataclass(frozen=True)
+class BackgroundEstimate:
+    mask: np.ndarray
+    rgb: tuple[int, int, int]
+    confidence: float
 
 
 def _remove_isolated_specks(mask: np.ndarray, min_area: int) -> np.ndarray:
@@ -32,7 +43,6 @@ def _remove_isolated_specks(mask: np.ndarray, min_area: int) -> np.ndarray:
         touches_edge = x == 0 or y == 0 or x + w == width or y + h == height
         if area >= min_area or touches_edge:
             keep[labels == label] = 1
-    # Only erase confident foreground noise; retain soft semantic detail.
     return np.where((binary == 1) & (keep == 0) & (mask > 0.95), 0.0, mask)
 
 
@@ -50,36 +60,76 @@ def _border_pixels(image: np.ndarray) -> np.ndarray:
     )
 
 
+def _parse_background_color(value: str | None) -> tuple[int, int, int] | None:
+    if not value:
+        return None
+    text = value.strip().lstrip("#")
+    if len(text) != 6:
+        return None
+    try:
+        return tuple(int(text[index : index + 2], 16) for index in (0, 2, 4))
+    except ValueError:
+        return None
+
+
+def _colour_alpha(rgb: np.ndarray, background_rgb: tuple[int, int, int]) -> np.ndarray:
+    """Lower-bound alpha from C = alpha*F + (1-alpha)*B.
+
+    It exactly recovers common red-on-white and white-on-black anti-aliased edges,
+    while semantic protection remains authoritative for same-colour subject regions.
+    """
+    source = rgb.astype(np.float32)
+    background = np.asarray(background_rgb, dtype=np.float32)
+    distance = np.abs(source - background)
+    possible_range = np.maximum(background, 255.0 - background)
+    possible_range = np.maximum(possible_range, 1.0)
+    return np.clip(np.max(distance / possible_range, axis=2), 0.0, 1.0)
+
+
 def _connected_uniform_background(
     rgb: np.ndarray,
     semantic_mask: np.ndarray,
+    options: RefinementOptions,
     *,
     force: bool,
-) -> tuple[np.ndarray | None, float]:
-    """Find a flat background without ever treating colour alone as foreground truth.
-
-    Colour similarity only proposes background pixels. A region is removable when it
-    is connected to the outer image and is not protected by the semantic subject mask.
-    """
+) -> BackgroundEstimate | None:
+    """Find background through border connectivity, colour and semantic protection."""
     lab = cv2.cvtColor(rgb, cv2.COLOR_RGB2LAB).astype(np.float32)
-    border = _border_pixels(lab)
-    median = np.median(border, axis=0)
-    border_distance = np.linalg.norm(border - median, axis=1)
+    override = _parse_background_color(options.background_color)
+    if override is None:
+        border_rgb = _border_pixels(rgb.astype(np.float32))
+        background_rgb = tuple(int(round(value)) for value in np.median(border_rgb, axis=0))
+        reference = np.median(_border_pixels(lab), axis=0)
+    else:
+        background_rgb = override
+        reference = cv2.cvtColor(
+            np.asarray([[background_rgb]], dtype=np.uint8),
+            cv2.COLOR_RGB2LAB,
+        )[0, 0].astype(np.float32)
+
+    border_distance = np.linalg.norm(_border_pixels(lab) - reference, axis=1)
     uniformity = float(np.percentile(border_distance, 75))
-    confidence = float(np.clip(1.0 - uniformity / 32.0, 0.0, 1.0))
-    if not force and confidence < 0.58:
-        return None, confidence
-    if force and confidence < 0.30:
-        return None, confidence
+    confidence = 1.0 if override is not None else float(
+        np.clip(1.0 - uniformity / 32.0, 0.0, 1.0)
+    )
+    if override is None and not force and confidence < 0.58:
+        return None
+    if override is None and force and confidence < 0.30:
+        return None
 
-    distance = np.linalg.norm(lab - median, axis=2)
-    tolerance = float(np.clip(np.percentile(border_distance, 90) * 1.65 + 5.0, 9.0, 34.0))
-
-    # Semantic foreground is a hard protection, including colours identical to the background.
+    level_scale = {
+        BackgroundCleanup.light: 0.90,
+        BackgroundCleanup.normal: 1.00,
+        BackgroundCleanup.strong: 1.25,
+    }[options.background_cleanup]
+    distance = np.linalg.norm(lab - reference, axis=2)
+    tolerance = float(
+        np.clip((np.percentile(border_distance, 90) * 1.65 + 5.0) * level_scale, 8.0, 42.0)
+    )
     candidate = ((distance <= tolerance) & (semantic_mask < 0.34)).astype(np.uint8)
     count, labels = cv2.connectedComponents(candidate, connectivity=8)
     if count <= 1:
-        return None, confidence
+        return None
 
     border_labels = np.unique(
         np.concatenate((labels[0], labels[-1], labels[:, 0], labels[:, -1]))
@@ -89,12 +139,13 @@ def _connected_uniform_background(
     lookup[0] = False
     background = lookup[labels]
 
-    # A second, more permissive region can join the confirmed background only
-    # through connected low-confidence pixels. This removes small shadow/JPEG
-    # remnants without turning a global colour tolerance into an eraser.
-    relaxed_factor = 1.60 if force else 1.30
-    relaxed_tolerance = float(np.clip(tolerance * relaxed_factor + 3.0, 12.0, 48.0))
-    semantic_ceiling = 0.18 if force else 0.10
+    relaxed_factor = {
+        BackgroundCleanup.light: 1.25,
+        BackgroundCleanup.normal: 1.60,
+        BackgroundCleanup.strong: 2.00,
+    }[options.background_cleanup]
+    relaxed_tolerance = float(np.clip(tolerance * relaxed_factor + 3.0, 11.0, 60.0))
+    semantic_ceiling = 0.20 if options.protect_details else 0.30
     relaxed_candidate = (
         (distance <= relaxed_tolerance) & (semantic_mask < semantic_ceiling)
     ).astype(np.uint8)
@@ -108,41 +159,76 @@ def _connected_uniform_background(
         relaxed_lookup[seed_labels] = True
         relaxed_lookup[0] = False
         grown = relaxed_lookup[relaxed_labels]
-        small_kernel = np.ones((3, 3), np.uint8)
         closed = cv2.morphologyEx(
             grown.astype(np.uint8),
             cv2.MORPH_CLOSE,
-            small_kernel,
+            np.ones((3, 3), np.uint8),
         ).astype(bool)
         background |= grown | (closed & relaxed_candidate.astype(bool))
 
-    # Never erase a pixel that the semantic model considers likely foreground.
     background &= semantic_mask < 0.52
-    return background, confidence
+    return BackgroundEstimate(background, background_rgb, confidence)
+
+
+def _recover_background_alpha(
+    rgb: np.ndarray,
+    semantic_mask: np.ndarray,
+    estimate: BackgroundEstimate,
+    options: RefinementOptions,
+) -> np.ndarray:
+    colour_alpha = _colour_alpha(rgb, estimate.rgb)
+    gamma = {
+        BackgroundCleanup.light: 0.78,
+        BackgroundCleanup.normal: 1.00,
+        BackgroundCleanup.strong: 1.28,
+    }[options.background_cleanup]
+    recovered = np.power(colour_alpha, gamma).astype(np.float32)
+    recovered[estimate.mask] = 0.0
+
+    protection_threshold = 0.42 if options.protect_details else 0.68
+    semantic_protection = np.where(
+        semantic_mask >= protection_threshold,
+        semantic_mask,
+        0.0,
+    )
+    semantic_protection = np.where(
+        semantic_protection >= 0.85,
+        1.0,
+        semantic_protection,
+    )
+
+    # High-chroma micro-details remain protected even if they are only a few pixels.
+    hsv = cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV)
+    saturated_detail = (hsv[:, :, 1] >= 32) & (colour_alpha >= 0.08)
+    recovered = np.where(saturated_detail, np.maximum(recovered, colour_alpha), recovered)
+    return np.clip(np.maximum(recovered, semantic_protection), 0.0, 1.0)
 
 
 def combine_semantic_and_design_mask(
     image: Image.Image,
     semantic_mask: np.ndarray,
     mode: RemovalMode,
+    options: RefinementOptions | None = None,
 ) -> tuple[np.ndarray, float]:
-    """Fuse semantic understanding with topology for graphics and flat backdrops."""
+    """Fuse semantic understanding, topology and flat-background alpha recovery."""
+    options = options or RefinementOptions()
     mask = np.clip(semantic_mask.astype(np.float32), 0.0, 1.0)
     rgb = np.asarray(image.convert("RGB"), dtype=np.uint8)
-    force = mode is RemovalMode.design
-    background, confidence = _connected_uniform_background(rgb, mask, force=force)
-    if background is None:
-        return mask, confidence
+    force = mode is RemovalMode.design or options.background_color is not None
+    estimate = _connected_uniform_background(rgb, mask, options, force=force)
+    if estimate is None:
+        return mask, 0.0
 
-    structural_foreground = (~background).astype(np.float32)
-    if mode is RemovalMode.design:
-        # DTF mode is deliberately conservative: visible design regions survive.
-        fused = np.maximum(mask, structural_foreground)
+    if mode is RemovalMode.design and options.remove_haze:
+        fused = _recover_background_alpha(rgb, mask, estimate, options)
     else:
-        # Auto mode only adds structural foreground where border confidence is high.
-        weight = float(np.clip((confidence - 0.58) / 0.30, 0.0, 1.0))
-        fused = np.maximum(mask, structural_foreground * weight)
-    return np.clip(fused, 0.0, 1.0), confidence
+        structural_foreground = (~estimate.mask).astype(np.float32)
+        if mode is RemovalMode.design:
+            fused = np.maximum(mask, structural_foreground)
+        else:
+            weight = float(np.clip((estimate.confidence - 0.58) / 0.30, 0.0, 1.0))
+            fused = np.maximum(mask, structural_foreground * weight)
+    return np.clip(fused, 0.0, 1.0), estimate.confidence
 
 
 def _guided_filter(guide: np.ndarray, source: np.ndarray, radius: int, eps: float) -> np.ndarray:
@@ -161,15 +247,12 @@ def _guided_filter(guide: np.ndarray, source: np.ndarray, radius: int, eps: floa
 
 
 def _edge_aware_alpha(rgb: np.ndarray, mask: np.ndarray, feather: float) -> np.ndarray:
-    """Refine only the trimap's unknown band; interiors and true background stay fixed."""
     hard = (mask >= 0.5).astype(np.uint8)
     radius = max(1, min(8, round(2 + feather * 1.5)))
-    kernel_size = radius * 2 + 1
-    kernel = np.ones((kernel_size, kernel_size), np.uint8)
+    kernel = np.ones((radius * 2 + 1, radius * 2 + 1), np.uint8)
     sure_foreground = cv2.erode(hard, kernel, iterations=1).astype(bool) & (mask >= 0.90)
     sure_background = cv2.erode(1 - hard, kernel, iterations=1).astype(bool) & (mask <= 0.10)
     unknown = ~(sure_foreground | sure_background)
-
     guide = cv2.cvtColor(rgb, cv2.COLOR_RGB2GRAY).astype(np.float32) / 255.0
     refined = _guided_filter(guide, mask.astype(np.float32), radius, 1e-3)
     alpha = np.where(unknown, refined, mask)
@@ -184,12 +267,11 @@ def refine_mask(
     mode: RemovalMode,
     options: RefinementOptions,
 ) -> np.ndarray:
-    mask, _ = combine_semantic_and_design_mask(image, raw_mask, mode)
+    mask, _ = combine_semantic_and_design_mask(image, raw_mask, mode, options)
     if not options.refine:
         return mask
 
-    height, width = mask.shape
-    pixels = height * width
+    pixels = mask.shape[0] * mask.shape[1]
     min_area_ratio = 0.000002 if mode is RemovalMode.design else 0.00001
     mask = _remove_isolated_specks(mask, max(2, int(pixels * min_area_ratio)))
 
@@ -209,7 +291,16 @@ def refine_mask(
     return np.clip(mask, 0.0, 1.0).astype(np.float32)
 
 
-def mask_warnings(mask: np.ndarray) -> list[str]:
+def residual_haze_ratio(image: Image.Image, mask: np.ndarray) -> float:
+    rgb = np.asarray(image.convert("RGB"), dtype=np.uint8)
+    border = _border_pixels(rgb.astype(np.float32))
+    background_rgb = tuple(int(round(value)) for value in np.median(border, axis=0))
+    colour_alpha = _colour_alpha(rgb, background_rgb)
+    haze = (mask > 0.04) & (mask < 0.90) & (colour_alpha < 0.18)
+    return float(np.mean(haze))
+
+
+def mask_warnings(mask: np.ndarray, image: Image.Image | None = None) -> list[str]:
     warnings: list[str] = []
     foreground = float(np.mean(mask > 0.5))
     transparent = float(np.mean(mask < 0.01))
@@ -220,6 +311,8 @@ def mask_warnings(mask: np.ndarray) -> list[str]:
         warnings.append("Très peu d'arrière-plan a été supprimé.")
     if uncertain > 0.35:
         warnings.append("De nombreuses zones sont ambiguës; vérifiez le masque.")
+    if image is not None and residual_haze_ratio(image, mask) > 0.015:
+        warnings.append("Un léger voile de l'ancien fond peut encore être présent.")
     border = np.concatenate((mask[0], mask[-1], mask[:, 0], mask[:, -1]))
     if float(np.mean(border > 0.5)) > 0.75:
         warnings.append("Le sujet touche fortement les bords de l'image.")
