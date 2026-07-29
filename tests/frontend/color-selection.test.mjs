@@ -82,6 +82,31 @@ test("guided manual selection never escapes the painted safety zone", () => {
   assert.equal(result.count, 2);
 });
 
+test("palette extraction detects dominant visible colors and ignores transparent pixels", () => {
+  const engine = loadEngine();
+  const width = 6;
+  const pixels = image(width, 1, [255, 0, 0]);
+  const colors = [
+    [255, 0, 0],
+    [0, 255, 0],
+    [0, 0, 255],
+    [0, 0, 0],
+    [255, 255, 255],
+    [255, 255, 0]
+  ];
+  colors.forEach((color, index) => {
+    pixels.data[index * 4] = color[0];
+    pixels.data[index * 4 + 1] = color[1];
+    pixels.data[index * 4 + 2] = color[2];
+  });
+  const alpha = new Float32Array([1, 1, 1, 1, 1, 0]);
+  const result = engine.extractPalette(pixels, width, 1, alpha, 8);
+  assert.equal(result.colors.length, 5);
+  assert.equal(result.visibleCount, 5);
+  assert.equal(result.assignments[5], -1);
+  assert.equal(result.colors.reduce((sum, color) => sum + color.count, 0), 5);
+});
+
 test("tolerance includes nearby JPEG shades and eraseMask only changes alpha", () => {
   const engine = loadEngine();
   const pixels = image(3, 1, [255, 255, 255]);
@@ -106,4 +131,7 @@ test("editor exposes every removal method and remains valid JavaScript", () => {
   assert.match(editorSource, /pendingSelection/);
   assert.match(editorSource, /beginManualGuide/);
   assert.match(editorSource, /guidedSelection/);
+  assert.match(editorSource, /analyzeColors/);
+  assert.match(editorSource, /deleteSelectedPaletteColor/);
+  assert.match(htmlSource, /id="brPaletteList"/);
 });
