@@ -79,6 +79,7 @@ class Settings:
     public_api_url: str = os.getenv("PUBLIC_API_URL", "http://localhost:8000").rstrip("/")
     enable_docs: bool = _bool("ENABLE_API_DOCS", True)
     background_pipeline_v2_enabled: bool = _bool("BACKGROUND_PIPELINE_V2_ENABLED", True)
+    load_legacy_model: bool = _bool("LOAD_LEGACY_MODEL", True)
     antivirus_command: str = os.getenv("ANTIVIRUS_COMMAND", "").strip()
     allow_vector_conversion: bool = _bool("ALLOW_VECTOR_CONVERSION", False)
     price_per_square_cm_dzd: float = _float("PRICE_PER_SQUARE_CM_DZD", 0.55)
