@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   ClipboardPaste,
   FileImage,
+  Edit3,
   FolderSearch,
   LoaderCircle,
   LockKeyhole,
@@ -15,6 +16,7 @@ import {
   UploadCloud,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   apiFetch,
@@ -321,6 +323,7 @@ function ProcessingPanel({ asset }: { asset: Asset }) {
           <Sparkles size={18} /> Supprimer le fond
         </button>
       )}
+      {asset.final_download_url && <Link className="secondary-button full editor-link" href={`/editor/${asset.id}`}><Edit3 size={17} /> Corriger le masque manuellement</Link>}
       {error && <p className="inline-error"><AlertCircle size={17} /> {error}</p>}
     </div>
   );
