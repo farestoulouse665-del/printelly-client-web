@@ -25,6 +25,8 @@ test("typed client sends semantic mode and refinement options", async () => {
           "x-residual-haze": "0.012",
           "x-source-alpha-preserved": "true",
           "x-effective-mode": "design",
+          "x-black-background-mode": "smart",
+          "x-black-background-confidence": "0.875",
           "x-request-id": "abcdef1234567890",
           "x-model-name": "test",
           "x-warnings": "[]"
@@ -44,6 +46,7 @@ test("typed client sends semantic mode and refinement options", async () => {
       edgeShift: 0,
       decontaminate: true,
       backgroundCleanup: "strong",
+      blackBackgroundMode: "smart",
       protectDetails: true,
       removeHaze: true,
       backgroundColor: "#ffffff"
@@ -52,6 +55,7 @@ test("typed client sends semantic mode and refinement options", async () => {
   assert.equal(captured.url, "http://localhost:8000/api/remove-background");
   assert.equal(captured.options.body.get("mode"), "design");
   assert.equal(captured.options.body.get("background_cleanup"), "strong");
+  assert.equal(captured.options.body.get("black_background_mode"), "smart");
   assert.equal(captured.options.body.get("protect_details"), "true");
   assert.equal(captured.options.body.get("remove_haze"), "true");
   assert.equal(captured.options.body.get("background_color"), "#ffffff");
@@ -59,6 +63,8 @@ test("typed client sends semantic mode and refinement options", async () => {
   assert.equal(result.metadata.residualHazeRatio, 0.012);
   assert.equal(result.metadata.sourceAlphaPreserved, true);
   assert.equal(result.metadata.effectiveMode, "design");
+  assert.equal(result.metadata.blackBackgroundMode, "smart");
+  assert.equal(result.metadata.blackBackgroundConfidence, 0.875);
   assert.equal(result.metadata.requestId, "abcdef1234567890");
   assert.equal(result.blob.type, "image/png");
 });
@@ -89,7 +95,7 @@ test("typed client surfaces the safe server request reference", async () => {
 test("service worker excludes private API responses from cache", async () => {
   const worker = await readFile(new URL("../../sw.js", import.meta.url), "utf8");
   assert.match(worker, /pathname\.startsWith\("\/api\/"\)/);
-  assert.match(worker, /printelly-client-v40/);
+  assert.match(worker, /printelly-client-v41/);
 });
 
 
