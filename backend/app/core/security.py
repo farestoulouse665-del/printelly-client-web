@@ -12,13 +12,23 @@ from fastapi import HTTPException, Request, status
 class LocalRateLimiter:
     """A small in-memory limiter for one-process/self-hosted deployments."""
 
-    def __init__(self, requests_per_minute: int) -> None:
+    def __init__(
+        self,
+        requests_per_minute: int,
+        *,
+        trust_proxy_headers: bool = False,
+    ) -> None:
         self.limit = max(1, requests_per_minute)
+        self.trust_proxy_headers = trust_proxy_headers
         self._requests: dict[str, deque[float]] = defaultdict(deque)
         self._lock = Lock()
 
     def check(self, request: Request) -> None:
-        forwarded = request.headers.get("x-forwarded-for", "")
+        forwarded = (
+            request.headers.get("x-forwarded-for", "")
+            if self.trust_proxy_headers
+            else ""
+        )
         client_ip = forwarded.split(",", 1)[0].strip() if forwarded else ""
         if not client_ip and request.client:
             client_ip = request.client.host
