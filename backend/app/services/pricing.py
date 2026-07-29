@@ -140,14 +140,12 @@ class PricingService:
                 )
 
         discount = subtotal * discount_rate
-        delivery = (
-            float(request.delivery_dzd)
-            if request.delivery_dzd is not None
-            else self._amount(
-                rules,
-                "delivery_default",
-                settings.default_delivery_dzd,
-            )
+        # Public clients cannot override delivery fees. The active
+        # administrative rule is the sole source of truth.
+        delivery = self._amount(
+            rules,
+            "delivery_default",
+            settings.default_delivery_dzd,
         )
         total = max(0.0, subtotal - discount + service_fees + delivery)
         return CalculatedQuote(
