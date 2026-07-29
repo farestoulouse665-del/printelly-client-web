@@ -31,13 +31,15 @@ def test_existing_transparency_is_never_made_opaque():
     assert merged[0, 0] == 1
 
 
-def test_export_rejects_an_entirely_opaque_mask():
+def test_export_can_return_an_opaque_preview_for_manual_correction():
     image = Image.new("RGB", (2, 2), "white")
-    with pytest.raises(RuntimeError, match="aucun pixel transparent"):
-        export_png(image, np.ones((2, 2), dtype=np.float32), decontaminate=False)
+    payload = export_png(image, np.ones((2, 2), dtype=np.float32), decontaminate=False)
+    with Image.open(BytesIO(payload)) as result:
+        assert result.getchannel("A").getextrema() == (255, 255)
 
 
-def test_export_rejects_an_empty_subject():
+def test_export_can_return_an_empty_preview_for_manual_restoration():
     image = Image.new("RGB", (2, 2), "white")
-    with pytest.raises(RuntimeError, match="tout le sujet"):
-        export_png(image, np.zeros((2, 2), dtype=np.float32), decontaminate=False)
+    payload = export_png(image, np.zeros((2, 2), dtype=np.float32), decontaminate=False)
+    with Image.open(BytesIO(payload)) as result:
+        assert result.getchannel("A").getextrema() == (0, 0)
