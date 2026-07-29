@@ -21,7 +21,7 @@ from app.services.mask_refinement import RefinementOptions
 from app.storage.local import storage
 
 
-logger = logging.getLogger("printelly.worker")
+logger = logging.getLogger("transferlab.worker")
 _provider: LocalOnnxProvider | None = None
 _pipeline: BackgroundRemovalPipeline | None = None
 
@@ -47,7 +47,7 @@ def _publish_runtime_heartbeat(provider: LocalOnnxProvider) -> None:
     try:
         redis = Redis.from_url(settings.redis_url, decode_responses=True)
         redis.setex(
-            "printelly:worker:model-runtime",
+            "transferlab:worker:model-runtime",
             120,
             json.dumps(
                 {
