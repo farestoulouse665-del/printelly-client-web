@@ -161,7 +161,8 @@
     }
 
     var printWidthCm = Math.max(0, Number(options.printWidthCm) || 0);
-    var dpi = printWidthCm ? width / (printWidthCm / 2.54) : 0;
+    var sourceWidth = Math.max(width, Number(options.sourceWidth) || width);
+    var dpi = printWidthCm ? sourceWidth / (printWidthCm / 2.54) : 0;
     var issues = [];
     if (!foreground) issues.push({ type: "empty", severity: "error", title: "Sujet vide", message: "Aucun pixel visible n’est présent dans le masque." });
     if (!transparent) issues.push({ type: "opaque", severity: "error", title: "Aucune transparence", message: "Le résultat ne contient aucun fond transparent." });
