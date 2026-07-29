@@ -29,6 +29,7 @@
     var outputHeight = mode === "resample" ? targetHeight : sourceHeight;
     var scale = targetWidth / sourceWidth;
     var quality = effectiveDpi >= 250 ? "ready" : effectiveDpi >= 150 ? "warning" : "error";
+    var qualityLabel = quality === "ready" ? "Prêt pour impression" : quality === "warning" ? "Qualité moyenne" : "Résolution insuffisante";
     var message = quality === "ready"
       ? "Résolution originale adaptée à cette taille."
       : quality === "warning"
@@ -38,10 +39,12 @@
     var targetRatio = widthInches / heightInches;
     if (!lockRatio && Math.abs(targetRatio / sourceRatio - 1.0) > 0.01) {
       quality = "error";
+      qualityLabel = "Proportions modifiées";
       message = "Les proportions sont modifiées; activez le verrouillage pour éviter une déformation.";
     }
     if (mode === "resample" && scale > 1.5) {
       quality = scale > 2.5 ? "error" : "warning";
+      qualityLabel = scale > 2.5 ? "Agrandissement excessif" : "Agrandissement à vérifier";
       message = "Agrandissement ×" + scale.toFixed(2).replace(".", ",") + " : aucun redimensionnement ne peut recréer les détails absents.";
     }
     return {
@@ -60,6 +63,7 @@
       scale: scale,
       mode: mode,
       quality: quality,
+      qualityLabel: qualityLabel,
       message: message
     };
   }
