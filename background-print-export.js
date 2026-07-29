@@ -12,9 +12,16 @@
     var unit = options.unit === "in" ? "in" : "cm";
     var widthValue = clampNumber(options.width, 0.1, unit === "cm" ? 500 : 200, 25);
     var widthInches = unit === "cm" ? widthValue / 2.54 : widthValue;
-    var heightInches = widthInches * sourceHeight / sourceWidth;
+    var naturalHeight = widthValue * sourceHeight / sourceWidth;
+    var lockRatio = options.lockRatio !== false;
+    var heightValue = lockRatio
+      ? naturalHeight
+      : clampNumber(options.height, 0.1, unit === "cm" ? 500 : 200, naturalHeight);
+    var heightInches = unit === "cm" ? heightValue / 2.54 : heightValue;
     var dpi = Math.round(clampNumber(options.dpi, 36, 1200, 300));
-    var effectiveDpi = sourceWidth / widthInches;
+    var effectiveDpiX = sourceWidth / widthInches;
+    var effectiveDpiY = sourceHeight / heightInches;
+    var effectiveDpi = Math.min(effectiveDpiX, effectiveDpiY);
     var targetWidth = Math.max(1, Math.round(widthInches * dpi));
     var targetHeight = Math.max(1, Math.round(heightInches * dpi));
     var mode = options.mode === "resample" ? "resample" : "metadata";
@@ -27,6 +34,12 @@
       : quality === "warning"
         ? "Résolution moyenne : vérifiez les petits textes et contours."
         : "Résolution originale insuffisante pour une impression nette.";
+    var sourceRatio = sourceWidth / sourceHeight;
+    var targetRatio = widthInches / heightInches;
+    if (!lockRatio && Math.abs(targetRatio / sourceRatio - 1.0) > 0.01) {
+      quality = "error";
+      message = "Les proportions sont modifiées; activez le verrouillage pour éviter une déformation.";
+    }
     if (mode === "resample" && scale > 1.5) {
       quality = scale > 2.5 ? "error" : "warning";
       message = "Agrandissement ×" + scale.toFixed(2).replace(".", ",") + " : aucun redimensionnement ne peut recréer les détails absents.";
@@ -34,7 +47,8 @@
     return {
       unit: unit,
       width: widthValue,
-      height: unit === "cm" ? heightInches * 2.54 : heightInches,
+      height: heightValue,
+      lockRatio: lockRatio,
       widthInches: widthInches,
       heightInches: heightInches,
       dpi: dpi,
