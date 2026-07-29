@@ -177,3 +177,18 @@ Les objets binaires restent dans le stockage objet/local sécurisé ; PostgreSQL
 - Workflow GitHub Actions pour migrations, pytest, lint, TypeScript, Vitest, build Next, Playwright et Docker.
 
 Les résultats ne seront inscrits comme « réussis » qu’après réception effective d’un run GitHub Actions. Le modèle ONNX réel reste un prérequis séparé pour les régressions d’inférence.
+
+
+## 10. Revue de durcissement finale
+
+La revue statique de livraison a ajouté les garanties suivantes :
+
+- rejet de la résolution avant décodage complet afin de limiter les bombes de décompression et pics mémoire ;
+- aperçu navigateur limité au raster de travail validé, les sources SVG/PDF/PSD/AI restant privées ;
+- adresse de rate limiting fournie uniquement par le proxy Nginx de confiance ;
+- profil ICC conservé dans les exports PNG lorsqu’il est présent ;
+- devis lié aux dimensions, quantités, variantes et options exactes ; toute altération lors de la commande est refusée ;
+- frais de livraison calculés exclusivement par les règles serveur ;
+- totalité des profils IA et des variantes lasso exposée dans l’interface.
+
+La branche contient le workflow de validation complet, mais le connecteur disponible ne remonte pas les exécutions déclenchées par `push`. L’environnement Windows local refuse aussi l’exécution du shell par sa politique ACL. En conséquence, aucun test n’est déclaré réussi sans résultat GitHub Actions observable. La PR reste volontairement en brouillon et aucun déploiement ou merge n’a été effectué.
