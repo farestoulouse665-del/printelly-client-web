@@ -202,3 +202,32 @@ def test_residual_haze_score_and_warning_detect_a_remaining_matte():
 
     assert residual_haze_ratio(image, mask) > 0.015
     assert any("voile" in warning for warning in mask_warnings(mask, image))
+
+
+
+def test_border_connected_false_semantic_positive_is_removed_but_enclosed_white_stays():
+    image = Image.new("RGB", (100, 100), "white")
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((20, 20, 79, 79), outline="black", width=5)
+    draw.ellipse((6, 45, 10, 49), fill=(210, 20, 20))
+    semantic = np.full((100, 100), 0.97, dtype=np.float32)
+
+    alpha = refine_mask(
+        raw_mask=semantic,
+        image=image,
+        mode=RemovalMode.design,
+        options=RefinementOptions(
+            refine=True,
+            feather=0,
+            edge_shift=0,
+            background_cleanup=BackgroundCleanup.strong,
+            protect_details=True,
+            remove_haze=True,
+        ),
+    )
+
+    assert alpha[0, 0] < 0.01
+    assert alpha[10, 10] < 0.01
+    assert alpha[50, 50] > 0.99
+    assert alpha[20, 50] > 0.99
+    assert alpha[47, 8] > 0.80
