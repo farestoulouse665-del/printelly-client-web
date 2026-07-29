@@ -62,6 +62,7 @@ class Asset(Base, TimestampMixin):
     color_profile: Mapped[str] = mapped_column(String(80), default="RGB")
     has_transparency: Mapped[bool] = mapped_column(Boolean, default=False)
     original_key: Mapped[str] = mapped_column(String(512))
+    source_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
     preview_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
     final_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="uploaded", index=True)
