@@ -1,18 +1,24 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.background import router
 from app.core.config import settings
 from app.core.security import LocalRateLimiter
 from app.providers.local_onnx_provider import LocalOnnxProvider
 from app.services.background_removal import BackgroundRemovalPipeline
+
+
+logger = logging.getLogger("printelly.api")
 
 
 def cleanup_expired_temp_files() -> None:
@@ -72,15 +78,36 @@ app.add_middleware(
         "X-Processing-Ms",
         "X-Foreground-Ratio",
         "X-Residual-Haze",
+        "X-Source-Alpha-Preserved",
+        "X-Effective-Mode",
         "X-Model-Name",
         "X-Warnings",
+        "X-Request-ID",
     ],
 )
 
 
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
-    response = await call_next(request)
+    request_id = uuid.uuid4().hex
+    request.state.request_id = request_id
+    try:
+        response = await call_next(request)
+    except Exception:
+        logger.exception(
+            "Unhandled request error id=%s method=%s path=%s",
+            request_id,
+            request.method,
+            request.url.path,
+        )
+        response = JSONResponse(
+            status_code=500,
+            content={
+                "detail": "Erreur interne du moteur d’image.",
+                "request_id": request_id,
+            },
+        )
+    response.headers["X-Request-ID"] = request_id
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
