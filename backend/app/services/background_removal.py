@@ -14,6 +14,7 @@ from app.services.image_export import (
     source_alpha_is_authoritative,
     source_alpha_mask,
 )
+from app.services.mode_detection import choose_effective_mode
 from app.services.mask_refinement import (
     RefinementOptions,
     mask_warnings,
@@ -42,19 +43,22 @@ class BackgroundRemovalPipeline:
     ) -> BackgroundRemovalResult:
         started = time.perf_counter()
         source_alpha_preserved = source_alpha_is_authoritative(image)
+        effective_mode = (
+            mode if source_alpha_preserved else choose_effective_mode(image, mode)
+        )
         if source_alpha_preserved:
             # A real alpha channel is more reliable than re-segmenting an already cut-out PNG.
             alpha = source_alpha_mask(image)
             haze_ratio = 0.0
             warnings: list[str] = []
         else:
-            raw_mask = self.provider.predict_mask(image, mode)
+            raw_mask = self.provider.predict_mask(image, effective_mode)
             expected_shape = (image.height, image.width)
             if raw_mask.shape != expected_shape:
                 raise RuntimeError(
                     f"Masque de taille {raw_mask.shape}, image de taille {expected_shape}."
                 )
-            alpha = refine_mask(raw_mask, image, mode, options)
+            alpha = refine_mask(raw_mask, image, effective_mode, options)
             alpha = preserve_source_alpha(image, alpha)
             haze_ratio = residual_haze_ratio(image, alpha)
             warnings = mask_warnings(alpha, image)
@@ -64,7 +68,7 @@ class BackgroundRemovalPipeline:
             # Never rewrite RGB values when the source already contains a trusted cut-out.
             decontaminate=decontaminate and not source_alpha_preserved,
             recover_spill=(
-                mode is RemovalMode.design
+                effective_mode is RemovalMode.design
                 and options.remove_haze
                 and not source_alpha_preserved
             ),
@@ -78,5 +82,6 @@ class BackgroundRemovalPipeline:
             processing_ms=elapsed_ms,
             warnings=warnings,
             source_alpha_preserved=source_alpha_preserved,
+            effective_mode=effective_mode,
         )
         return BackgroundRemovalResult(png=png, report=report)
