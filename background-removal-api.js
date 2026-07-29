@@ -47,6 +47,7 @@
           processingMs: Number(response.headers.get("x-processing-ms") || 0),
           foregroundRatio: Number(response.headers.get("x-foreground-ratio") || 0),
           residualHazeRatio: Number(response.headers.get("x-residual-haze") || 0),
+          sourceAlphaPreserved: response.headers.get("x-source-alpha-preserved") === "true",
           modelName: response.headers.get("x-model-name") || "modèle local",
           warnings
         }
