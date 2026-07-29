@@ -29,6 +29,12 @@ export function Header() {
   const [open, setOpen] = useState(false);
   const locale = useStudio((state) => state.locale);
   const setLocale = useStudio((state) => state.setLocale);
+  const cartCount = useStudio((state) =>
+    state.sizes.reduce(
+      (total, size) => total + size.quantity * size.variants,
+      0,
+    ),
+  );
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -73,7 +79,7 @@ export function Header() {
             </Link>
             <Link className="cart-button" href="/orders" aria-label="Panier DTF">
               <ShoppingBag size={19} />
-              <span>0</span>
+              <span>{cartCount}</span>
             </Link>
             <button
               type="button"
