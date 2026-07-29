@@ -126,7 +126,7 @@ class ExportService:
     ) -> str:
         size = f"_{request.width_cm:g}cm" if request.width_cm else "_original"
         quantity = f"_QTE{request.quantity}"
-        return f"PRINTELLY_{_safe_stem(original_name)}{size}{quantity}_DTF{extension}"
+        return f"TRANSFERLAB_{_safe_stem(original_name)}{size}{quantity}_DTF{extension}"
 
 
 export_service = ExportService()
