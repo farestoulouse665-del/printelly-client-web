@@ -1,0 +1,11 @@
+services:
+  frontend:
+    volumes:
+      - type: bind
+        source: ./docker/nginx-secure.conf
+        target: /etc/nginx/conf.d/default.conf
+        read_only: true
+      - type: bind
+        source: ./.htpasswd
+        target: /etc/nginx/.htpasswd
+        read_only: true
