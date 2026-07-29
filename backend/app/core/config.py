@@ -24,13 +24,13 @@ def _csv(name: str, default: str) -> tuple[str, ...]:
 @dataclass(frozen=True)
 class Settings:
     environment: str = os.getenv("APP_ENV", "development").strip().lower()
-    app_name: str = "PRINTELLY Background Studio"
+    app_name: str = "TransferLab"
     api_version: str = "v1"
 
     model_path: Path = Path(os.getenv("BACKGROUND_MODEL_PATH", "/models/background-removal.onnx"))
     model_sha256: str = os.getenv("BACKGROUND_MODEL_SHA256", "").strip().lower()
     model_name: str = os.getenv("BACKGROUND_MODEL_NAME", "BiRefNet-general")
-    pipeline_version: str = os.getenv("BACKGROUND_PIPELINE_VERSION", "printelly-birefnet-v3")
+    pipeline_version: str = os.getenv("BACKGROUND_PIPELINE_VERSION", "transferlab-birefnet-v3")
     device: str = os.getenv("BACKGROUND_DEVICE", "auto").strip().lower()
     model_input_size: int = _int("BACKGROUND_MODEL_INPUT_SIZE", 1024)
     onnx_intra_op_threads: int = _int("ONNX_INTRA_OP_THREADS", 0)
@@ -52,7 +52,7 @@ class Settings:
 
     database_url: str = os.getenv(
         "DATABASE_URL",
-        "postgresql+psycopg://printelly:printelly@postgres:5432/printelly",
+        "postgresql+psycopg://transferlab:transferlab@postgres:5432/transferlab",
     )
     redis_url: str = os.getenv("REDIS_URL", "redis://redis:6379/0")
     queue_name: str = os.getenv("RQ_QUEUE_NAME", "background-removal")
@@ -63,9 +63,9 @@ class Settings:
     storage_backend: str = os.getenv("STORAGE_BACKEND", "local").strip().lower()
     storage_root: Path = Path(os.getenv("STORAGE_ROOT", "/data/objects"))
     minio_endpoint: str = os.getenv("MINIO_ENDPOINT", "minio:9000")
-    minio_access_key: str = os.getenv("MINIO_ACCESS_KEY", "printelly")
+    minio_access_key: str = os.getenv("MINIO_ACCESS_KEY", "transferlab")
     minio_secret_key: str = os.getenv("MINIO_SECRET_KEY", "change-me")
-    minio_bucket: str = os.getenv("MINIO_BUCKET", "printelly-assets")
+    minio_bucket: str = os.getenv("MINIO_BUCKET", "transferlab-assets")
     minio_secure: bool = _bool("MINIO_SECURE", False)
     signing_secret: str = os.getenv("SIGNING_SECRET", "development-only-change-me")
     signed_url_ttl_seconds: int = _int("SIGNED_URL_TTL_SECONDS", 900)
