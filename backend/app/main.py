@@ -80,6 +80,8 @@ app.add_middleware(
         "X-Residual-Haze",
         "X-Source-Alpha-Preserved",
         "X-Effective-Mode",
+        "X-Black-Background-Mode",
+        "X-Black-Background-Confidence",
         "X-Model-Name",
         "X-Warnings",
         "X-Request-ID",
