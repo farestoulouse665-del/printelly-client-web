@@ -44,6 +44,7 @@ services:
       APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-printelly}:${POSTGRES_PASSWORD:-printelly-dev-only}@postgres:5432/${POSTGRES_DB:-printelly}
       REDIS_URL: redis://redis:6379/0
+      RQ_QUEUE_NAME: ${RQ_QUEUE_NAME:-background-removal}
       STORAGE_ROOT: /data/objects
       BACKGROUND_MODEL_PATH: /models/background-removal.onnx
       BACKGROUND_MODEL_SHA256: ${BACKGROUND_MODEL_SHA256:-}
@@ -53,10 +54,14 @@ services:
       BACKGROUND_MODEL_INPUT_SIZE: ${BACKGROUND_MODEL_INPUT_SIZE:-1024}
       BACKGROUND_PIPELINE_V2_ENABLED: ${BACKGROUND_PIPELINE_V2_ENABLED:-true}
       LOAD_LEGACY_MODEL: ${LOAD_LEGACY_MODEL:-false}
+      INFERENCE_TILE_SIZE: ${INFERENCE_TILE_SIZE:-2048}
+      INFERENCE_TILE_OVERLAP: ${INFERENCE_TILE_OVERLAP:-192}
+      LARGE_IMAGE_THRESHOLD_PIXELS: ${LARGE_IMAGE_THRESHOLD_PIXELS:-16000000}
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-150}
       MAX_IMAGE_PIXELS: ${MAX_IMAGE_PIXELS:-120000000}
       MAX_BATCH_FILES: ${MAX_BATCH_FILES:-25}
       MAX_CONCURRENT_JOBS: ${MAX_CONCURRENT_JOBS:-1}
+      ALLOW_VECTOR_CONVERSION: ${ALLOW_VECTOR_CONVERSION:-true}
       TEMP_DIR: /tmp/background-removal
       SIGNING_SECRET: ${SIGNING_SECRET:-development-only-change-me}
       ADMIN_TOKEN: ${ADMIN_TOKEN:-development-admin-change-me}
@@ -140,7 +145,7 @@ services:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [gpu]
+              capabilities: ["gpu"]
     read_only: true
     security_opt:
       - no-new-privileges:true
