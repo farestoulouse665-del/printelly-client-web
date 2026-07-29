@@ -11,8 +11,11 @@ test("professional studio exposes left, canvas and right work areas", () => {
   assert.match(html, /id="brLeftControls"/);
   assert.match(html, /class="br-preview-column"/);
   assert.match(html, /id="brRightControls"/);
-  assert.ok(html.indexOf('id="brLeftControls"') < html.indexOf('class="br-preview-column"'));
-  assert.ok(html.indexOf('id="brRightControls"') < html.indexOf('class="br-preview-column"'));
+  const leftIndex = html.indexOf('id="brLeftControls"');
+  const canvasIndex = html.indexOf('class="br-preview-column"');
+  const rightIndex = html.indexOf('id="brRightControls"');
+  assert.ok(leftIndex < canvasIndex);
+  assert.ok(canvasIndex < rightIndex);
   assert.match(css, /grid-template-areas:"left center right"/);
   assert.match(css, /grid-template-columns:minmax\(230px,280px\) minmax\(560px,1fr\) minmax\(245px,295px\)/);
   assert.match(css, /\.br-preview-column\{grid-area:center\}/);
