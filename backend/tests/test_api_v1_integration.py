@@ -107,6 +107,52 @@ def test_guest_upload_library_queue_and_cancellation_are_connected():
         assert quote_response.json()["breakdown"]["price_per_square_cm_dzd"] == 1.0
         assert quote_response.json()["subtotal_dzd"] == 900.0
 
+        persisted_quote = client.post(
+            "/api/v1/quotes",
+            headers=headers,
+            json={
+                "lines": [
+                    {
+                        "asset_id": asset["id"],
+                        "width_cm": 30,
+                        "height_cm": 30,
+                        "quantity": 1,
+                    }
+                ]
+            },
+        )
+        assert persisted_quote.status_code == 201
+        tampered_order = client.post(
+            "/api/v1/orders",
+            headers=headers,
+            json={
+                "quote_id": persisted_quote.json()["id"],
+                "lines": [
+                    {
+                        "asset_id": asset["id"],
+                        "width_cm": 90,
+                        "height_cm": 90,
+                        "quantity": 100,
+                    }
+                ],
+                "customer": {
+                    "full_name": "Client test",
+                    "phone": "0550123456",
+                },
+                "delivery": {
+                    "wilaya_code": 16,
+                    "wilaya": "Alger",
+                    "commune": "Alger Centre",
+                    "method": "home",
+                    "address": "Adresse de test",
+                },
+                "payment_method": "cash_on_delivery",
+                "client_validated": True,
+            },
+        )
+        assert tampered_order.status_code == 409
+        assert "diffèrent du devis" in tampered_order.json()["detail"]
+
         job_response = client.post(
             "/api/v1/background-removal/jobs",
             headers=headers,
