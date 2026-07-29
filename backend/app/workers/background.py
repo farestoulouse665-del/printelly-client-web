@@ -1,20 +1,20 @@
 from __future__ import annotations
 
+import json
 import logging
 from datetime import datetime, timezone
 from io import BytesIO
 
 from PIL import Image, ImageOps
+from redis import Redis
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.entities import Asset, MaskVersion, ProcessingJob
-from app.models.schemas import (
-    BackgroundCleanup,
-    BlackBackgroundMode,
-    RemovalMode,
-)
+from app.models.schemas import BackgroundCleanup, BlackBackgroundMode, RemovalMode
 from app.providers.local_onnx_provider import LocalOnnxProvider
+from app.providers.tiled_inference import TiledInferenceEngine
 from app.services.background_removal import BackgroundRemovalPipeline
 from app.services.job_queue import record_event
 from app.services.mask_refinement import RefinementOptions
@@ -43,6 +43,27 @@ _MODE_MAP = {
 }
 
 
+def _publish_runtime_heartbeat(provider: LocalOnnxProvider) -> None:
+    try:
+        redis = Redis.from_url(settings.redis_url, decode_responses=True)
+        redis.setex(
+            "printelly:worker:model-runtime",
+            120,
+            json.dumps(
+                {
+                    "loaded": True,
+                    "model": provider.name,
+                    "provider": provider.execution_provider,
+                    "device": provider.device,
+                    "pipeline": settings.pipeline_version,
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                }
+            ),
+        )
+    except Exception:
+        logger.warning("Impossible de publier le heartbeat du modèle.", exc_info=True)
+
+
 def get_runtime() -> tuple[LocalOnnxProvider, BackgroundRemovalPipeline]:
     """Load BiRefNet once per worker process and reuse its ONNX session."""
     global _provider, _pipeline
@@ -54,10 +75,11 @@ def get_runtime() -> tuple[LocalOnnxProvider, BackgroundRemovalPipeline]:
             provider,
             background_pipeline_v2_enabled=settings.background_pipeline_v2_enabled,
         )
+    _publish_runtime_heartbeat(_provider)
     return _provider, _pipeline
 
 
-def _cancelled(database: SessionLocal, job: ProcessingJob) -> bool:
+def _cancelled(database: Session, job: ProcessingJob) -> bool:
     database.refresh(job)
     if not job.cancel_requested:
         return False
@@ -91,7 +113,9 @@ def _make_preview(png: bytes, maximum: int = 1400) -> bytes:
 
 
 def process_background_job(job_id: str) -> dict:
-    """Run the real local BiRefNet pipeline and persist every observable state."""
+    """Run the local BiRefNet pipeline and persist every observable state."""
+    image: Image.Image | None = None
+    tiled_provider: TiledInferenceEngine | None = None
     with SessionLocal() as database:
         job = database.get(ProcessingJob, job_id)
         if job is None:
@@ -110,25 +134,52 @@ def process_background_job(job_id: str) -> dict:
                 opened.load()
                 image = ImageOps.exif_transpose(opened).copy()
                 image.info.update(opened.info)
-            record_event(database, job, "validating", 12, "Validation des dimensions et du canal alpha…")
-            if image.width * image.height > settings.max_image_pixels:
+            record_event(
+                database,
+                job,
+                "validating",
+                12,
+                "Validation des dimensions et du canal alpha…",
+            )
+            pixels = image.width * image.height
+            if pixels > settings.max_image_pixels:
                 raise RuntimeError("L’image dépasse la limite de pixels configurée.")
             if _cancelled(database, job):
-                image.close()
                 return {"state": "cancelled"}
 
             provider, pipeline = get_runtime()
+            use_tiles = pixels >= settings.large_image_threshold_pixels
+            if use_tiles:
+                tiled_provider = TiledInferenceEngine(
+                    provider,
+                    tile_size=settings.tile_size,
+                    overlap=settings.tile_overlap,
+                    temp_dir=settings.temp_dir,
+                )
+                pipeline = BackgroundRemovalPipeline(
+                    tiled_provider,
+                    background_pipeline_v2_enabled=settings.background_pipeline_v2_enabled,
+                )
             record_event(
                 database,
                 job,
                 "analyzing",
                 22,
                 "Analyse du fond, des bordures et des détails internes…",
-                {"model": provider.name, "provider": provider.execution_provider},
+                {
+                    "model": provider.name,
+                    "provider": provider.execution_provider,
+                    "tiled_inference": use_tiles,
+                    "tile_size": settings.tile_size if use_tiles else None,
+                    "tile_overlap": settings.tile_overlap if use_tiles else None,
+                },
             )
             effective_mode = _MODE_MAP.get(job.mode, RemovalMode.auto)
             options = _build_options(job.parameters)
-            if job.mode == "black_background" and options.black_background_mode is BlackBackgroundMode.off:
+            if (
+                job.mode == "black_background"
+                and options.black_background_mode is BlackBackgroundMode.off
+            ):
                 options = RefinementOptions(
                     refine=options.refine,
                     feather=options.feather,
@@ -140,18 +191,30 @@ def process_background_job(job_id: str) -> dict:
                     black_background_mode=BlackBackgroundMode.smart,
                 )
             if _cancelled(database, job):
-                image.close()
                 return {"state": "cancelled"}
 
-            record_event(database, job, "segmenting", 35, "Segmentation BiRefNet ONNX réelle…")
+            record_event(
+                database,
+                job,
+                "segmenting",
+                35,
+                "Segmentation BiRefNet ONNX réelle par tuiles…"
+                if use_tiles
+                else "Segmentation BiRefNet ONNX réelle…",
+            )
             result = pipeline.process(
                 image,
                 effective_mode,
                 options,
                 decontaminate=bool(job.parameters.get("decontaminate", True)),
             )
-            image.close()
-            record_event(database, job, "refining", 72, "Raffinement multi-échelle des contours…")
+            record_event(
+                database,
+                job,
+                "refining",
+                72,
+                "Raffinement multi-échelle des contours…",
+            )
             if _cancelled(database, job):
                 return {"state": "cancelled"}
 
@@ -160,7 +223,13 @@ def process_background_job(job_id: str) -> dict:
             storage.put_bytes(result_key, result.png)
             record_event(database, job, "cleaning", 82, "Contrôle des halos et résidus…")
             storage.put_bytes(preview_key, _make_preview(result.png))
-            record_event(database, job, "generating_preview", 90, "Génération de l’aperçu transparent…")
+            record_event(
+                database,
+                job,
+                "generating_preview",
+                90,
+                "Génération de l’aperçu transparent…",
+            )
 
             previous_versions = database.query(MaskVersion).filter(
                 MaskVersion.asset_id == asset.id,
@@ -183,6 +252,7 @@ def process_background_job(job_id: str) -> dict:
                     "pipeline_version": settings.pipeline_version,
                     "model_version": provider.name,
                     "execution_provider": provider.execution_provider,
+                    "tiled_inference": use_tiles,
                 }
             )
             asset.final_key = result_key
@@ -198,24 +268,46 @@ def process_background_job(job_id: str) -> dict:
             ]
             job.result_key = result_key
             job.report = report
-            record_event(database, job, "exporting", 96, "Écriture du véritable PNG RGBA…")
+            record_event(
+                database,
+                job,
+                "exporting",
+                96,
+                "Écriture du véritable PNG RGBA…",
+            )
             job.finished_at = datetime.now(timezone.utc)
-            record_event(database, job, "completed", 100, "Votre fichier est prêt pour le DTF.")
-            return {"state": "completed", "asset_id": asset.id, "result_key": result_key}
+            record_event(
+                database,
+                job,
+                "completed",
+                100,
+                "Votre fichier est prêt pour le DTF.",
+            )
+            _publish_runtime_heartbeat(provider)
+            return {
+                "state": "completed",
+                "asset_id": asset.id,
+                "result_key": result_key,
+            }
         except Exception as exc:
             logger.exception("Background job failed id=%s", job_id)
             database.rollback()
-            job = database.get(ProcessingJob, job_id)
-            if job is not None:
-                job.error_code = type(exc).__name__
-                job.error_message = str(exc)[:2000]
-                job.finished_at = datetime.now(timezone.utc)
+            failed_job = database.get(ProcessingJob, job_id)
+            if failed_job is not None:
+                failed_job.error_code = type(exc).__name__
+                failed_job.error_message = str(exc)[:2000]
+                failed_job.finished_at = datetime.now(timezone.utc)
                 record_event(
                     database,
-                    job,
+                    failed_job,
                     "failed",
-                    job.progress,
+                    failed_job.progress,
                     "Le traitement a échoué. Consultez le détail ou relancez le job.",
                     {"error_code": type(exc).__name__},
                 )
             raise
+        finally:
+            if image is not None:
+                image.close()
+            if tiled_provider is not None:
+                tiled_provider.cleanup()
