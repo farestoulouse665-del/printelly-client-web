@@ -24,7 +24,7 @@ function Checkout() {
   const [wilayaCode, setWilayaCode] = useState(16);
 
   useEffect(() => {
-    const stored = sessionStorage.getItem("printelly-current-quote");
+    const stored = sessionStorage.getItem("transferlab-current-quote");
     if (stored) setQuote(JSON.parse(stored) as Quote);
   }, []);
 
