@@ -13,7 +13,9 @@ test("professional studio exposes left, canvas and right work areas", () => {
   assert.match(html, /id="brRightControls"/);
   assert.ok(html.indexOf('id="brLeftControls"') < html.indexOf('class="br-preview-column"'));
   assert.ok(html.indexOf('id="brRightControls"') < html.indexOf('class="br-preview-column"'));
-  assert.match(css, /grid-template-columns:minmax\(255px,305px\) minmax\(460px,1fr\) minmax\(285px,335px\)/);
+  assert.match(css, /grid-template-areas:"left center right"/);
+  assert.match(css, /grid-template-columns:minmax\(230px,280px\) minmax\(560px,1fr\) minmax\(245px,295px\)/);
+  assert.match(css, /\.br-preview-column\{grid-area:center\}/);
 });
 
 test("side panels are independently scrollable and collapsible", () => {
