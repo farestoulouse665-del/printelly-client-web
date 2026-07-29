@@ -81,7 +81,9 @@ class LocalOnnxProvider:
 
         options = ort.SessionOptions()
         options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-        options.enable_mem_pattern = True
+        directml_selected = providers[0] == "DmlExecutionProvider"
+        options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+        options.enable_mem_pattern = not directml_selected
         options.enable_cpu_mem_arena = True
         if self.config.onnx_intra_op_threads > 0:
             options.intra_op_num_threads = self.config.onnx_intra_op_threads
