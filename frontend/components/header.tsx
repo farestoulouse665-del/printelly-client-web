@@ -49,11 +49,11 @@ export function Header() {
       </div>
       <header className="site-header">
         <div className="header-inner">
-          <Link className="brand" href="/" aria-label="PRINTELLY Background Studio">
-            <span className="brand-glyph">P</span>
+          <Link className="brand" href="/" aria-label="TransferLab">
+            <span className="brand-glyph">TL</span>
             <span>
-              <strong>PRINTELLY</strong>
-              <small>BACKGROUND STUDIO</small>
+              <strong>TRANSFERLAB</strong>
+              <small>DTF STUDIO</small>
             </span>
           </Link>
           <nav className="desktop-navigation" aria-label="Navigation principale">
