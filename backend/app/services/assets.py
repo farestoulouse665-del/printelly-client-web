@@ -23,7 +23,12 @@ _MIME_BY_SUFFIX = {
     ".tif": "image/tiff",
     ".tiff": "image/tiff",
     ".bmp": "image/bmp",
+    ".pdf": "application/pdf",
+    ".svg": "image/svg+xml",
+    ".psd": "image/vnd.adobe.photoshop",
+    ".ai": "application/postscript",
 }
+_RASTER_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"}
 
 
 def _sha256_file(path: Path) -> str:
@@ -63,13 +68,27 @@ class AssetService:
         safe_name = sanitize_filename(validated.original_filename)
         suffix = Path(validated.original_filename).suffix.lower()
         mime_type = _MIME_BY_SUFFIX.get(suffix, declared_mime or "application/octet-stream")
-        extension = suffix if suffix in _MIME_BY_SUFFIX else ".bin"
-        original_key = f"assets/{asset_id}/original/{uuid.uuid4().hex}{extension}"
+        converted = validated.source_temp_path is not None
+        working_extension = ".png" if converted else (suffix if suffix in _RASTER_SUFFIXES else ".png")
+        original_key = f"assets/{asset_id}/original/{uuid.uuid4().hex}{working_extension}"
+        source_key: str | None = None
+        source_path = validated.source_temp_path or validated.temp_path
+        if converted and validated.source_temp_path:
+            source_extension = suffix if suffix in _MIME_BY_SUFFIX else ".source"
+            source_key = f"assets/{asset_id}/source/{uuid.uuid4().hex}{source_extension}"
+            storage.put_file(source_key, validated.source_temp_path)
         preview_key = f"assets/{asset_id}/previews/import.png"
         storage.put_file(original_key, validated.temp_path)
         storage.put_bytes(preview_key, _preview_png(validated.image))
         dpi_x, dpi_y, profile, has_transparency = _image_metadata(validated.image)
         warnings: list[dict[str, str]] = []
+        if converted:
+            warnings.append(
+                {
+                    "code": "converted_to_working_png",
+                    "message": f"L’original {validated.detected_format} est conservé; une copie PNG locale est utilisée pour le traitement.",
+                }
+            )
         if not dpi_x:
             warnings.append(
                 {
@@ -90,8 +109,8 @@ class AssetService:
             name=Path(safe_name).stem[:180],
             original_filename=validated.original_filename[:255],
             mime_type=mime_type,
-            byte_size=validated.temp_path.stat().st_size,
-            checksum_sha256=_sha256_file(validated.temp_path),
+            byte_size=source_path.stat().st_size,
+            checksum_sha256=_sha256_file(source_path),
             width=validated.image.width,
             height=validated.image.height,
             dpi_x=dpi_x,
@@ -99,6 +118,7 @@ class AssetService:
             color_profile=profile,
             has_transparency=has_transparency,
             original_key=original_key,
+            source_key=source_key,
             preview_key=preview_key,
             status="uploaded",
             warnings=warnings,
@@ -142,9 +162,10 @@ class AssetService:
 
     @staticmethod
     def serialize(asset: Asset) -> AssetOut:
+        source_key = asset.source_key or asset.original_key
         return AssetOut.model_validate(asset).model_copy(
             update={
-                "original_download_url": storage.signed_download_path(asset.original_key),
+                "original_download_url": storage.signed_download_path(source_key),
                 "final_download_url": (
                     storage.signed_download_path(asset.final_key) if asset.final_key else None
                 ),
