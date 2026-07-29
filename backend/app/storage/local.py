@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import os
 import re
+import shutil
 import time
 from pathlib import Path
 from urllib.parse import quote
@@ -34,12 +35,26 @@ class LocalObjectStorage:
             raise ValueError("Clé de stockage invalide.")
         return candidate
 
+    def internal_path(self, key: str) -> Path:
+        """Return a worker-only path. API responses must never serialize it."""
+        return self._path(key)
+
     def put_bytes(self, key: str, payload: bytes) -> None:
         target = self._path(key)
         target.parent.mkdir(parents=True, exist_ok=True)
         temporary = target.with_suffix(target.suffix + ".partial")
         with temporary.open("wb") as output:
             output.write(payload)
+            output.flush()
+            os.fsync(output.fileno())
+        temporary.replace(target)
+
+    def put_file(self, key: str, source_path: Path) -> None:
+        target = self._path(key)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        temporary = target.with_suffix(target.suffix + ".partial")
+        with source_path.open("rb") as source, temporary.open("wb") as output:
+            shutil.copyfileobj(source, output, length=1024 * 1024)
             output.flush()
             os.fsync(output.fileno())
         temporary.replace(target)
