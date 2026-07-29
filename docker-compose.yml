@@ -1,15 +1,15 @@
-name: printelly-background-studio
+name: transferlab
 
 services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-printelly}
-      POSTGRES_USER: ${POSTGRES_USER:-printelly}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-printelly-dev-only}
+      POSTGRES_DB: ${POSTGRES_DB:-transferlab}
+      POSTGRES_USER: ${POSTGRES_USER:-transferlab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-transferlab-dev-only}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-printelly} -d ${POSTGRES_DB:-printelly}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-transferlab} -d ${POSTGRES_DB:-transferlab}"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -42,14 +42,14 @@ services:
     command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1"]
     environment: &backend-environment
       APP_ENV: ${APP_ENV:-development}
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-printelly}:${POSTGRES_PASSWORD:-printelly-dev-only}@postgres:5432/${POSTGRES_DB:-printelly}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-transferlab}:${POSTGRES_PASSWORD:-transferlab-dev-only}@postgres:5432/${POSTGRES_DB:-transferlab}
       REDIS_URL: redis://redis:6379/0
       RQ_QUEUE_NAME: ${RQ_QUEUE_NAME:-background-removal}
       STORAGE_ROOT: /data/objects
       BACKGROUND_MODEL_PATH: /models/background-removal.onnx
       BACKGROUND_MODEL_SHA256: ${BACKGROUND_MODEL_SHA256:-}
       BACKGROUND_MODEL_NAME: ${BACKGROUND_MODEL_NAME:-BiRefNet-general}
-      BACKGROUND_PIPELINE_VERSION: ${BACKGROUND_PIPELINE_VERSION:-printelly-birefnet-v3}
+      BACKGROUND_PIPELINE_VERSION: ${BACKGROUND_PIPELINE_VERSION:-transferlab-birefnet-v3}
       BACKGROUND_DEVICE: ${BACKGROUND_DEVICE:-auto}
       BACKGROUND_MODEL_INPUT_SIZE: ${BACKGROUND_MODEL_INPUT_SIZE:-1024}
       BACKGROUND_PIPELINE_V2_ENABLED: ${BACKGROUND_PIPELINE_V2_ENABLED:-true}
