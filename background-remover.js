@@ -77,6 +77,18 @@
     qualityPanel: document.getElementById("brQualityPanel"),
     qualityScore: document.getElementById("brQualityScore"),
     printWidth: document.getElementById("brPrintWidth"),
+    printHeight: document.getElementById("brPrintHeight"),
+    printUnit: document.getElementById("brPrintUnit"),
+    exportDpi: document.getElementById("brExportDpi"),
+    customDpiField: document.getElementById("brCustomDpiField"),
+    customDpi: document.getElementById("brCustomDpi"),
+    dpiMode: document.getElementById("brDpiMode"),
+    lockPrintRatio: document.getElementById("brLockPrintRatio"),
+    printSummary: document.getElementById("brPrintSummary"),
+    printQuality: document.getElementById("brPrintQuality"),
+    printPixels: document.getElementById("brPrintPixels"),
+    effectiveDpi: document.getElementById("brEffectiveDpi"),
+    printBadge: document.getElementById("brPrintBadge"),
     microLimit: document.getElementById("brMicroLimit"),
     runQuality: document.getElementById("brRunQuality"),
     nextIssue: document.getElementById("brNextIssue"),
@@ -97,6 +109,28 @@
 
     var correctionSection = ui.removalMenu ? ui.removalMenu.closest(".br-control-section") : null;
     var exportPanel = document.querySelector(".br-export-panel");
+    if (correctionSection) correctionSection.setAttribute("data-br-pro-only", "");
+
+    function setStudioMode(mode, persist) {
+      mode = mode === "pro" ? "pro" : "simple";
+      ui.workspace.dataset.studioMode = mode;
+      document.querySelectorAll("[data-br-studio-mode]").forEach(function (button) {
+        var active = button.dataset.brStudioMode === mode;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+      if (persist !== false) {
+        try { localStorage.setItem("printellyStudioMode", mode); } catch (_) {}
+      }
+      window.requestAnimationFrame(function () { window.dispatchEvent(new Event("resize")); });
+    }
+
+    var savedMode = "simple";
+    try { savedMode = localStorage.getItem("printellyStudioMode") || "simple"; } catch (_) {}
+    setStudioMode(savedMode, false);
+    document.querySelectorAll("[data-br-studio-mode]").forEach(function (button) {
+      button.addEventListener("click", function () { setStudioMode(button.dataset.brStudioMode); });
+    });
     [correctionSection, ui.qualityPanel, exportPanel].forEach(function (panel) {
       if (panel) ui.rightControls.appendChild(panel);
     });
@@ -214,7 +248,8 @@
     lastClientY: 0,
     abortController: null,
     progressTimers: [],
-    outputName: "image-sans-fond.png"
+    outputName: "image-sans-fond.png",
+    printUnit: "cm"
   };
 
   function apiBase() {
@@ -293,6 +328,71 @@
     return base + "-sans-fond.png";
   }
 
+
+
+  function selectedExportDpi() {
+    if (!ui.exportDpi) return 300;
+    var raw = ui.exportDpi.value === "custom" && ui.customDpi ? ui.customDpi.value : ui.exportDpi.value;
+    return Math.max(36, Math.min(1200, Number(raw) || 300));
+  }
+
+  function currentPrintSettings() {
+    if (!remover.sourceImage || !window.PrintellyPrintExport || !ui.printWidth) return null;
+    return window.PrintellyPrintExport.calculate({
+      sourceWidth: remover.sourceImage.naturalWidth,
+      sourceHeight: remover.sourceImage.naturalHeight,
+      width: Number(ui.printWidth.value),
+      height: Number(ui.printHeight && ui.printHeight.value),
+      unit: ui.printUnit ? ui.printUnit.value : "cm",
+      dpi: selectedExportDpi(),
+      mode: ui.dpiMode ? ui.dpiMode.value : "metadata",
+      lockRatio: !ui.lockPrintRatio || ui.lockPrintRatio.checked
+    });
+  }
+
+  function formatPrintNumber(value) {
+    return Number(value).toFixed(2).replace(/0+$/, "").replace(/[.,]$/, "").replace(".", ",");
+  }
+
+  function updatePrintPanel(refreshQuality) {
+    if (!ui.printSummary) return null;
+    var custom = ui.exportDpi && ui.exportDpi.value === "custom";
+    if (ui.customDpiField) ui.customDpiField.classList.toggle("hidden", !custom);
+    if (ui.printHeight) ui.printHeight.readOnly = !ui.lockPrintRatio || ui.lockPrintRatio.checked;
+
+    var settings = currentPrintSettings();
+    if (!settings) {
+      ui.printSummary.dataset.state = "waiting";
+      if (ui.printQuality) ui.printQuality.textContent = "Ajoutez une image";
+      if (ui.printPixels) ui.printPixels.textContent = "—";
+      if (ui.effectiveDpi) ui.effectiveDpi.textContent = "—";
+      if (ui.printBadge) ui.printBadge.textContent = selectedExportDpi() + " DPI";
+      return null;
+    }
+
+    if (ui.lockPrintRatio && ui.lockPrintRatio.checked && ui.printHeight) {
+      ui.printHeight.value = String(Math.round(settings.height * 100) / 100);
+    }
+    if (ui.printBadge) ui.printBadge.textContent = settings.dpi + " DPI";
+    if (ui.printQuality) ui.printQuality.textContent = settings.qualityLabel;
+    if (ui.printPixels) ui.printPixels.textContent = settings.outputWidth + " × " + settings.outputHeight + " px";
+    if (ui.effectiveDpi) ui.effectiveDpi.textContent = Math.round(settings.effectiveDpi) + " DPI";
+    ui.printSummary.dataset.state = settings.quality;
+    var modeText = settings.mode === "resample" ? "redimensionnement haute qualité" : "pixels originaux + métadonnée";
+    ui.printSummary.innerHTML = "<strong>" + settings.qualityLabel + "</strong><span>" +
+      formatPrintNumber(settings.width) + " × " + formatPrintNumber(settings.height) + " " + settings.unit +
+      " • " + settings.dpi + " DPI • " + modeText + ". " + settings.message + "</span>";
+    if (refreshQuality && remover.currentMask) runQualityInspection(true);
+    return settings;
+  }
+
+  function convertPrintUnit(previous, nextUnit) {
+    if (previous === nextUnit || !ui.printWidth || !ui.printHeight) return;
+    var factor = previous === "cm" && nextUnit === "in" ? 1 / 2.54 : 2.54;
+    ui.printWidth.value = String(Math.round((Number(ui.printWidth.value) || 0) * factor * 100) / 100);
+    ui.printHeight.value = String(Math.round((Number(ui.printHeight.value) || 0) * factor * 100) / 100);
+  }
+
   function normalizedImageFile(file) {
     if (!file) return null;
     var declared = String(file.type || "").split(";", 1)[0].trim().toLowerCase();
@@ -342,6 +442,7 @@
       remover.sourceUrl = loaded.url;
       remover.outputName = safeOutputName(file.name);
       prepareOriginalPreview();
+      updatePrintPanel(false);
       ui.empty.classList.add("hidden");
       ui.analyze.disabled = false;
       ui.reset.disabled = false;
@@ -427,7 +528,7 @@
       remover.previewWidth,
       remover.previewHeight,
       {
-        printWidthCm: Number(ui.printWidth.value),
+        printWidthCm: (currentPrintSettings() ? currentPrintSettings().widthInches * 2.54 : Number(ui.printWidth.value)),
         sourceWidth: remover.sourceImage.naturalWidth,
         microPixelLimit: Number(ui.microLimit.value)
       }
@@ -1488,7 +1589,7 @@
     if (maximum <= 0.001) throw new Error("Le sujet est entièrement transparent. Restaurez-le avant le téléchargement.");
   }
 
-  async function buildFinalBlob() {
+  async function buildEditedBlob() {
     if (!remover.resultBlob || !remover.resultImage) throw new Error("Aucun résultat à exporter.");
     validateMaskForExport();
     if (!remover.actions.length && !hasHiddenPaletteColors()) return remover.resultBlob;
@@ -1528,11 +1629,47 @@
     return blob;
   }
 
-  function downloadBlob(blob) {
+  async function preparePrintBlob(blob) {
+    var settings = currentPrintSettings();
+    if (!settings || !window.PrintellyPrintExport) return blob;
+    var output = blob;
+
+    if (settings.mode === "resample" && (settings.outputWidth !== remover.sourceImage.naturalWidth || settings.outputHeight !== remover.sourceImage.naturalHeight)) {
+      if (settings.outputWidth * settings.outputHeight > 40000000) {
+        throw new Error("L’export dépasserait 40 mégapixels. Réduisez la taille ou le DPI.");
+      }
+      if (settings.scale > 1.5 && typeof window.confirm === "function" && !window.confirm(
+        "Cet export agrandit fortement l’image (" + settings.scale.toFixed(1) + "×). Il ne peut pas inventer de vrais détails. Continuer ?"
+      )) {
+        throw new Error("Export annulé : choisissez une taille plus petite ou le mode métadonnée.");
+      }
+      var loaded = await loadImageFromBlob(output);
+      try {
+        var canvas = document.createElement("canvas");
+        canvas.width = settings.outputWidth;
+        canvas.height = settings.outputHeight;
+        var context = canvas.getContext("2d");
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = "high";
+        context.drawImage(loaded.image, 0, 0, settings.outputWidth, settings.outputHeight);
+        output = await canvasToBlob(canvas);
+        canvas.width = canvas.height = 1;
+      } finally {
+        URL.revokeObjectURL(loaded.url);
+      }
+    }
+    return window.PrintellyPrintExport.embedPngDpi(output, settings.dpi);
+  }
+
+  async function buildFinalBlob() {
+    return preparePrintBlob(await buildEditedBlob());
+  }
+
+  function downloadBlob(blob, fileName) {
     var url = URL.createObjectURL(blob);
     var anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = remover.outputName;
+    anchor.download = fileName || remover.outputName;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
@@ -1544,23 +1681,27 @@
     ui.progress.classList.remove("hidden");
     ui.download.disabled = true;
     ui.add.disabled = true;
-    setMessage("Création du PNG transparent dans les dimensions originales…", "");
+    var printSettings = updatePrintPanel(false);
+    setMessage("Création du PNG transparent" + (printSettings ? " • " + printSettings.dpi + " DPI" : "") + "…", "");
     try {
       var blob = await buildFinalBlob();
       if (blob.type !== "image/png" || !blob.size) throw new Error("Le PNG final est invalide.");
+      var exportName = window.PrintellyPrintExport && printSettings
+        ? window.PrintellyPrintExport.outputName(remover.outputName, printSettings.dpi)
+        : remover.outputName;
       if (addToOrder) {
         if (typeof state === "undefined" || !state.files || typeof renderFiles !== "function") {
           throw new Error("Le module de commande n’est pas disponible.");
         }
-        var file = new File([blob], remover.outputName, { type: "image/png", lastModified: Date.now() });
+        var file = new File([blob], exportName, { type: "image/png", lastModified: Date.now() });
         state.files.push({ id: typeof uuid === "function" ? uuid() : String(Date.now()), file: file, width: "", height: "", quantity: 1, previewUrl: URL.createObjectURL(file) });
         renderFiles();
         if (typeof navigate === "function") navigate("newOrder");
         if (typeof toast === "function") toast("PNG transparent ajouté à la commande.");
       } else {
-        downloadBlob(blob);
+        downloadBlob(blob, exportName);
       }
-      setMessage(addToOrder ? "PNG ajouté à votre nouvelle commande." : "PNG transparent téléchargé.", "success");
+      setMessage(addToOrder ? "PNG ajouté à votre nouvelle commande." : "PNG transparent téléchargé" + (printSettings ? " à " + printSettings.dpi + " DPI." : "."), "success");
     } catch (error) {
       setMessage(error.message || "Export impossible.", "error");
     } finally {
@@ -1598,11 +1739,32 @@
     ui.add.disabled = true;
     ui.qualityInfo.querySelector("strong").textContent = "En attente d’analyse";
     ui.qualityInfo.querySelector("span").textContent = "Les zones ambiguës et les alertes apparaîtront ici.";
+    updatePrintPanel(false);
     setMessage("", "");
     resetStages();
     fitPreview();
     updateHistory();
   }
+
+
+  if (ui.printWidth) ui.printWidth.addEventListener("input", function () { updatePrintPanel(true); });
+  if (ui.printHeight) ui.printHeight.addEventListener("input", function () { updatePrintPanel(true); });
+  if (ui.printUnit) {
+    ui.printUnit.dataset.previous = ui.printUnit.value;
+    ui.printUnit.addEventListener("change", function () {
+      var previous = ui.printUnit.dataset.previous || remover.printUnit || "cm";
+      convertPrintUnit(previous, ui.printUnit.value);
+      remover.printUnit = ui.printUnit.value;
+      ui.printUnit.dataset.previous = ui.printUnit.value;
+      updatePrintPanel(true);
+    });
+  }
+  if (ui.exportDpi) ui.exportDpi.addEventListener("change", function () { updatePrintPanel(true); });
+  if (ui.customDpi) ui.customDpi.addEventListener("input", function () { updatePrintPanel(true); });
+  if (ui.dpiMode) ui.dpiMode.addEventListener("change", function () { updatePrintPanel(true); });
+  if (ui.lockPrintRatio) ui.lockPrintRatio.addEventListener("change", function () { updatePrintPanel(true); });
+
+  updatePrintPanel(false);
 
   ui.apiUrl.value = initialApiUrl();
   ui.apiUrl.addEventListener("change", function () {
