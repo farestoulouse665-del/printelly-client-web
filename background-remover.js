@@ -85,7 +85,11 @@
     qualityCertificate: document.getElementById("brQualityCertificate"),
     createSnapshot: document.getElementById("brCreateSnapshot"),
     snapshotList: document.getElementById("brSnapshotList"),
-    snapshotCount: document.getElementById("brSnapshotCount")
+    snapshotCount: document.getElementById("brSnapshotCount"),
+    scanResidues: document.getElementById("brScanResidues"),
+    forgottenClick: document.getElementById("brForgottenClick"),
+    multiPoint: document.getElementById("brMultiPoint"),
+    assistantStatus: document.getElementById("brAssistantStatus")
   };
 
   if (!ui.canvas) return;
@@ -206,6 +210,7 @@
     qualityIssueIndex: -1,
     snapshots: [],
     snapshotSequence: 0,
+    multiPointMode: false,
     drawing: false,
     panning: false,
     activeStroke: null,
@@ -603,7 +608,6 @@
       ui.download.disabled = false;
       ui.add.disabled = false;
       if (ui.createSnapshot) ui.createSnapshot.disabled = false;
-      createSnapshot("Résultat IA", true);
       setMessage(warnings.length ? "Résultat créé avec " + warnings.length + " zone à vérifier." : "Fond supprimé. Vérifiez les contours avant l’export.", warnings.length ? "warning" : "success");
       renderPreview();
     } catch (error) {
@@ -957,7 +961,7 @@
       var emptyMessage = method === "exterior"
         ? "Aucune zone de cette couleur n’est connectée aux bords. Utilisez la sélection manuelle ou Toute une couleur."
         : "Aucune zone de fond ne correspond à cette couleur et cette tolérance.";
-      setPendingSelection(result, method === "manual", emptyMessage);
+      setPendingSelection(result, method === "manual" || remover.multiPointMode, emptyMessage);
     } catch (error) {
       setMessage(error.message, "warning");
     }
@@ -1682,7 +1686,34 @@
     if (remover.paletteSelectedIndex >= 0) selectPaletteColor(remover.paletteSelectedIndex);
   });
   ui.deleteSelectedColor.addEventListener("click", deleteSelectedPaletteColor);
-  if (ui.createSnapshot) ui.createSnapshot.addEventListener("click", function () { createSnapshot(); });
+  if (ui.scanResidues) ui.scanResidues.addEventListener("click", function () {
+    if (!remover.currentMask) { setMessage("Lancez d’abord l’analyse du sujet.", "warning"); return; }
+    runQualityInspection(false);
+    setView("ambiguous");
+    var issues = remover.qualityReport && remover.qualityReport.issues ? remover.qualityReport.issues.length : 0;
+    ui.assistantStatus.textContent = issues ? issues + " zone(s) suspecte(s) affichée(s). Utilisez Erreur suivante pour les examiner." : "Aucun résidu important détecté.";
+    setMessage(ui.assistantStatus.textContent, issues ? "warning" : "success");
+  });
+  if (ui.forgottenClick) ui.forgottenClick.addEventListener("click", function () {
+    if (!remover.currentMask) { setMessage("Lancez d’abord l’analyse du sujet.", "warning"); return; }
+    remover.multiPointMode = false;
+    ui.removalMethod.value = "manual";
+    ui.removalMenu.open = true;
+    setTool("color-select");
+    ui.assistantStatus.textContent = "Cliquez sur un morceau de fond oublié : seule sa région connectée sera sélectionnée.";
+    setMessage(ui.assistantStatus.textContent, "success");
+  });
+  if (ui.multiPoint) ui.multiPoint.addEventListener("click", function () {
+    if (!remover.currentMask) { setMessage("Lancez d’abord l’analyse du sujet.", "warning"); return; }
+    remover.multiPointMode = !remover.multiPointMode;
+    ui.multiPoint.classList.toggle("active", remover.multiPointMode);
+    ui.multiPoint.setAttribute("aria-pressed", remover.multiPointMode ? "true" : "false");
+    ui.removalMethod.value = "manual";
+    ui.removalMenu.open = true;
+    setTool(remover.multiPointMode ? "color-select" : "pan");
+    ui.assistantStatus.textContent = remover.multiPointMode ? "Multipoints actif : cliquez sur plusieurs morceaux ou couleurs, puis rendez-les transparents." : "Sélection multipoints terminée.";
+    setMessage(ui.assistantStatus.textContent, "success");
+  });
   ui.runQuality.addEventListener("click", function () { runQualityInspection(false); });
   ui.nextIssue.addEventListener("click", focusNextQualityIssue);
   ui.cleanMicro.addEventListener("click", previewMicroCleanup);
