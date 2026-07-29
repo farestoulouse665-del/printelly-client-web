@@ -8,7 +8,12 @@ from PIL import Image
 
 from app.models.schemas import ProcessingReport, RemovalMode
 from app.providers.base import BackgroundRemovalProvider
-from app.services.image_export import export_png, preserve_source_alpha
+from app.services.image_export import (
+    export_png,
+    preserve_source_alpha,
+    source_alpha_is_authoritative,
+    source_alpha_mask,
+)
 from app.services.mask_refinement import (
     RefinementOptions,
     mask_warnings,
@@ -36,16 +41,23 @@ class BackgroundRemovalPipeline:
         decontaminate: bool,
     ) -> BackgroundRemovalResult:
         started = time.perf_counter()
-        raw_mask = self.provider.predict_mask(image, mode)
-        expected_shape = (image.height, image.width)
-        if raw_mask.shape != expected_shape:
-            raise RuntimeError(
-                f"Masque de taille {raw_mask.shape}, image de taille {expected_shape}."
-            )
-        alpha = refine_mask(raw_mask, image, mode, options)
-        alpha = preserve_source_alpha(image, alpha)
-        haze_ratio = residual_haze_ratio(image, alpha)
-        warnings = mask_warnings(alpha, image)
+        source_alpha_preserved = source_alpha_is_authoritative(image)
+        if source_alpha_preserved:
+            # A real alpha channel is more reliable than re-segmenting an already cut-out PNG.
+            alpha = source_alpha_mask(image)
+            haze_ratio = 0.0
+            warnings: list[str] = []
+        else:
+            raw_mask = self.provider.predict_mask(image, mode)
+            expected_shape = (image.height, image.width)
+            if raw_mask.shape != expected_shape:
+                raise RuntimeError(
+                    f"Masque de taille {raw_mask.shape}, image de taille {expected_shape}."
+                )
+            alpha = refine_mask(raw_mask, image, mode, options)
+            alpha = preserve_source_alpha(image, alpha)
+            haze_ratio = residual_haze_ratio(image, alpha)
+            warnings = mask_warnings(alpha, image)
         png = export_png(
             image,
             alpha,
@@ -60,5 +72,6 @@ class BackgroundRemovalPipeline:
             residual_haze_ratio=haze_ratio,
             processing_ms=elapsed_ms,
             warnings=warnings,
+            source_alpha_preserved=source_alpha_preserved,
         )
         return BackgroundRemovalResult(png=png, report=report)
