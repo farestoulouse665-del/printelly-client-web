@@ -1,12 +1,7 @@
 {
-  "name": "printelly-client-web",
+  "name": "transferlab-autonome",
   "private": true,
-  "version": "1.0.0",
-  "scripts": {
-    "typecheck": "tsc --noEmit",
-    "test:frontend": "node --test tests/frontend/*.test.mjs"
-  },
-  "devDependencies": {
-    "typescript": "^5.9.2"
-  }
+  "version": "0.1.0",
+  "description": "Configurateur DTF autonome TransferLab",
+  "scripts": {}
 }
