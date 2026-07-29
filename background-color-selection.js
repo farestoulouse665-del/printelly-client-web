@@ -56,6 +56,15 @@
     }
   }
 
+  function forEachOrthogonalNeighbour(index, width, height, callback) {
+    var x = index % width;
+    var y = Math.floor(index / width);
+    if (x > 0) callback(index - 1);
+    if (x + 1 < width) callback(index + 1);
+    if (y > 0) callback(index - width);
+    if (y + 1 < height) callback(index + width);
+  }
+
   function dominantBorderColor(imageData, width, height) {
     validate(imageData, width, height);
     var buckets = Object.create(null);
@@ -126,6 +135,49 @@
     }
     for (var pixel = 0; pixel < selected.length; pixel += 1) if (selected[pixel] && matches[pixel]) count += 1;
     return { mask: selected, count: count, color: color };
+  }
+
+  function magicExterior(imageData, alphaMask, width, height, seedX, seedY, tolerance) {
+    validate(imageData, width, height);
+    if (alphaMask && alphaMask.length !== width * height) {
+      throw new Error("Le masque alpha et l’image n’ont pas les mêmes dimensions.");
+    }
+    var color = colorAt(imageData, width, height, seedX, seedY);
+    var matches = matchingColor(imageData, width, height, color, tolerance).mask;
+    var region = new Uint8Array(width * height);
+    var queue = new Int32Array(width * height);
+    var head = 0;
+    var tail = 0;
+    var touchesExterior = false;
+    region[color.index] = 1;
+    queue[tail++] = color.index;
+
+    while (head < tail) {
+      var index = queue[head++];
+      var x = index % width;
+      var y = Math.floor(index / width);
+      if (x === 0 || y === 0 || x + 1 === width || y + 1 === height) touchesExterior = true;
+      forEachOrthogonalNeighbour(index, width, height, function (neighbour) {
+        if (matches[neighbour] && !region[neighbour]) {
+          region[neighbour] = 1;
+          queue[tail++] = neighbour;
+        }
+      });
+    }
+
+    if (!touchesExterior) {
+      return { mask: new Uint8Array(width * height), count: 0, color: color, touchesExterior: false };
+    }
+
+    var selected = new Uint8Array(width * height);
+    var count = 0;
+    for (var pixel = 0; pixel < region.length; pixel += 1) {
+      if (!region[pixel]) continue;
+      if (alphaMask && alphaMask[pixel] <= 0.01) continue;
+      selected[pixel] = 1;
+      count += 1;
+    }
+    return { mask: selected, count: count, color: color, touchesExterior: true, regionCount: tail };
   }
 
   function exteriorColor(imageData, width, height, color, tolerance) {
@@ -497,6 +549,7 @@
     matchingColor: matchingColor,
     connectedRegion: connectedRegion,
     exteriorColor: exteriorColor,
+    magicExterior: magicExterior,
     dominantGuideColor: dominantGuideColor,
     guidedSelection: guidedSelection,
     guidedRegion: guidedRegion,
