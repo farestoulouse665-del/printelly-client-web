@@ -278,24 +278,16 @@
               <section class="br-control-section">
                 <div class="br-section-head"><span>05</span><div><h3>Corrections du masque</h3><p>Non destructives : seule la transparence change</p></div></div>
 
-                <details id="brLayersMenu" class="br-removal-menu br-layers-menu" open>
-                  <summary><span>CALQUES DU PROJET</span><small>Non destructifs</small></summary>
+                <details id="brDifficultBackgroundMenu" class="br-removal-menu br-assistant-menu" open>
+                  <summary><span>ASSISTANT FOND DIFFICILE</span><small>3 outils intelligents</small></summary>
                   <div class="br-removal-panel">
-                    <div class="br-layer-list" role="list" aria-label="Calques du projet">
-                      <button type="button" data-br-view="original"><span class="br-layer-eye">◉</span><span><strong>Image originale</strong><small>Verrouillée • jamais modifiée</small></span><b>🔒</b></button>
-                      <button type="button" data-br-view="result" class="active"><span class="br-layer-eye">◉</span><span><strong>Masque IA + corrections</strong><small>Résultat composite actif</small></span><b>●</b></button>
-                      <button type="button" data-br-view="mask"><span class="br-layer-eye">◉</span><span><strong>Canal alpha</strong><small>Masque noir et blanc</small></span><b>α</b></button>
-                      <button type="button" data-br-view="ambiguous"><span class="br-layer-eye">◉</span><span><strong>Carte de contrôle</strong><small>Zones ambiguës et résidus</small></span><b>!</b></button>
+                    <p class="br-removal-hint">Localisez et retirez les morceaux de fond oubliés sans modifier les couleurs du design.</p>
+                    <div class="br-assistant-actions">
+                      <button id="brScanResidues" class="secondary" type="button">SCANNER LES RESTES DU FOND</button>
+                      <button id="brForgottenClick" class="secondary" type="button">FOND OUBLIÉ PAR CLIC</button>
+                      <button id="brMultiPoint" class="secondary" type="button" aria-pressed="false">SÉLECTION MULTIPOINTS</button>
                     </div>
-                  </div>
-                </details>
-
-                <details id="brSnapshotsMenu" class="br-removal-menu br-snapshots-menu">
-                  <summary><span>HISTORIQUE VISUEL</span><small id="brSnapshotCount">0 instantané</small></summary>
-                  <div class="br-removal-panel">
-                    <p class="br-removal-hint">Enregistrez une version du masque puis revenez-y à tout moment.</p>
-                    <button id="brCreateSnapshot" class="secondary" type="button" disabled>CRÉER UN INSTANTANÉ</button>
-                    <div id="brSnapshotList" class="br-snapshot-list"><p>Aucun instantané enregistré.</p></div>
+                    <p id="brAssistantStatus" class="br-removal-hint">Lancez d’abord l’analyse du sujet.</p>
                   </div>
                 </details>
 
