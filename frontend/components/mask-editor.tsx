@@ -29,6 +29,7 @@ import type { Asset } from "@/lib/types";
 
 type Point = { x: number; y: number; pressure: number };
 type Tool = "restore_brush" | "erase_brush" | "protect_brush" | "magic_exterior" | "forgotten_background" | "background_point" | "subject_point" | "lasso_restore" | "lasso_erase" | "lasso_protect";
+type OperationKind = Tool | "edge_refine" | "residue_cleanup";
 type Preview = "result" | "original" | "mask" | "uncertain";
 
 type MaskVersion = { id: string; download_url: string; operation_count: number };
@@ -153,7 +154,7 @@ export function MaskEditor({ assetId }: { assetId: string }) {
     if (point) setPoints((current) => [...current, point]);
   }
 
-  async function apply(kind: Tool = tool) {
+  async function apply(kind: OperationKind = tool) {
     if (!asset || !resultUrl) return;
     if (!points.length && !["edge_refine", "residue_cleanup"].includes(kind)) {
       setMessage("Tracez ou sélectionnez d’abord une zone sur l’image.");
