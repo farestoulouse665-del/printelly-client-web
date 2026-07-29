@@ -31,12 +31,28 @@ test("local color selection never erases the same color across a separating obje
     const offset = (y * width + 3) * 4;
     pixels.data[offset] = pixels.data[offset + 1] = pixels.data[offset + 2] = 0;
   }
-
   const result = engine.connectedRegion(pixels, width, height, 1, 1, 12);
-
   assert.equal(result.count, 9);
   assert.equal(result.mask[1 * width + 1], 1);
   assert.equal(result.mask[1 * width + 5], 0);
+});
+
+test("global color removes enclosed matches while exterior mode preserves them", () => {
+  const engine = loadEngine();
+  const width = 5;
+  const height = 5;
+  const pixels = image(width, height, [255, 255, 255]);
+  const ring = [[1,1],[2,1],[3,1],[1,2],[3,2],[1,3],[2,3],[3,3]];
+  for (const [x, y] of ring) {
+    const offset = (y * width + x) * 4;
+    pixels.data[offset] = pixels.data[offset + 1] = pixels.data[offset + 2] = 0;
+  }
+  const color = engine.colorAt(pixels, width, height, 0, 0);
+  const global = engine.matchingColor(pixels, width, height, color, 5);
+  const exterior = engine.exteriorColor(pixels, width, height, color, 5);
+  assert.equal(global.mask[2 * width + 2], 1);
+  assert.equal(exterior.mask[2 * width + 2], 0);
+  assert.equal(exterior.mask[0], 1);
 });
 
 test("tolerance includes nearby JPEG shades and eraseMask only changes alpha", () => {
@@ -46,9 +62,7 @@ test("tolerance includes nearby JPEG shades and eraseMask only changes alpha", (
   pixels.data[8] = pixels.data[9] = pixels.data[10] = 120;
   const result = engine.connectedRegion(pixels, 3, 1, 0, 0, 8);
   const alpha = new Float32Array([1, 0.6, 0.9]);
-
   engine.eraseMask(alpha, result.mask);
-
   assert.deepEqual(Array.from(result.mask), [1, 1, 0]);
   assert.deepEqual(Array.from(alpha), [0, 0, 0.8999999761581421]);
 });
