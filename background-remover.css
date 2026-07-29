@@ -71,8 +71,9 @@
 
 /* Semantic background-removal workspace */
 .br-api-field{display:grid;gap:6px;color:var(--muted);font-size:8px;font-weight:800;letter-spacing:.04em}
-.br-api-field input{width:100%;min-height:38px;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:inherit;letter-spacing:0}
-.br-api-field input:focus{outline:2px solid rgba(214,49,43,.16);border-color:var(--red)}
+.br-api-field input,.br-api-field select{width:100%;min-height:38px;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font:inherit;letter-spacing:0}
+.br-api-field input:focus,.br-api-field select:focus{outline:2px solid rgba(214,49,43,.16);border-color:var(--red)}
+.br-api-field select{appearance:auto}
 .br-api-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:8px}
 .br-status{display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:8px;font-weight:900}
 .br-status:before{content:"";width:8px;height:8px;border-radius:50%;background:#a3aab5;box-shadow:0 0 0 4px rgba(163,170,181,.12)}
@@ -94,6 +95,10 @@
 .br-check{display:flex;align-items:flex-start;gap:9px;margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fafafb;cursor:pointer}
 .br-check input{margin-top:2px;accent-color:var(--red)}.br-check span,.br-check strong,.br-check small{display:block}
 .br-check strong{font-size:8px}.br-check small{margin-top:3px;color:var(--muted);font-size:7px;line-height:1.45}
+.br-matte-color{display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:8px;align-items:stretch}
+.br-matte-color .br-check{margin-top:0}
+.br-matte-color>input[type="color"]{width:44px;height:100%;min-height:58px;padding:5px;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:pointer}
+.br-matte-color>input[type="color"]:disabled{opacity:.38;cursor:not-allowed}
 .br-view-tabs{flex-wrap:wrap}.br-view-tabs button{white-space:nowrap}
 .br-backgrounds .gray{background:#777d86}.br-backgrounds .green{background:#18794e}
 .br-custom-color{display:grid;place-items:center;width:23px;height:23px;overflow:hidden;border:1px solid var(--line);border-radius:50%;background:conic-gradient(red,#ff0,#0f0,#0ff,#00f,#f0f,red);cursor:pointer}
