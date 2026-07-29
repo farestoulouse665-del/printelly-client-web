@@ -147,7 +147,11 @@ async def security_headers(request: Request, call_next):
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     response.headers["Cross-Origin-Resource-Policy"] = "same-site"
-    response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'none'; frame-ancestors 'none'; "
+        "img-src 'self' data:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "script-src https://cdn.jsdelivr.net; connect-src 'self'"
+    )
     response.headers["Cache-Control"] = response.headers.get("Cache-Control", "no-store")
     return response
 
