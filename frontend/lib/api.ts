@@ -312,3 +312,60 @@ export function createPngExport(
     }),
   });
 }
+
+
+export type Account = {
+  id: string;
+  email: string;
+  display_name: string;
+  locale: "fr" | "ar";
+  is_admin: boolean;
+};
+
+type AccountSession = {
+  token: string;
+  expires_at: string;
+  retention_days: number;
+  user: Account;
+};
+
+async function saveAccountSession(request: Promise<AccountSession>): Promise<AccountSession> {
+  const session = await request;
+  browserStorage()?.setItem(SESSION_KEY, session.token);
+  return session;
+}
+
+export function registerAccount(input: {
+  email: string;
+  display_name: string;
+  password: string;
+  locale: "fr" | "ar";
+}): Promise<AccountSession> {
+  return saveAccountSession(
+    apiFetch<AccountSession>("/accounts/register", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
+export function loginAccount(input: {
+  email: string;
+  password: string;
+}): Promise<AccountSession> {
+  return saveAccountSession(
+    apiFetch<AccountSession>("/accounts/login", {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  );
+}
+
+export function getAccount(): Promise<Account> {
+  return apiFetch<Account>("/accounts/me");
+}
+
+export async function logoutAccount(): Promise<void> {
+  await apiFetch<void>("/accounts/logout", { method: "POST" });
+  browserStorage()?.removeItem(SESSION_KEY);
+}
