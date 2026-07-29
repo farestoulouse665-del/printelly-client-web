@@ -57,6 +57,27 @@ test("global color removes enclosed matches while exterior mode preserves them",
   assert.equal(exterior.mask[0], 1);
 });
 
+test("guided manual selection never escapes the painted safety zone", () => {
+  const engine = loadEngine();
+  const width = 6;
+  const height = 3;
+  const pixels = image(width, height, [255, 255, 255]);
+  const guide = new Uint8Array(width * height);
+  guide[1 * width + 1] = 1;
+  guide[1 * width + 2] = 1;
+  guide[1 * width + 3] = 1;
+  const offset = (1 * width + 2) * 4;
+  pixels.data[offset] = pixels.data[offset + 1] = pixels.data[offset + 2] = 0;
+  const color = engine.colorAt(pixels, width, height, 1, 1);
+  const result = engine.guidedSelection(pixels, width, height, guide, color, 8);
+  assert.deepEqual(Array.from(result.mask), [
+    0, 0, 0, 0, 0, 0,
+    0, 1, 0, 1, 0, 0,
+    0, 0, 0, 0, 0, 0
+  ]);
+  assert.equal(result.count, 2);
+});
+
 test("tolerance includes nearby JPEG shades and eraseMask only changes alpha", () => {
   const engine = loadEngine();
   const pixels = image(3, 1, [255, 255, 255]);
@@ -78,4 +99,6 @@ test("editor exposes every removal method and remains valid JavaScript", () => {
   assert.match(htmlSource, /background-color-selection\.js/);
   assert.match(editorSource, /paintSelectionAction/);
   assert.match(editorSource, /pendingSelection/);
+  assert.match(editorSource, /beginManualGuide/);
+  assert.match(editorSource, /guidedSelection/);
 });
