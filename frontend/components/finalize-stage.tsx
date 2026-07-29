@@ -94,7 +94,12 @@ export function FinalizeStage() {
     setBusy("export");
     setMessage("");
     try {
-      const result = await createPngExport(asset.id, size.widthCm, totalQuantity);
+      const result = await createPngExport(
+        asset.id,
+        size.widthCm,
+        totalQuantity,
+        options,
+      );
       const anchor = document.createElement("a");
       anchor.href = result.download_url;
       anchor.download = result.filename;
