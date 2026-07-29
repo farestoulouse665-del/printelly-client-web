@@ -47,6 +47,8 @@ class Settings:
     temp_ttl_seconds: int = _int("TEMP_TTL_SECONDS", 1800)
     retention_days_guest: int = _int("RETENTION_DAYS_GUEST", 7)
     retention_days_user: int = _int("RETENTION_DAYS_USER", 90)
+    deletion_grace_hours: int = _int("DELETION_GRACE_HOURS", 24)
+    maintenance_interval_seconds: int = _int("MAINTENANCE_INTERVAL_SECONDS", 3600)
 
     database_url: str = os.getenv(
         "DATABASE_URL",
