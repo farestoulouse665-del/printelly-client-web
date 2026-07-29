@@ -294,8 +294,14 @@ def process_background_job(job_id: str) -> dict:
             database.rollback()
             failed_job = database.get(ProcessingJob, job_id)
             if failed_job is not None:
+                friendly_error = (
+                    "Mémoire insuffisante pour ce fichier. Réduisez sa résolution, "
+                    "la taille des tuiles ou le nombre de workers."
+                    if isinstance(exc, MemoryError)
+                    else str(exc)
+                )
                 failed_job.error_code = type(exc).__name__
-                failed_job.error_message = str(exc)[:2000]
+                failed_job.error_message = friendly_error[:2000]
                 failed_job.finished_at = datetime.now(timezone.utc)
                 record_event(
                     database,
