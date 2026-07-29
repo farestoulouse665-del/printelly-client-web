@@ -1,0 +1,54 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+import vm from "node:vm";
+
+const source = await readFile(new URL("../../background-color-selection.js", import.meta.url), "utf8");
+
+function loadEngine() {
+  const context = { window: {}, Uint8Array, Uint8ClampedArray, Int32Array, Error, Math, Number };
+  vm.runInNewContext(source, context);
+  return context.window.PrintellyColorSelection;
+}
+
+function image(width, height, color) {
+  const data = new Uint8ClampedArray(width * height * 4);
+  for (let index = 0; index < width * height; index += 1) {
+    data[index * 4] = color[0];
+    data[index * 4 + 1] = color[1];
+    data[index * 4 + 2] = color[2];
+    data[index * 4 + 3] = 255;
+  }
+  return { data };
+}
+
+test("local color selection never erases the same color across a separating object", () => {
+  const engine = loadEngine();
+  const width = 7;
+  const height = 3;
+  const pixels = image(width, height, [250, 250, 250]);
+  for (let y = 0; y < height; y += 1) {
+    const offset = (y * width + 3) * 4;
+    pixels.data[offset] = pixels.data[offset + 1] = pixels.data[offset + 2] = 0;
+  }
+
+  const result = engine.connectedRegion(pixels, width, height, 1, 1, 12);
+
+  assert.equal(result.count, 9);
+  assert.equal(result.mask[1 * width + 1], 1);
+  assert.equal(result.mask[1 * width + 5], 0);
+});
+
+test("tolerance includes nearby JPEG shades and eraseMask only changes alpha", () => {
+  const engine = loadEngine();
+  const pixels = image(3, 1, [255, 255, 255]);
+  pixels.data[4] = pixels.data[5] = pixels.data[6] = 242;
+  pixels.data[8] = pixels.data[9] = pixels.data[10] = 120;
+  const result = engine.connectedRegion(pixels, 3, 1, 0, 0, 8);
+  const alpha = new Float32Array([1, 0.6, 0.9]);
+
+  engine.eraseMask(alpha, result.mask);
+
+  assert.deepEqual(Array.from(result.mask), [1, 1, 0]);
+  assert.deepEqual(Array.from(alpha), [0, 0, 0.8999999761581421]);
+});
