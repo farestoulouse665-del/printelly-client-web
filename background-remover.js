@@ -630,10 +630,11 @@
       var model = apiResult.metadata.modelName;
       var residualHaze = Number(apiResult.metadata.residualHazeRatio || 0);
       var sourceAlphaPreserved = apiResult.metadata.sourceAlphaPreserved === true;
+      var effectiveMode = apiResult.metadata.effectiveMode || remover.mode;
       var warnings = Array.isArray(apiResult.metadata.warnings)
         ? apiResult.metadata.warnings
         : [];
-      updateQuality(model, processingMs, ratio, residualHaze, warnings);
+      updateQuality(model, processingMs, ratio, residualHaze, warnings, effectiveMode);
       ui.resultInfo.textContent = (sourceAlphaPreserved ? "Alpha original protégé • " : "PNG RGBA • ") + remover.sourceImage.naturalWidth + " × " + remover.sourceImage.naturalHeight + " px";
       ui.download.disabled = false;
       ui.add.disabled = false;
@@ -668,11 +669,12 @@
     }
   }
 
-  function updateQuality(model, milliseconds, ratio, residualHaze, warnings) {
+  function updateQuality(model, milliseconds, ratio, residualHaze, warnings, effectiveMode) {
     var percent = Math.round(ratio * 100);
     var hazePercent = Math.min(100, Math.max(0, residualHaze * 100));
+    var profile = String(effectiveMode || "auto").toUpperCase();
     ui.backgroundInfo.querySelector("strong").textContent = "Sujet détecté • " + percent + " % de l’image";
-    ui.backgroundInfo.querySelector("span").textContent = "Moteur " + model + (milliseconds ? " • " + (milliseconds / 1000).toFixed(1).replace(".", ",") + " s" : "") + " • résidu " + hazePercent.toFixed(1).replace(".", ",") + " %";
+    ui.backgroundInfo.querySelector("span").textContent = "Moteur " + model + " • profil " + profile + (milliseconds ? " • " + (milliseconds / 1000).toFixed(1).replace(".", ",") + " s" : "") + " • résidu " + hazePercent.toFixed(1).replace(".", ",") + " %";
     ui.qualityInfo.classList.toggle("warning", warnings.length > 0);
     ui.qualityInfo.querySelector("strong").textContent = warnings.length ? "Vérification recommandée" : "Fond réellement transparent";
     ui.qualityInfo.querySelector("span").textContent = warnings.length ? warnings.join(" ") : "Le canal alpha est valide et aucun voile de fond important n’a été détecté.";
