@@ -12,7 +12,7 @@ const envExample = await readFile(new URL("../../.env.example", import.meta.url)
 test("large PNG uploads use one consistent 50 MB limit", () => {
   assert.match(editor, /file\.size > 50 \* 1024 \* 1024/);
   assert.match(editor, /limite de 50 Mo/);
-  assert.match(html, /PNG, JPEG ou WEBP · 50 Mo maximum/);
+  assert.match(html, /PNG, JPEG ou WebP • 50 Mo • 40 mégapixels/);
   assert.match(config, /_int\("MAX_UPLOAD_MB", 50\)/);
   assert.match(compose, /MAX_UPLOAD_MB: \$\{MAX_UPLOAD_MB:-50\}/);
   assert.match(envExample, /^MAX_UPLOAD_MB=50$/m);
