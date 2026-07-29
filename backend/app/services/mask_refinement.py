@@ -6,7 +6,12 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from app.models.schemas import BackgroundCleanup, RemovalMode
+from app.models.schemas import (
+    BackgroundCleanup,
+    BlackBackgroundMode,
+    RemovalMode,
+)
+from app.services.black_background import remove_black_background
 
 
 @dataclass(frozen=True)
@@ -18,6 +23,7 @@ class RefinementOptions:
     protect_details: bool = True
     remove_haze: bool = True
     background_color: str | None = None
+    black_background_mode: BlackBackgroundMode = BlackBackgroundMode.off
 
 
 @dataclass(frozen=True)
@@ -233,6 +239,15 @@ def combine_semantic_and_design_mask(
     """Fuse semantic understanding, topology and flat-background alpha recovery."""
     options = options or RefinementOptions()
     mask = np.clip(semantic_mask.astype(np.float32), 0.0, 1.0)
+    if options.black_background_mode is not BlackBackgroundMode.off:
+        black_result = remove_black_background(
+            image,
+            mask,
+            options.black_background_mode,
+            options.background_cleanup,
+            protect_details=options.protect_details,
+        )
+        return black_result.alpha, black_result.confidence
     rgb = np.asarray(image.convert("RGB"), dtype=np.uint8)
     force = mode is RemovalMode.design or options.background_color is not None
     estimate = _connected_uniform_background(rgb, mask, options, force=force)
@@ -286,8 +301,16 @@ def refine_mask(
     image: Image.Image,
     mode: RemovalMode,
     options: RefinementOptions,
+    diagnostics: dict[str, float] | None = None,
 ) -> np.ndarray:
-    mask, _ = combine_semantic_and_design_mask(image, raw_mask, mode, options)
+    mask, background_confidence = combine_semantic_and_design_mask(
+        image,
+        raw_mask,
+        mode,
+        options,
+    )
+    if diagnostics is not None and options.black_background_mode is not BlackBackgroundMode.off:
+        diagnostics["black_background_confidence"] = background_confidence
     if not options.refine:
         return mask
 
