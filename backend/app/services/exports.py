@@ -22,6 +22,7 @@ class ExportService:
         with Image.open(BytesIO(source_png)) as opened:
             opened.load()
             image = opened.convert("RGBA")
+            embedded_icc = opened.info.get("icc_profile")
 
         if request.crop_to_content:
             alpha = np.asarray(image.getchannel("A"), dtype=np.uint8)
@@ -107,12 +108,14 @@ class ExportService:
             background.save(output, format="PDF", resolution=export_dpi)
             return output.getvalue(), "application/pdf", ".preview.pdf"
 
-        image.save(
-            output,
-            format="PNG",
-            optimize=True,
-            dpi=(export_dpi, export_dpi),
-        )
+        save_options: dict[str, object] = {
+            "format": "PNG",
+            "optimize": True,
+            "dpi": (export_dpi, export_dpi),
+        }
+        if isinstance(embedded_icc, bytes) and embedded_icc:
+            save_options["icc_profile"] = embedded_icc
+        image.save(output, **save_options)
         return output.getvalue(), "image/png", ".png"
 
     @staticmethod
