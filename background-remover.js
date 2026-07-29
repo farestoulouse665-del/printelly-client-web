@@ -292,12 +292,37 @@
     return base + "-sans-fond.png";
   }
 
+  function normalizedImageFile(file) {
+    if (!file) return null;
+    var declared = String(file.type || "").split(";", 1)[0].trim().toLowerCase();
+    var aliases = {
+      "image/x-png": "image/png",
+      "image/jpg": "image/jpeg",
+      "image/pjpeg": "image/jpeg"
+    };
+    var canonical = aliases[declared] || declared;
+    var extension = (file.name.match(/\.([^.]+)$/) || ["", ""])[1].toLowerCase();
+    if ((!canonical || canonical === "application/octet-stream") && extension) {
+      canonical = extension === "png"
+        ? "image/png"
+        : ((extension === "jpg" || extension === "jpeg") ? "image/jpeg" : (extension === "webp" ? "image/webp" : ""));
+    }
+    if (!["image/png", "image/jpeg", "image/webp"].includes(canonical)) return null;
+    if (file.type === canonical) return file;
+    return new File([file], file.name, {
+      type: canonical,
+      lastModified: file.lastModified || Date.now()
+    });
+  }
+
   async function selectFile(file) {
     if (!file) return;
-    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+    var normalized = normalizedImageFile(file);
+    if (!normalized) {
       setMessage("Format refusé. Choisissez un PNG, JPEG ou WebP.", "error");
       return;
     }
+    file = normalized;
     if (file.size > 50 * 1024 * 1024) {
       setMessage("Le fichier dépasse la limite de 50 Mo.", "error");
       return;
@@ -565,7 +590,12 @@
     setProcessing(true);
     setMessage("Analyse de l’image en cours…", "");
     stage("upload", "active");
+    var requestTimedOut = false;
 
+    remover.progressTimers.push(setTimeout(function () {
+      requestTimedOut = true;
+      if (remover.abortController) remover.abortController.abort();
+    }, 315000));
     remover.progressTimers.push(setTimeout(function () { stage("segment", "active"); setMessage("Le modèle local détecte le sujet et ses détails…", ""); }, 350));
     remover.progressTimers.push(setTimeout(function () { stage("refine", "active"); setMessage("Récupération du fond, de l’alpha et des micro-détails…", ""); }, 1800));
 
@@ -616,7 +646,12 @@
       renderPreview();
     } catch (error) {
       if (error.name === "AbortError") {
-        setMessage("Traitement annulé. L’image originale est toujours disponible.", "warning");
+        setMessage(
+          requestTimedOut
+            ? "Le serveur n’a pas terminé dans le délai prévu. L’image originale reste disponible; vérifiez les journaux Docker avant de réessayer."
+            : "Traitement annulé. L’image originale est toujours disponible.",
+          "warning"
+        );
         resetStages();
       } else {
         var active = ui.stages.querySelector("li.active");
