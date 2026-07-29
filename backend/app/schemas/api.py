@@ -371,6 +371,8 @@ class ExportCreateIn(BaseModel):
     margin_mm: float = Field(default=0, ge=0, le=100)
     width_cm: float | None = Field(default=None, gt=0, le=2000)
     dpi: int = Field(default=300, ge=36, le=1200)
+    resize_to_target: bool = False
+    scale_factor: float = Field(default=1, ge=1, le=4)
     remove_sensitive_metadata: bool = True
     quantity: int = Field(default=1, ge=1, le=10000)
 
