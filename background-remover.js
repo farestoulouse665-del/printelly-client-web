@@ -16,6 +16,11 @@
     edge: document.getElementById("brEdge"),
     edgeValue: document.getElementById("brEdgeValue"),
     decontaminate: document.getElementById("brDecontaminate"),
+    backgroundCleanup: document.getElementById("brBackgroundCleanup"),
+    removeHaze: document.getElementById("brRemoveHaze"),
+    protectDetails: document.getElementById("brProtectDetails"),
+    useBackgroundColor: document.getElementById("brUseBackgroundColor"),
+    backgroundColor: document.getElementById("brBackgroundColor"),
     brush: document.getElementById("brBrush"),
     brushValue: document.getElementById("brBrushValue"),
     hardness: document.getElementById("brHardness"),
@@ -285,7 +290,7 @@
     stage("upload", "active");
 
     remover.progressTimers.push(setTimeout(function () { stage("segment", "active"); setMessage("Le modèle local détecte le sujet et ses détails…", ""); }, 350));
-    remover.progressTimers.push(setTimeout(function () { stage("refine", "active"); setMessage("Raffinement des cheveux, tissus et contours…", ""); }, 1800));
+    remover.progressTimers.push(setTimeout(function () { stage("refine", "active"); setMessage("Récupération du fond, de l’alpha et des micro-détails…", ""); }, 1800));
 
     try {
       if (!window.PrintellyBackgroundApi) throw new Error("Client API non chargé.");
@@ -293,7 +298,11 @@
         mode: remover.mode,
         feather: Number(ui.feather.value),
         edgeShift: Number(ui.edge.value),
-        decontaminate: ui.decontaminate.checked
+        decontaminate: ui.decontaminate.checked,
+        backgroundCleanup: ui.backgroundCleanup.value,
+        removeHaze: ui.removeHaze.checked,
+        protectDetails: ui.protectDetails.checked,
+        backgroundColor: ui.useBackgroundColor.checked ? ui.backgroundColor.value : ""
       }, remover.abortController.signal);
 
       stage("verify", "active");
@@ -312,10 +321,11 @@
       var processingMs = apiResult.metadata.processingMs;
       var ratio = apiResult.metadata.foregroundRatio;
       var model = apiResult.metadata.modelName;
+      var residualHaze = Number(apiResult.metadata.residualHazeRatio || 0);
       var warnings = Array.isArray(apiResult.metadata.warnings)
         ? apiResult.metadata.warnings
         : [];
-      updateQuality(model, processingMs, ratio, warnings);
+      updateQuality(model, processingMs, ratio, residualHaze, warnings);
       ui.resultInfo.textContent = "PNG RGBA • " + remover.sourceImage.naturalWidth + " × " + remover.sourceImage.naturalHeight + " px";
       ui.download.disabled = false;
       ui.add.disabled = false;
@@ -340,13 +350,14 @@
     }
   }
 
-  function updateQuality(model, milliseconds, ratio, warnings) {
+  function updateQuality(model, milliseconds, ratio, residualHaze, warnings) {
     var percent = Math.round(ratio * 100);
+    var hazePercent = Math.min(100, Math.max(0, residualHaze * 100));
     ui.backgroundInfo.querySelector("strong").textContent = "Sujet détecté • " + percent + " % de l’image";
-    ui.backgroundInfo.querySelector("span").textContent = "Moteur " + model + (milliseconds ? " • " + (milliseconds / 1000).toFixed(1).replace(".", ",") + " s" : "");
+    ui.backgroundInfo.querySelector("span").textContent = "Moteur " + model + (milliseconds ? " • " + (milliseconds / 1000).toFixed(1).replace(".", ",") + " s" : "") + " • résidu " + hazePercent.toFixed(1).replace(".", ",") + " %";
     ui.qualityInfo.classList.toggle("warning", warnings.length > 0);
-    ui.qualityInfo.querySelector("strong").textContent = warnings.length ? "Vérification recommandée" : "Contrôle automatique réussi";
-    ui.qualityInfo.querySelector("span").textContent = warnings.length ? warnings.join(" ") : "Le masque contient un sujet visible et de véritables pixels transparents.";
+    ui.qualityInfo.querySelector("strong").textContent = warnings.length ? "Vérification recommandée" : "Fond réellement transparent";
+    ui.qualityInfo.querySelector("span").textContent = warnings.length ? warnings.join(" ") : "Le canal alpha est valide et aucun voile de fond important n’a été détecté.";
   }
 
   function buildBaseMask() {
@@ -813,6 +824,11 @@
   document.querySelectorAll("[data-br-mode]").forEach(function (button) {
     button.addEventListener("click", function () {
       remover.mode = button.dataset.brMode;
+      if (remover.mode === "design") {
+        ui.removeHaze.checked = true;
+        ui.protectDetails.checked = true;
+        ui.decontaminate.checked = true;
+      }
       document.querySelectorAll("[data-br-mode]").forEach(function (item) { item.classList.toggle("active", item === button); });
     });
   });
@@ -825,6 +841,9 @@
     ui.shell.className = "br-canvas-shell br-bg-custom";
     ui.shell.style.backgroundColor = ui.previewColor.value;
     document.querySelectorAll("[data-br-background]").forEach(function (button) { button.classList.remove("active"); });
+  });
+  ui.useBackgroundColor.addEventListener("change", function () {
+    ui.backgroundColor.disabled = !ui.useBackgroundColor.checked;
   });
   ui.feather.addEventListener("input", function () { ui.featherValue.textContent = Number(ui.feather.value).toFixed(1).replace(".", ",") + " px"; });
   ui.edge.addEventListener("input", function () { ui.edgeValue.textContent = ui.edge.value + " px"; });
