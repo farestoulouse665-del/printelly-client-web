@@ -59,6 +59,7 @@
     originalPreview: document.createElement("canvas"),
     originalPixels: null,
     sourceAlpha: null,
+    serverPixels: null,
     baseMask: null,
     currentMask: null,
     previewWidth: 0,
@@ -345,7 +346,8 @@
     canvas.height = remover.previewHeight;
     var context = canvas.getContext("2d", { willReadFrequently: true });
     context.drawImage(remover.resultImage, 0, 0, canvas.width, canvas.height);
-    var data = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    remover.serverPixels = context.getImageData(0, 0, canvas.width, canvas.height);
+    var data = remover.serverPixels.data;
     remover.baseMask = new Float32Array(canvas.width * canvas.height);
     for (var index = 0, pixel = 0; index < remover.baseMask.length; index += 1, pixel += 4) {
       remover.baseMask[index] = data[pixel + 3] / 255;
@@ -409,9 +411,15 @@
   }
 
   function resultPixels() {
-    var output = new ImageData(new Uint8ClampedArray(remover.originalPixels.data), remover.previewWidth, remover.previewHeight);
+    var basis = remover.serverPixels || remover.originalPixels;
+    var output = new ImageData(new Uint8ClampedArray(basis.data), remover.previewWidth, remover.previewHeight);
     if (!remover.currentMask) return output;
     for (var index = 0, pixel = 0; index < remover.currentMask.length; index += 1, pixel += 4) {
+      if (remover.baseMask && remover.currentMask[index] > remover.baseMask[index] + 0.002) {
+        output.data[pixel] = remover.originalPixels.data[pixel];
+        output.data[pixel + 1] = remover.originalPixels.data[pixel + 1];
+        output.data[pixel + 2] = remover.originalPixels.data[pixel + 2];
+      }
       output.data[pixel + 3] = Math.round(remover.currentMask[index] * 255);
     }
     return output;
@@ -451,6 +459,15 @@
     applyTransform();
   }
 
+  function blendOverlay(context, imageData) {
+    var overlayCanvas = document.createElement("canvas");
+    overlayCanvas.width = remover.previewWidth;
+    overlayCanvas.height = remover.previewHeight;
+    overlayCanvas.getContext("2d").putImageData(imageData, 0, 0);
+    context.drawImage(overlayCanvas, 0, 0);
+    overlayCanvas.width = overlayCanvas.height = 1;
+  }
+
   function drawEdgeOverlay(context) {
     var overlay = context.createImageData(remover.previewWidth, remover.previewHeight);
     var width = remover.previewWidth;
@@ -469,7 +486,7 @@
         }
       }
     }
-    context.putImageData(overlay, 0, 0);
+    blendOverlay(context, overlay);
   }
 
   function drawAmbiguousOverlay(context) {
@@ -481,7 +498,7 @@
         overlay.data[pixel + 3] = Math.round(75 + 100 * (1 - Math.abs(alpha - 0.5) * 2));
       }
     }
-    context.putImageData(overlay, 0, 0);
+    blendOverlay(context, overlay);
   }
 
   function sizeCanvasToShell() {
@@ -748,6 +765,7 @@
     remover.resultBlob = null;
     remover.originalPixels = null;
     remover.sourceAlpha = null;
+    remover.serverPixels = null;
     remover.baseMask = null;
     remover.currentMask = null;
     remover.actions = [];
