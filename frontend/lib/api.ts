@@ -54,8 +54,16 @@ export async function apiFetch<T>(
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/json");
   if (withGuest) headers.set("X-Guest-Token", await ensureGuestToken());
-  if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
+  if (
+    init.body &&
+    !(init.body instanceof FormData) &&
+    !(init.body instanceof Blob) &&
+    !headers.has("Content-Type")
+  ) {
     headers.set("Content-Type", "application/json");
+  }
+  if (init.body instanceof Blob && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/octet-stream");
   }
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
