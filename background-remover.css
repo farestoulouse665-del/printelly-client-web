@@ -24,10 +24,27 @@
 .br-analyze{width:100%;min-height:42px;font-size:8px}
 .br-rule-note{display:flex;gap:8px;padding:10px;border-radius:11px;background:#f3f7ff;color:#45658f;font-size:8px;line-height:1.5}
 .br-rule-note .icon{flex:none;width:15px;height:15px}
-.br-tools{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.br-tools{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
 .br-tools button{min-height:35px;padding:7px 5px;border:1px solid var(--line);border-radius:9px;background:#fff;color:#6b717b;font-size:7px;font-weight:950}
 .br-tools button:hover{border-color:#efb5b1;color:var(--red)}.br-tools button.active{border-color:var(--red);background:#fff1f0;color:var(--red)}
 .br-history{display:grid;grid-template-columns:1fr 1fr;gap:7px}.br-history button{font-size:7px}
+.br-removal-menu{border:1px solid #efb5b1;border-radius:12px;background:#fff8f7;overflow:hidden}
+.br-removal-menu summary{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px;color:var(--red);font-size:8px;font-weight:950;cursor:pointer;list-style:none}
+.br-removal-menu summary::-webkit-details-marker{display:none}
+.br-removal-menu summary:after{content:"＋";font-size:13px}.br-removal-menu[open] summary:after{content:"−"}
+.br-removal-menu summary small{margin-left:auto;color:#8c6c69;font-size:7px;font-weight:800}
+.br-removal-panel{display:grid;gap:11px;padding:0 12px 12px;border-top:1px solid #f3cfcd}
+.br-removal-panel>.br-api-field{margin-top:11px}
+.br-target-color{display:grid;grid-template-columns:75px 1fr;gap:7px;align-items:end}
+.br-target-color label{display:grid;gap:5px;color:var(--muted);font-size:7px;font-weight:900}
+.br-target-color input[type="color"]{width:100%;height:37px;padding:4px;border:1px solid var(--line);border-radius:9px;background:#fff;cursor:pointer}
+.br-target-color button{height:37px;font-size:7px}
+.br-removal-hint{margin:0;padding:9px;border-radius:9px;background:#fff;color:#75615f;font-size:7px;line-height:1.5}
+.br-removal-hint.warning{background:#fff6df;color:#8a5b00}
+.br-removal-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.br-removal-actions button{min-height:35px;padding:7px 6px;font-size:6.5px}
+.br-removal-actions button:last-child{grid-column:1/-1}
+.br-selection-preview{position:absolute;inset:0;z-index:3;pointer-events:none}
 .br-help{margin:0;color:var(--muted);font-size:8px;line-height:1.5}
 .br-preview-column{display:grid;gap:14px;min-width:0}
 .br-preview-panel{overflow:hidden}
@@ -46,7 +63,7 @@
 .br-canvas-shell.br-bg-checker{background-color:#e8eaee;background-image:linear-gradient(45deg,#d8dbe1 25%,transparent 25%),linear-gradient(-45deg,#d8dbe1 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#d8dbe1 75%),linear-gradient(-45deg,transparent 75%,#d8dbe1 75%);background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0}
 .br-canvas-shell.br-bg-white{background:#fff}.br-canvas-shell.br-bg-black{background:#111318}.br-canvas-shell.br-bg-red{background:#a9201d}
 .br-canvas-shell canvas{display:block;position:relative;z-index:1;width:0;height:0;max-width:none;max-height:none;transform-origin:center;filter:drop-shadow(0 14px 25px rgba(17,19,24,.14));cursor:grab}
-.br-canvas-shell[data-tool="protect"] canvas,.br-canvas-shell[data-tool="erase"] canvas{cursor:none}.br-canvas-shell.panning canvas{cursor:grabbing}
+.br-canvas-shell[data-tool="protect"] canvas,.br-canvas-shell[data-tool="erase"] canvas{cursor:none}.br-canvas-shell[data-tool="color-select"] canvas,.br-canvas-shell[data-tool="manual-background"] canvas{cursor:crosshair}.br-canvas-shell.panning canvas{cursor:grabbing}
 .br-preview-empty{display:grid;place-items:center;gap:8px;position:absolute;z-index:2;max-width:310px;padding:30px;border:1px solid rgba(255,255,255,.85);border-radius:17px;background:rgba(255,255,255,.94);text-align:center;box-shadow:0 10px 35px rgba(17,19,24,.08)}
 .br-empty-icon{display:grid;place-items:center;width:43px;height:43px;border-radius:14px;background:#fff0ef;color:var(--red)}.br-empty-icon .icon{width:21px;height:21px}
 .br-preview-empty strong{font-size:12px}.br-preview-empty>span:last-child{color:var(--muted);font-size:9px;line-height:1.55}
