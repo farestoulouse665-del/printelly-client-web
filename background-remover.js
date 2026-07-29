@@ -1566,6 +1566,7 @@
     clearPendingSelection(false);
     clearPalette(false);
     clearQuality(false);
+    clearSnapshots();
     ui.file.value = "";
     ui.canvas.width = ui.canvas.height = 1;
     ui.empty.classList.remove("hidden");
