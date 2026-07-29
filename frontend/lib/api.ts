@@ -81,7 +81,13 @@ export async function apiFetch<T>(
     } catch {
       // A non-JSON proxy error keeps the HTTP message.
     }
-    if (response.status === 401) browserStorage()?.removeItem(SESSION_KEY);
+    if (
+      response.status === 401 &&
+      path !== "/accounts/login" &&
+      path !== "/accounts/register"
+    ) {
+      browserStorage()?.removeItem(SESSION_KEY);
+    }
     throw new Error(detail);
   }
   if (response.status === 204) return undefined as T;
