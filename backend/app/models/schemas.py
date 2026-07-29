@@ -12,6 +12,12 @@ class RemovalMode(str, Enum):
     product = "product"
 
 
+class BackgroundCleanup(str, Enum):
+    light = "light"
+    normal = "normal"
+    strong = "strong"
+
+
 class HealthResponse(BaseModel):
     status: str
     model_loaded: bool
@@ -24,5 +30,6 @@ class ProcessingReport(BaseModel):
     width: int
     height: int
     foreground_ratio: float = Field(ge=0, le=1)
+    residual_haze_ratio: float = Field(default=0, ge=0, le=1)
     processing_ms: int
     warnings: list[str]
