@@ -155,13 +155,23 @@ Cas synthétiques sans données client :
 
 Ces tests complètent les tests existants, sans remplacer la future validation visuelle.
 
-## 9. Priorités suivantes
+## 9. Validation de la modification
 
-1. Faire passer la CI de cette modification.
-2. Ajouter une authentification backend adaptée au mode public, sans casser le mode local.
-3. Ajouter instrumentation par étape et script de benchmark réel.
-4. Constituer le dataset privé autorisé et calculer les métriques avant/après.
-5. Ajouter warm-up, provider réel enregistré et fallback CPU.
-6. Étendre le V2 aux cartes de risque visibles dans l'interface.
-7. Implémenter ensuite les profils fond blanc, cheveux/fourrure, halos et résidus avec
+Le run GitHub Actions `30482225984` (workflow nº 477) est réussi :
+
+- backend : 42 tests réussis en 0,83 s, 2 avertissements de dépréciation ;
+- frontend : 39 tests réussis, 0 échec ;
+- typecheck frontend : réussi.
+
+Les tests synthétiques valident l'algorithme et la compatibilité. Ils ne mesurent pas
+encore la qualité du modèle ONNX sur les images réelles de production.
+
+## 10. Priorités suivantes
+
+1. Ajouter une authentification backend adaptée au mode public, sans casser le mode local.
+2. Ajouter instrumentation par étape et script de benchmark réel.
+3. Constituer le dataset privé autorisé et calculer les métriques avant/après.
+4. Ajouter warm-up, provider réel enregistré et fallback CPU.
+5. Étendre le V2 aux cartes de risque visibles dans l'interface.
+6. Implémenter ensuite les profils fond blanc, cheveux/fourrure, halos et résidus avec
    seuils de non-régression.
