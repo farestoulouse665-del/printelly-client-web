@@ -1,0 +1,26 @@
+# Python
+backend/.venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Node
+node_modules/
+.typecheck-output/
+
+# Local configuration, credentials and model weights
+.env
+.htpasswd
+models/*
+!models/.gitkeep
+!models/README.md
+
+# Test fixtures containing private images
+backend/tests/fixtures/*
+!backend/tests/fixtures/README.md
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

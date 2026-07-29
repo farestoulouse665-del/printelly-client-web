@@ -1,0 +1,45 @@
+from __future__ import annotations
+
+from enum import Enum
+
+from pydantic import BaseModel, Field
+
+
+class RemovalMode(str, Enum):
+    auto = "auto"
+    person = "person"
+    design = "design"
+    product = "product"
+
+
+class BackgroundCleanup(str, Enum):
+    light = "light"
+    normal = "normal"
+    strong = "strong"
+
+
+class BlackBackgroundMode(str, Enum):
+    off = "off"
+    exterior = "exterior"
+    smart = "smart"
+
+
+class HealthResponse(BaseModel):
+    status: str
+    model_loaded: bool
+    model_name: str
+    device: str
+    privacy: str = "Aucune image n'est envoyée à un service tiers."
+
+
+class ProcessingReport(BaseModel):
+    width: int
+    height: int
+    foreground_ratio: float = Field(ge=0, le=1)
+    residual_haze_ratio: float = Field(default=0, ge=0, le=1)
+    processing_ms: int
+    warnings: list[str]
+    source_alpha_preserved: bool = False
+    effective_mode: RemovalMode = RemovalMode.auto
+    black_background_mode: BlackBackgroundMode = BlackBackgroundMode.off
+    black_background_confidence: float = Field(default=0, ge=0, le=1)
