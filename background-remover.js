@@ -33,6 +33,8 @@
     pickColor: document.getElementById("brPickColor"),
     colorTolerance: document.getElementById("brColorTolerance"),
     colorToleranceValue: document.getElementById("brColorToleranceValue"),
+    magicTolerance: document.getElementById("brMagicTolerance"),
+    magicToleranceValue: document.getElementById("brMagicToleranceValue"),
     removalHint: document.getElementById("brRemovalHint"),
     previewRemoval: document.getElementById("brPreviewRemoval"),
     applyRemoval: document.getElementById("brApplyRemoval"),
@@ -1387,6 +1389,56 @@
     }
   }
 
+
+  function eraseMagicExterior(point) {
+    if (!remover.currentMask || !remover.originalPixels) {
+      setMessage("Lancez d’abord l’analyse du sujet.", "warning");
+      return;
+    }
+    if (!window.PrintellyColorSelection || !window.PrintellyColorSelection.magicExterior) {
+      setMessage("La gomme magique n’est pas chargée. Rechargez la page avec Ctrl+F5.", "error");
+      return;
+    }
+    try {
+      var result = window.PrintellyColorSelection.magicExterior(
+        remover.originalPixels,
+        remover.currentMask,
+        remover.previewWidth,
+        remover.previewHeight,
+        point.x * (remover.previewWidth - 1),
+        point.y * (remover.previewHeight - 1),
+        Number(ui.magicTolerance ? ui.magicTolerance.value : 18)
+      );
+      ui.targetColor.value = colorHex(result.color);
+      if (!result.touchesExterior) {
+        setMessage("Zone intérieure protégée : cliquez sur le fond situé autour du dessin et relié au bord de l’image.", "warning");
+        return;
+      }
+      if (!result.count) {
+        setMessage("Cette partie du fond extérieur est déjà transparente.", "success");
+        return;
+      }
+      remover.actions.push({
+        tool: "selection-erase",
+        selection: new Uint8Array(result.mask),
+        width: remover.previewWidth,
+        height: remover.previewHeight,
+        source: "magic-exterior"
+      });
+      remover.redo = [];
+      rebuildMask();
+      runQualityInspection(true);
+      var percent = result.count * 100 / Math.max(1, remover.previewWidth * remover.previewHeight);
+      setMessage(
+        "Gomme magique : fond extérieur supprimé (" + percent.toFixed(1).replace(".", ",") +
+        " %). Les zones intérieures sont protégées; utilisez Annuler si nécessaire.",
+        "success"
+      );
+    } catch (error) {
+      setMessage(error.message || "La gomme magique n’a pas pu analyser cette zone.", "error");
+    }
+  }
+
   function pointerDown(event) {
     if (!remover.sourceImage) return;
     ui.canvas.setPointerCapture(event.pointerId);
@@ -1394,6 +1446,10 @@
     remover.lastClientY = event.clientY;
     if (remover.tool === "pan") {
       remover.panning = true;
+      return;
+    }
+    if (remover.tool === "magic-exterior") {
+      eraseMagicExterior(normalizedPoint(event));
       return;
     }
     if (remover.tool === "color-select" || remover.tool === "manual-background") {
@@ -1462,7 +1518,7 @@
   }
 
   function updateCursor(event) {
-    if (remover.tool === "pan" || remover.tool === "color-select" || remover.tool === "manual-background" || !remover.currentMask) {
+    if (remover.tool === "pan" || remover.tool === "color-select" || remover.tool === "manual-background" || remover.tool === "magic-exterior" || !remover.currentMask) {
       ui.cursor.classList.add("hidden");
       return;
     }
@@ -1485,7 +1541,8 @@
     });
     ui.canvas.classList.toggle("is-brushing", tool === "protect" || tool === "erase");
     ui.shell.dataset.tool = tool;
-    if (tool === "pan" || tool === "color-select" || tool === "manual-background") ui.cursor.classList.add("hidden");
+    if (tool === "pan" || tool === "color-select" || tool === "manual-background" || tool === "magic-exterior") ui.cursor.classList.add("hidden");
+    if (tool === "magic-exterior") setMessage("Gomme magique extérieure active : cliquez sur le fond autour du dessin.", "success");
   }
 
   function updateHistory() {
@@ -1830,6 +1887,9 @@
     setTool(ui.removalMethod.value === "manual" ? "manual-background" : "color-select");
     setMessage("Cliquez maintenant sur la couleur ou la zone de fond dans l’image.", "success");
   });
+  if (ui.magicTolerance) ui.magicTolerance.addEventListener("input", function () {
+    ui.magicToleranceValue.textContent = ui.magicTolerance.value;
+  });
   ui.colorTolerance.addEventListener("input", function () {
     ui.colorToleranceValue.textContent = ui.colorTolerance.value;
     if (remover.currentMask && (ui.removalMethod.value === "global" || ui.removalMethod.value === "exterior")) previewRemoval();
@@ -1953,6 +2013,7 @@
     if (!document.body.classList.contains("br-studio-active")) return;
     if (key === "b") setTool("protect");
     else if (key === "e") setTool("erase");
+    else if (key === "m") setTool("magic-exterior");
     else if (key === "r") setTool("protect");
     else if (key === "f") fitPreview();
     else if (key === "h") setView("mask");
