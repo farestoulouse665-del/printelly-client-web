@@ -57,11 +57,12 @@ def test_pipeline_preserves_a_real_source_alpha_without_resegmenting():
         for x in range(5, 15):
             image.putpixel((x, y), (20, 140, 230, 255))
 
+    image.putpixel((5, 8), (180, 90, 30, 128))
     pipeline = BackgroundRemovalPipeline(FailingIfCalledProvider())
     result = pipeline.process(
         image,
-        RemovalMode.auto,
-        RefinementOptions(refine=True, feather=1, edge_shift=0),
+        RemovalMode.design,
+        RefinementOptions(refine=True, feather=1, edge_shift=0, remove_haze=True),
         decontaminate=True,
     )
 
@@ -70,3 +71,4 @@ def test_pipeline_preserves_a_real_source_alpha_without_resegmenting():
         exported.load()
         assert exported.getpixel((0, 0))[3] == 0
         assert exported.getpixel((10, 8)) == (20, 140, 230, 255)
+        assert exported.getpixel((5, 8)) == (180, 90, 30, 128)
