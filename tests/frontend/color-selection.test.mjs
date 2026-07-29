@@ -6,6 +6,7 @@ import vm from "node:vm";
 const source = await readFile(new URL("../../background-color-selection.js", import.meta.url), "utf8");
 const editorSource = await readFile(new URL("../../background-remover.js", import.meta.url), "utf8");
 const htmlSource = await readFile(new URL("../../index.html", import.meta.url), "utf8");
+const dockerfileSource = await readFile(new URL("../../Dockerfile.frontend", import.meta.url), "utf8");
 
 function loadEngine() {
   const context = { window: {}, Uint8Array, Uint8ClampedArray, Int32Array, Error, Math, Number };
@@ -97,6 +98,7 @@ test("editor exposes every removal method and remains valid JavaScript", () => {
   assert.match(htmlSource, /value="exterior"/);
   assert.match(htmlSource, /value="manual"/);
   assert.match(htmlSource, /background-color-selection\.js/);
+  assert.match(dockerfileSource, /background-color-selection\.js/);
   assert.match(editorSource, /paintSelectionAction/);
   assert.match(editorSource, /pendingSelection/);
   assert.match(editorSource, /beginManualGuide/);
