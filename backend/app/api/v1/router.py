@@ -1,10 +1,23 @@
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter, Request
 from redis import Redis
 from sqlalchemy import text
 
-from app.api.v1 import admin, assets, commerce, exports, files, jobs, masks, preflight, reviews, sessions
+from app.api.v1 import (
+    admin,
+    assets,
+    commerce,
+    exports,
+    files,
+    jobs,
+    masks,
+    preflight,
+    reviews,
+    sessions,
+)
 from app.core.config import settings
 from app.db.session import SessionLocal
 from app.schemas.api import HealthOut
@@ -19,13 +32,22 @@ def health(request: Request) -> HealthOut:
     database_state = "ready"
     redis_state = "ready"
     storage_state = "ready"
+    runtime: dict = {}
     try:
         with SessionLocal() as database:
             database.execute(text("SELECT 1"))
     except Exception:
         database_state = "unavailable"
     try:
-        Redis.from_url(settings.redis_url, socket_connect_timeout=1).ping()
+        redis = Redis.from_url(
+            settings.redis_url,
+            decode_responses=True,
+            socket_connect_timeout=1,
+        )
+        redis.ping()
+        encoded_runtime = redis.get("printelly:worker:model-runtime")
+        if encoded_runtime:
+            runtime = json.loads(encoded_runtime)
     except Exception:
         redis_state = "unavailable"
     try:
@@ -36,17 +58,28 @@ def health(request: Request) -> HealthOut:
     except Exception:
         storage_state = "unavailable"
 
-    provider = getattr(request.app.state, "provider", None)
-    required_ready = database_state == "ready" and storage_state == "ready"
+    api_provider = getattr(request.app.state, "provider", None)
+    model_loaded = bool(runtime.get("loaded")) or api_provider is not None
+    execution_provider = runtime.get("provider") or getattr(
+        api_provider,
+        "execution_provider",
+        None,
+    )
+    model_name = runtime.get("model") or settings.model_name
+    required_ready = (
+        database_state == "ready"
+        and redis_state == "ready"
+        and storage_state == "ready"
+    )
     return HealthOut(
         status="ready" if required_ready else "degraded",
         version="1.0.0",
         database=database_state,
         redis=redis_state,
         storage=storage_state,
-        model_loaded=provider is not None,
-        model_name=settings.model_name,
-        execution_provider=getattr(provider, "execution_provider", None),
+        model_loaded=model_loaded,
+        model_name=model_name,
+        execution_provider=execution_provider,
     )
 
 
