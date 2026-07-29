@@ -25,7 +25,10 @@ def serialize(record: ExportRecord) -> ExportOut:
         status=record.status,
         filename=record.filename,
         byte_size=record.byte_size,
-        download_url=storage.signed_download_path(record.storage_key),
+        download_url=storage.signed_download_path(
+            record.storage_key,
+            filename=record.filename,
+        ),
         created_at=record.created_at,
     )
 
@@ -43,7 +46,10 @@ def create_export(
             detail="Supprimez le fond avant de créer cet export.",
         )
     source_key = asset.final_key or asset.original_key
-    payload, media_type, extension = export_service.render(storage.get_bytes(source_key), body)
+    payload, _media_type, extension = export_service.render(
+        storage.get_bytes(source_key),
+        body,
+    )
     export_id = str(uuid.uuid4())
     filename = export_service.filename(asset.original_filename, body, extension)
     key = f"assets/{asset.id}/exports/{export_id}{extension}"
