@@ -272,7 +272,10 @@
 
   async function analyze() {
     if (!remover.file) return;
-    if (remover.abortController) remover.abortController.abort();
+    if (remover.abortController) {
+      setMessage("Un traitement est déjà en cours. Patientez ou utilisez Annuler.", "warning");
+      return;
+    }
     remover.abortController = new AbortController();
     clearResult(false);
     clearProgressTimers();
@@ -309,7 +312,9 @@
       var processingMs = apiResult.metadata.processingMs;
       var ratio = apiResult.metadata.foregroundRatio;
       var model = apiResult.metadata.modelName;
-      var warnings = apiResult.metadata.warnings;
+      var warnings = Array.isArray(apiResult.metadata.warnings)
+        ? apiResult.metadata.warnings
+        : [];
       updateQuality(model, processingMs, ratio, warnings);
       ui.resultInfo.textContent = "PNG RGBA • " + remover.sourceImage.naturalWidth + " × " + remover.sourceImage.naturalHeight + " px";
       ui.download.disabled = false;
@@ -322,7 +327,10 @@
         resetStages();
       } else {
         var active = ui.stages.querySelector("li.active");
-        if (active) active.classList.add("error");
+        if (active) {
+          active.classList.remove("active");
+          active.classList.add("error");
+        }
         setMessage(error.message || "Le traitement a échoué.", "error");
       }
     } finally {
