@@ -7,6 +7,7 @@ const html = await readFile(new URL("../../index.html", import.meta.url), "utf8"
 const compose = await readFile(new URL("../../docker-compose.yml", import.meta.url), "utf8");
 const nginx = await readFile(new URL("../../docker/nginx.conf", import.meta.url), "utf8");
 const config = await readFile(new URL("../../backend/app/core/config.py", import.meta.url), "utf8");
+const dockerfile = await readFile(new URL("../../backend/Dockerfile", import.meta.url), "utf8");
 const envExample = await readFile(new URL("../../.env.example", import.meta.url), "utf8");
 
 test("large PNG uploads use one consistent 50 MB limit", () => {
@@ -22,6 +23,8 @@ test("large decoded PNGs have adequate timeout and temporary memory", () => {
   assert.match(config, /_int\("REQUEST_TIMEOUT_SECONDS", 300\)/);
   assert.match(compose, /REQUEST_TIMEOUT_SECONDS: \$\{REQUEST_TIMEOUT_SECONDS:-300\}/);
   assert.match(compose, /background-removal:size=512m/);
+  assert.match(compose, /TMPDIR: \/tmp\/background-removal/);
+  assert.match(dockerfile, /TMPDIR=\/tmp\/background-removal/);
   assert.match(nginx, /client_max_body_size 52m/);
   assert.match(nginx, /proxy_read_timeout 310s/);
   assert.match(nginx, /proxy_send_timeout 310s/);
