@@ -58,6 +58,7 @@
     resultBlob: null,
     originalPreview: document.createElement("canvas"),
     originalPixels: null,
+    sourceAlpha: null,
     baseMask: null,
     currentMask: null,
     previewWidth: 0,
@@ -200,6 +201,10 @@
     context.clearRect(0, 0, remover.previewWidth, remover.previewHeight);
     context.drawImage(remover.sourceImage, 0, 0, remover.previewWidth, remover.previewHeight);
     remover.originalPixels = context.getImageData(0, 0, remover.previewWidth, remover.previewHeight);
+    remover.sourceAlpha = new Float32Array(remover.previewWidth * remover.previewHeight);
+    for (var alphaIndex = 0, alphaPixel = 3; alphaIndex < remover.sourceAlpha.length; alphaIndex += 1, alphaPixel += 4) {
+      remover.sourceAlpha[alphaIndex] = remover.originalPixels.data[alphaPixel] / 255;
+    }
     ui.canvas.width = remover.previewWidth;
     ui.canvas.height = remover.previewHeight;
     fitPreview();
@@ -395,8 +400,9 @@
         var falloff = distance <= hardRadius ? 1 : 1 - (distance - hardRadius) / Math.max(0.001, radius - hardRadius);
         var weight = Math.max(0, Math.min(1, falloff * stroke.opacity));
         var offset = y * remover.previewWidth + x;
+        var sourceMaximum = remover.sourceAlpha ? remover.sourceAlpha[offset] : 1;
         mask[offset] = stroke.tool === "protect"
-          ? mask[offset] + (1 - mask[offset]) * weight
+          ? mask[offset] + (sourceMaximum - mask[offset]) * weight
           : mask[offset] * (1 - weight);
       }
     }
@@ -741,6 +747,7 @@
     remover.resultImage = null;
     remover.resultBlob = null;
     remover.originalPixels = null;
+    remover.sourceAlpha = null;
     remover.baseMask = null;
     remover.currentMask = null;
     remover.actions = [];
