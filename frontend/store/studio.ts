@@ -135,7 +135,7 @@ export const useStudio = create<StudioState>()(
   setPreflight: (preflight) => set({ preflight }),
     }),
     {
-      name: "printelly-background-studio-state",
+      name: "transferlab-background-studio-state",
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         locale: state.locale,
