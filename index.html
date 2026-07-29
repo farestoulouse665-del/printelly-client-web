@@ -390,6 +390,25 @@
                 </div>
               </article>
 
+              <article id="brQualityPanel" class="panel br-quality-panel">
+                <div class="br-quality-head">
+                  <div><p class="eyebrow">CONTRÔLE AVANT IMPRESSION</p><h3>Inspecteur Qualité DTF</h3><p>Analyse locale du canal alpha, des résidus, des micro-pixels, des trous et de la résolution.</p></div>
+                  <div id="brQualityScore" class="br-quality-score" data-state="waiting"><strong>—</strong><span>/ 100</span></div>
+                </div>
+                <div class="br-quality-settings">
+                  <label class="br-api-field"><span>Largeur d’impression</span><div class="br-unit-field"><input id="brPrintWidth" type="number" min="1" max="200" step="0.1" value="25"><b>cm</b></div></label>
+                  <label class="br-api-field"><span>Nettoyage des fragments</span><select id="brMicroLimit"><option value="4">1–4 pixels</option><option value="8">1–8 pixels</option><option value="12" selected>1–12 pixels</option><option value="24">1–24 pixels</option></select></label>
+                </div>
+                <div class="br-quality-actions">
+                  <button id="brRunQuality" class="primary" type="button" disabled>ANALYSER LA QUALITÉ</button>
+                  <button id="brNextIssue" class="secondary" type="button" disabled>ERREUR SUIVANTE</button>
+                  <button id="brCleanMicro" class="secondary" type="button" disabled>SUPPRIMER LES MICRO-PIXELS</button>
+                </div>
+                <div id="brQualitySummary" class="br-quality-summary"><p>Lancez l’analyse du sujet pour obtenir le contrôle DTF.</p></div>
+                <div id="brQualityIssues" class="br-quality-issues"></div>
+                <div id="brQualityCertificate" class="br-quality-certificate hidden"></div>
+              </article>
+
               <article class="panel br-export-panel">
                 <div>
                   <p class="eyebrow">FICHIER FINAL</p>
@@ -474,6 +493,7 @@
   <script src="./app.js" defer></script>
   <script src="./background-removal-api.js" defer></script>
   <script src="./background-color-selection.js" defer></script>
+  <script src="./background-quality.js" defer></script>
   <script src="./background-remover.js" defer></script>
 </body>
 </html>
