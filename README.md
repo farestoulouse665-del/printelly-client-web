@@ -29,6 +29,8 @@ FastAPI
   -> suppression du fichier temporaire
 Navigateur
   -> aperçu, masque, contours, zones ambiguës
+  -> scanner de résidus (voiles, bords reliés, petits fragments)
+  -> guidage manuel intelligent à 8 directions avec zone de sécurité
   -> corrections alpha non destructives
   -> téléchargement ou ajout à une commande
 ```
@@ -141,13 +143,13 @@ serveur ».
 | `BACKGROUND_MODEL_NAME` | `BiRefNet-general-tiny` | nom remonté au frontend |
 | `BACKGROUND_DEVICE` | `cpu` | `cpu` ou `cuda` |
 | `BACKGROUND_MODEL_INPUT_SIZE` | `1024` | repli si la forme ONNX est dynamique |
-| `MAX_UPLOAD_MB` | `20` | limite de taille |
+| `MAX_UPLOAD_MB` | `50` | limite de taille |
 | `MAX_IMAGE_PIXELS` | `40000000` | limite de résolution |
 | `TEMP_DIR` | `/tmp/background-removal` | stockage temporaire |
 | `TEMP_TTL_SECONDS` | `900` | nettoyage des fichiers orphelins |
 | `RATE_LIMIT_PER_MINUTE` | `10` | limite locale par IP |
 | `MAX_CONCURRENT_JOBS` | `1` | protège la mémoire CPU |
-| `REQUEST_TIMEOUT_SECONDS` | `180` | délai maximal |
+| `REQUEST_TIMEOUT_SECONDS` | `300` | délai maximal |
 | `CORS_ORIGINS` | origines locales + site PRINTELLY | liste séparée par virgules |
 | `ONNX_INTRA_OP_THREADS` | `0` | réglage automatique ONNX |
 | `ENABLE_API_DOCS` | `false` | active `/docs` en développement |
@@ -159,7 +161,7 @@ CUDA/CuDNN et définir `BACKGROUND_DEVICE=cuda`. Le CPU reste la configuration d
 ## Sécurité et confidentialité
 
 - PNG, JPEG et WebP seulement, contrôlés par MIME, signature et décodage Pillow.
-- 20 Mo et 40 mégapixels par défaut.
+- 50 Mo et 40 mégapixels par défaut.
 - noms de sortie neutralisés et temporaires aléatoires;
 - rate limiting local, un traitement CPU concurrent, délai et annulation côté navigateur;
 - origines CORS explicites;
@@ -185,7 +187,7 @@ npm run test:frontend
 ```
 
 La CI exécute les tests sans poids ONNX grâce à un fournisseur factice. Elle couvre la
-validation, le nettoyage en erreur, la conservation des dimensions/RGB, l'alpha existant,
+validation, le nettoyage en erreur, la conservation des dimensions/RGB, l'alpha existant sans nouvelle segmentation,
 le fond noir avec design blanc, les couleurs de fond présentes dans un sujet protégé,
 les designs multicolores, les halos blancs issus d'un ancien fond, les micro-détails,
 la récupération des couleurs de bord, le score de résidus, le pipeline, les en-têtes de
@@ -218,7 +220,8 @@ production.
   la couleur de fond forcée pour un ancien fond blanc/noir particulièrement tenace;
 - la décontamination modifie uniquement le RGB des pixels semi-transparents du bord; le centre
   du sujet et ses couleurs restent inchangés;
-- la sélection de plusieurs instances et le guidage par clic nécessitent un second modèle
-  interactif; le pinceau manuel permet déjà de restaurer ou retirer localement le masque;
+- le guidage manuel actuel combine couleur, proximité et topologie à 8 directions dans une
+  zone de sécurité; une ambiguïté sémantique extrême peut encore nécessiter le pinceau
+  Protéger/Effacer ou un futur second modèle interactif;
 - la recette visuelle réelle reste obligatoire pour les vêtements, cheveux, dentelles,
   voiles, verre, ombres et designs propres à PRINTELLY.
