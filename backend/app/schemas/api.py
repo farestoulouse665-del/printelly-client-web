@@ -358,7 +358,14 @@ class HealthOut(BaseModel):
 
 class ExportCreateIn(BaseModel):
     asset_id: str
-    format: Literal["png", "alpha_png", "preview_jpg", "underbase_jpg"] = "png"
+    format: Literal[
+        "png",
+        "alpha_png",
+        "preview_jpg",
+        "underbase_jpg",
+        "pdf_preview",
+        "dtf_report_json",
+    ] = "png"
     preserve_canvas: bool = True
     crop_to_content: bool = False
     margin_mm: float = Field(default=0, ge=0, le=100)
@@ -366,6 +373,10 @@ class ExportCreateIn(BaseModel):
     dpi: int = Field(default=300, ge=36, le=1200)
     remove_sensitive_metadata: bool = True
     quantity: int = Field(default=1, ge=1, le=10000)
+
+
+class BatchExportIn(BaseModel):
+    items: list[ExportCreateIn] = Field(min_length=1, max_length=25)
 
 
 class ExportOut(BaseModel):
