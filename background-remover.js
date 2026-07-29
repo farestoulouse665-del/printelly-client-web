@@ -83,9 +83,6 @@
     qualitySummary: document.getElementById("brQualitySummary"),
     qualityIssues: document.getElementById("brQualityIssues"),
     qualityCertificate: document.getElementById("brQualityCertificate"),
-    createSnapshot: document.getElementById("brCreateSnapshot"),
-    snapshotList: document.getElementById("brSnapshotList"),
-    snapshotCount: document.getElementById("brSnapshotCount"),
     scanResidues: document.getElementById("brScanResidues"),
     forgottenClick: document.getElementById("brForgottenClick"),
     multiPoint: document.getElementById("brMultiPoint"),
@@ -208,8 +205,6 @@
     paletteSelectedIndex: -1,
     qualityReport: null,
     qualityIssueIndex: -1,
-    snapshots: [],
-    snapshotSequence: 0,
     multiPointMode: false,
     drawing: false,
     panning: false,
@@ -508,7 +503,6 @@
     clearPendingSelection(false);
     clearPalette(false);
     clearQuality(false);
-    clearSnapshots();
     ui.download.disabled = true;
     ui.add.disabled = true;
     updateHistory();
@@ -607,7 +601,6 @@
       ui.resultInfo.textContent = "PNG RGBA • " + remover.sourceImage.naturalWidth + " × " + remover.sourceImage.naturalHeight + " px";
       ui.download.disabled = false;
       ui.add.disabled = false;
-      if (ui.createSnapshot) ui.createSnapshot.disabled = false;
       setMessage(warnings.length ? "Résultat créé avec " + warnings.length + " zone à vérifier." : "Fond supprimé. Vérifiez les contours avant l’export.", warnings.length ? "warning" : "success");
       renderPreview();
     } catch (error) {
@@ -1321,80 +1314,6 @@
     if (tool === "pan" || tool === "color-select" || tool === "manual-background") ui.cursor.classList.add("hidden");
   }
 
-  function cloneStudioAction(action) {
-    var copy = Object.assign({}, action);
-    if (action.points) copy.points = action.points.map(function (point) { return { x: point.x, y: point.y }; });
-    if (action.selection) copy.selection = new Uint8Array(action.selection);
-    return copy;
-  }
-
-  function clearSnapshots() {
-    remover.snapshots = [];
-    remover.snapshotSequence = 0;
-    if (ui.createSnapshot) ui.createSnapshot.disabled = true;
-    renderSnapshots();
-  }
-
-  function renderSnapshots() {
-    if (!ui.snapshotList || !ui.snapshotCount) return;
-    var count = remover.snapshots.length;
-    ui.snapshotCount.textContent = count + (count > 1 ? " instantanés" : " instantané");
-    if (!count) {
-      ui.snapshotList.innerHTML = "<p>Aucun instantané enregistré.</p>";
-      return;
-    }
-    ui.snapshotList.innerHTML = "";
-    remover.snapshots.slice().reverse().forEach(function (snapshot) {
-      var item = document.createElement("div");
-      item.className = "br-snapshot-item";
-      var info = document.createElement("div");
-      var title = document.createElement("strong");
-      title.textContent = snapshot.name;
-      var meta = document.createElement("small");
-      meta.textContent = snapshot.actions.length + " correction(s) • " + snapshot.time;
-      info.appendChild(title);
-      info.appendChild(meta);
-      var restore = document.createElement("button");
-      restore.type = "button";
-      restore.className = "secondary";
-      restore.textContent = "RESTAURER";
-      restore.addEventListener("click", function () { restoreSnapshot(snapshot.id); });
-      item.appendChild(info);
-      item.appendChild(restore);
-      ui.snapshotList.appendChild(item);
-    });
-  }
-
-  function createSnapshot(label, automatic) {
-    if (!remover.currentMask) return;
-    remover.snapshotSequence += 1;
-    var snapshot = {
-      id: Date.now() + "-" + remover.snapshotSequence,
-      name: label || "Version " + remover.snapshotSequence,
-      time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
-      actions: remover.actions.map(cloneStudioAction),
-      paletteHidden: Object.assign({}, remover.paletteHidden),
-      view: remover.view
-    };
-    remover.snapshots.push(snapshot);
-    if (remover.snapshots.length > 10) remover.snapshots.shift();
-    if (ui.createSnapshot) ui.createSnapshot.disabled = false;
-    renderSnapshots();
-    if (!automatic) setMessage("Instantané enregistré. Vous pouvez revenir à cette version à tout moment.", "success");
-  }
-
-  function restoreSnapshot(id) {
-    var snapshot = remover.snapshots.find(function (item) { return item.id === id; });
-    if (!snapshot || !remover.baseMask) return;
-    remover.actions = snapshot.actions.map(cloneStudioAction);
-    remover.redo = [];
-    remover.paletteHidden = Object.assign({}, snapshot.paletteHidden);
-    rebuildMask();
-    setView(snapshot.view || "result");
-    if (typeof renderPalette === "function") renderPalette();
-    setMessage("Version restaurée sans modifier l’image originale.", "success");
-  }
-
   function updateHistory() {
     ui.undo.disabled = remover.actions.length === 0;
     ui.redo.disabled = remover.redo.length === 0;
@@ -1593,7 +1512,6 @@
     clearPendingSelection(false);
     clearPalette(false);
     clearQuality(false);
-    clearSnapshots();
     ui.file.value = "";
     ui.canvas.width = ui.canvas.height = 1;
     ui.empty.classList.remove("hidden");
