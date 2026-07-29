@@ -100,12 +100,14 @@ def test_guest_upload_library_queue_and_cancellation_are_connected():
                         "height_cm": 30,
                         "quantity": 1,
                     }
-                ]
+                ],
+                "delivery_dzd": 0,
             },
         )
         assert quote_response.status_code == 200, quote_response.text
         assert quote_response.json()["breakdown"]["price_per_square_cm_dzd"] == 1.0
         assert quote_response.json()["subtotal_dzd"] == 900.0
+        assert quote_response.json()["delivery_dzd"] > 0
 
         persisted_quote = client.post(
             "/api/v1/quotes",
