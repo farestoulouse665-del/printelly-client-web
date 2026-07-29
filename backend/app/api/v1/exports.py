@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import uuid
+import zipfile
+from io import BytesIO
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -8,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.api.v1.dependencies import current_guest
 from app.db.session import get_db
 from app.models.entities import ExportRecord, GuestSession
-from app.schemas.api import ExportCreateIn, ExportOut
+from app.schemas.api import BatchExportIn, ExportCreateIn, ExportOut
 from app.services.assets import asset_service
 from app.services.exports import export_service
 from app.storage.local import storage
@@ -63,6 +65,66 @@ def create_export(
         storage_key=key,
         filename=filename,
         options=body.model_dump(mode="json"),
+        byte_size=len(payload),
+    )
+    database.add(record)
+    database.commit()
+    database.refresh(record)
+    return serialize(record)
+
+
+@router.post("/batch", response_model=ExportOut, status_code=201)
+def create_batch_export(
+    body: BatchExportIn,
+    guest: GuestSession = Depends(current_guest),
+    database: Session = Depends(get_db),
+) -> ExportOut:
+    archive_buffer = BytesIO()
+    first_asset = None
+    filenames: list[str] = []
+    with zipfile.ZipFile(
+        archive_buffer,
+        mode="w",
+        compression=zipfile.ZIP_DEFLATED,
+        compresslevel=6,
+    ) as archive:
+        for index, requested in enumerate(body.items, start=1):
+            asset = asset_service.owned_asset(database, requested.asset_id, guest.id)
+            if not asset.final_key:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Le design {asset.name} n’a pas encore de PNG transparent.",
+                )
+            first_asset = first_asset or asset
+            png_request = requested.model_copy(update={"format": "png"})
+            payload, _media_type, extension = export_service.render(
+                storage.get_bytes(asset.final_key),
+                png_request,
+            )
+            filename = export_service.filename(
+                asset.original_filename,
+                png_request,
+                extension,
+            )
+            unique_name = f"{index:02d}_{filename}"
+            filenames.append(unique_name)
+            archive.writestr(unique_name, payload)
+    if first_asset is None:
+        raise HTTPException(status_code=422, detail="Aucun design à exporter.")
+    payload = archive_buffer.getvalue()
+    export_id = str(uuid.uuid4())
+    filename = "PRINTELLY_exports_DTF.zip"
+    key = f"assets/{first_asset.id}/exports/{export_id}.zip"
+    storage.put_bytes(key, payload)
+    record = ExportRecord(
+        id=export_id,
+        asset_id=first_asset.id,
+        guest_session_id=guest.id,
+        format="zip",
+        status="completed",
+        storage_key=key,
+        filename=filename,
+        options={"items": filenames},
         byte_size=len(payload),
     )
     database.add(record)
