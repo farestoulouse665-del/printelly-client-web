@@ -145,7 +145,7 @@ serveur ».
 | `REQUEST_TIMEOUT_SECONDS` | `180` | délai maximal |
 | `CORS_ORIGINS` | origines locales + site PRINTELLY | liste séparée par virgules |
 | `ONNX_INTRA_OP_THREADS` | `0` | réglage automatique ONNX |
-| `ENABLE_API_DOCS` | `false` | active `/docs` en développement |
+| `ENABLE_API_DOCS` | `false` | active `/docs` en développement |\n| `TRUST_PROXY_HEADERS` | `false` | fait confiance à `X-Forwarded-For` seulement derrière un proxy contrôlé |
 
 Pour le GPU, installer `backend/requirements-gpu.txt` dans un environnement compatible
 CUDA/CuDNN et définir `BACKGROUND_DEVICE=cuda`. Le CPU reste la configuration de référence.
