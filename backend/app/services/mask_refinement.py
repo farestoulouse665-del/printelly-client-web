@@ -89,6 +89,33 @@ def _connected_uniform_background(
     lookup[0] = False
     background = lookup[labels]
 
+    # A second, more permissive region can join the confirmed background only
+    # through connected low-confidence pixels. This removes small shadow/JPEG
+    # remnants without turning a global colour tolerance into an eraser.
+    relaxed_factor = 1.60 if force else 1.30
+    relaxed_tolerance = float(np.clip(tolerance * relaxed_factor + 3.0, 12.0, 48.0))
+    semantic_ceiling = 0.18 if force else 0.10
+    relaxed_candidate = (
+        (distance <= relaxed_tolerance) & (semantic_mask < semantic_ceiling)
+    ).astype(np.uint8)
+    relaxed_count, relaxed_labels = cv2.connectedComponents(
+        relaxed_candidate,
+        connectivity=8,
+    )
+    if relaxed_count > 1 and np.any(background):
+        seed_labels = np.unique(relaxed_labels[background])
+        relaxed_lookup = np.zeros(relaxed_count, dtype=bool)
+        relaxed_lookup[seed_labels] = True
+        relaxed_lookup[0] = False
+        grown = relaxed_lookup[relaxed_labels]
+        small_kernel = np.ones((3, 3), np.uint8)
+        closed = cv2.morphologyEx(
+            grown.astype(np.uint8),
+            cv2.MORPH_CLOSE,
+            small_kernel,
+        ).astype(bool)
+        background |= grown | (closed & relaxed_candidate.astype(bool))
+
     # Never erase a pixel that the semantic model considers likely foreground.
     background &= semantic_mask < 0.52
     return background, confidence
