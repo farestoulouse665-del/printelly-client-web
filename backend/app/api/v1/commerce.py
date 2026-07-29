@@ -94,6 +94,22 @@ def create_order(
     if not body.client_validated:
         raise HTTPException(status_code=422, detail="La validation explicite du client est requise.")
 
+    quoted_lines = quote.breakdown.get("lines", [])
+    submitted_lines = [line.model_dump(mode="json") for line in body.lines]
+    expected_lines = [
+        item.get("request")
+        for item in quoted_lines
+        if isinstance(item, dict)
+    ]
+    if submitted_lines != expected_lines:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Les dimensions, quantités ou options diffèrent du devis. "
+                "Recalculez le prix avant de commander."
+            ),
+        )
+
     assets = {
         line.asset_id: asset_service.owned_asset(database, line.asset_id, guest.id)
         for line in body.lines
@@ -114,12 +130,7 @@ def create_order(
     database.add(order)
     database.flush()
 
-    line_prices = {
-        item["asset_id"]: item
-        for item in quote.breakdown.get("lines", [])
-        if isinstance(item, dict)
-    }
-    for line in body.lines:
+    for line, pricing in zip(body.lines, quoted_lines, strict=True):
         asset = assets[line.asset_id]
         if not asset.final_key:
             raise HTTPException(
@@ -127,7 +138,6 @@ def create_order(
                 detail=f"Le design {asset.name} n’a pas encore de PNG transparent validé.",
             )
         dpi = asset.width / (line.width_cm / 2.54)
-        pricing = line_prices.get(line.asset_id, {})
         base = float(pricing.get("base_dzd", 0))
         fees = float(pricing.get("fees_dzd", 0))
         total = base + fees
