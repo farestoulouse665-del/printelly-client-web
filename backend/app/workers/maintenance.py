@@ -13,7 +13,7 @@ from app.models.entities import Asset, GuestSession, UploadSession
 from app.storage.local import storage
 
 
-logger = logging.getLogger("printelly.maintenance")
+logger = logging.getLogger("transferlab.maintenance")
 
 
 def cleanup_expired_data() -> dict[str, int]:
@@ -68,7 +68,7 @@ def cleanup_expired_data() -> dict[str, int]:
 
     settings.temp_dir.mkdir(parents=True, exist_ok=True)
     temp_cutoff = time.time() - settings.temp_ttl_seconds
-    for pattern in ("*.upload", "*.partial", "printelly-mask-*"):
+    for pattern in ("*.upload", "*.partial", "transferlab-mask-*"):
         for path in settings.temp_dir.glob(pattern):
             try:
                 if path.is_file() and path.stat().st_mtime < temp_cutoff:
@@ -82,7 +82,7 @@ def cleanup_expired_data() -> dict[str, int]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Purge sécurisée des fichiers PRINTELLY.")
+    parser = argparse.ArgumentParser(description="Purge sécurisée des fichiers TransferLab.")
     parser.add_argument("--loop", action="store_true", help="Exécuter périodiquement.")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO)
