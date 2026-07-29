@@ -805,3 +805,44 @@ button:disabled { cursor: not-allowed; opacity: 0.48; }
   .account-intro h1 { font-size: clamp(2.45rem, 12vw, 4rem); }
   .account-panel { padding: 24px; }
 }
+
+
+.garment-preview {
+  margin-top: 24px;
+  padding: 26px 20px 18px;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 18px;
+  background: linear-gradient(145deg, #eef2f7, #dfe5ee);
+  text-align: center;
+}
+.garment-shirt {
+  position: relative;
+  width: min(260px, 76%);
+  aspect-ratio: 0.9;
+  margin: 0 auto 14px;
+  display: grid;
+  place-items: center;
+  border-radius: 28px 28px 20px 20px;
+  background: #f8fafc;
+  box-shadow: 0 20px 35px rgba(15, 23, 42, 0.18);
+  clip-path: polygon(20% 8%, 35% 0, 65% 0, 80% 8%, 100% 22%, 87% 40%, 78% 31%, 78% 100%, 22% 100%, 22% 31%, 13% 40%, 0 22%);
+}
+.garment-preview.dark .garment-shirt { background: #171923; }
+.garment-neck {
+  position: absolute;
+  top: 0;
+  left: 39%;
+  width: 22%;
+  height: 10%;
+  border-radius: 0 0 50% 50%;
+  background: #dfe5ee;
+}
+.garment-preview.dark .garment-neck { background: #eef2f7; }
+.garment-shirt img {
+  width: 44%;
+  height: 48%;
+  object-fit: contain;
+  margin-top: 10%;
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.12));
+}
+.garment-preview small { color: #667085; font-weight: 650; }
