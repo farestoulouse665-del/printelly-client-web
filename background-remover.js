@@ -650,8 +650,21 @@
     });
   }
 
+  function validateMaskForExport() {
+    if (!remover.currentMask || !remover.currentMask.length) throw new Error("Aucun masque à exporter.");
+    var minimum = 1;
+    var maximum = 0;
+    for (var index = 0; index < remover.currentMask.length; index += 1) {
+      minimum = Math.min(minimum, remover.currentMask[index]);
+      maximum = Math.max(maximum, remover.currentMask[index]);
+    }
+    if (minimum >= 0.999) throw new Error("Aucun pixel transparent n’est présent. Effacez le fond ou relancez l’analyse.");
+    if (maximum <= 0.001) throw new Error("Le sujet est entièrement transparent. Restaurez-le avant le téléchargement.");
+  }
+
   async function buildFinalBlob() {
     if (!remover.resultBlob || !remover.resultImage) throw new Error("Aucun résultat à exporter.");
+    validateMaskForExport();
     if (!remover.actions.length) return remover.resultBlob;
 
     var width = remover.sourceImage.naturalWidth;
