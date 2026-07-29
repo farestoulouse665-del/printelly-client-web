@@ -10,6 +10,7 @@ from fastapi import HTTPException, UploadFile, status
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from app.core.config import Settings
+from app.services.security_scan import scan_local_file
 
 _MIME_TO_FORMAT = {
     "image/png": "PNG",
@@ -110,6 +111,7 @@ async def validate_upload(upload: UploadFile, config: Settings) -> ValidatedImag
 
         if total == 0:
             raise HTTPException(status_code=422, detail="Le fichier est vide.")
+        scan_local_file(temp_path, config)
         detected = _detect_format(header)
         if detected is None:
             raise HTTPException(
