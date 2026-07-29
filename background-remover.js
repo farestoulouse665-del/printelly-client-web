@@ -293,8 +293,8 @@
       setMessage("Format refusé. Choisissez un PNG, JPEG ou WebP.", "error");
       return;
     }
-    if (file.size > 20 * 1024 * 1024) {
-      setMessage("Le fichier dépasse la limite de 20 Mo.", "error");
+    if (file.size > 50 * 1024 * 1024) {
+      setMessage("Le fichier dépasse la limite de 50 Mo.", "error");
       return;
     }
     clearResult(false);
