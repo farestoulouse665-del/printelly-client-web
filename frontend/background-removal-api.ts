@@ -1,4 +1,5 @@
 type RemovalMode = "auto" | "person" | "design" | "product";
+type BackgroundCleanup = "light" | "normal" | "strong";
 
 interface HealthResponse {
   status: string;
@@ -13,6 +14,10 @@ interface RemovalOptions {
   feather: number;
   edgeShift: number;
   decontaminate: boolean;
+  backgroundCleanup: BackgroundCleanup;
+  protectDetails: boolean;
+  removeHaze: boolean;
+  backgroundColor?: string;
 }
 
 interface RemovalMetadata {
@@ -20,6 +25,7 @@ interface RemovalMetadata {
   height: number;
   processingMs: number;
   foregroundRatio: number;
+  residualHazeRatio: number;
   modelName: string;
   warnings: string[];
 }
@@ -75,6 +81,10 @@ const client: PrintellyBackgroundApi = {
     form.append("feather", String(options.feather));
     form.append("edge_shift", String(options.edgeShift));
     form.append("decontaminate", String(options.decontaminate));
+    form.append("background_cleanup", options.backgroundCleanup);
+    form.append("protect_details", String(options.protectDetails));
+    form.append("remove_haze", String(options.removeHaze));
+    if (options.backgroundColor) form.append("background_color", options.backgroundColor);
 
     const request: RequestInit = { method: "POST", body: form };
     if (signal) request.signal = signal;
@@ -99,6 +109,7 @@ const client: PrintellyBackgroundApi = {
         height: Number(response.headers.get("x-image-height") ?? 0),
         processingMs: Number(response.headers.get("x-processing-ms") ?? 0),
         foregroundRatio: Number(response.headers.get("x-foreground-ratio") ?? 0),
+        residualHazeRatio: Number(response.headers.get("x-residual-haze") ?? 0),
         modelName: response.headers.get("x-model-name") ?? "modèle local",
         warnings,
       },
