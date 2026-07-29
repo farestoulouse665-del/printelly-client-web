@@ -41,7 +41,7 @@ class BackgroundRemovalPipeline:
             raise RuntimeError(
                 f"Masque de taille {raw_mask.shape}, image de taille {expected_shape}."
             )
-        alpha = refine_mask(raw_mask, mode, options)
+        alpha = refine_mask(raw_mask, image, mode, options)
         alpha = preserve_source_alpha(image, alpha)
         warnings = mask_warnings(alpha)
         png = export_png(image, alpha, decontaminate=decontaminate)
