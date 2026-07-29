@@ -263,6 +263,14 @@
 
               <section class="br-control-section">
                 <div class="br-section-head"><span>04</span><div><h3>Récupération du fond</h3><p>Élimine les restes et protège les détails du design</p></div></div>
+                <label class="br-api-field"><span>Fond noir intelligent</span>
+                  <select id="brBlackBackgroundMode">
+                    <option value="off" selected>Désactivé — traitement universel</option>
+                    <option value="exterior">Noir extérieur seulement</option>
+                    <option value="smart">Tous les fonds noirs intelligents</option>
+                  </select>
+                  <small>Préserve cheveux, barbe, vêtements, ombres, textes et contours noirs appartenant au sujet.</small>
+                </label>
                 <label class="br-api-field"><span>Puissance du nettoyage</span><select id="brBackgroundCleanup"><option value="light">Léger — contours délicats</option><option value="normal" selected>Normal — recommandé</option><option value="strong">Fort — fond blanc/noir tenace</option></select></label>
                 <label class="br-check"><input id="brRemoveHaze" type="checkbox" checked><span><strong>Supprimer les voiles du fond</strong><small>Reconstruit l’alpha pour retirer les halos blancs, noirs ou colorés autour du sujet.</small></span></label>
                 <label class="br-check"><input id="brProtectDetails" type="checkbox" checked><span><strong>Protéger les micro-détails</strong><small>Conserve textes, gouttelettes, cheveux, fleurs et éléments fins reconnus comme sujet.</small></span></label>
