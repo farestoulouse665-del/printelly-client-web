@@ -19,6 +19,7 @@ RUN pip install --requirement "${REQUIREMENTS_FILE}"
 
 COPY backend/app ./app
 COPY backend/migrations ./migrations
+COPY backend/scripts ./scripts
 COPY backend/alembic.ini ./alembic.ini
 RUN mkdir -p /tmp/background-removal /models /data/objects \
     && chown -R app:app /app /tmp/background-removal /models /data/objects
