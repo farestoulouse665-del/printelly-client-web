@@ -115,7 +115,7 @@ def create_order(
         for line in body.lines
     }
     order = Order(
-        order_number=f"PB-{datetime.now(timezone.utc):%Y%m%d}-{secrets.token_hex(3).upper()}",
+        order_number=f"TL-{datetime.now(timezone.utc):%Y%m%d}-{secrets.token_hex(3).upper()}",
         guest_session_id=guest.id,
         user_id=guest.user_id,
         status="submitted",
