@@ -1,4 +1,4 @@
-name: Background Studio CI
+name: TransferLab CI
 
 on:
   push:
@@ -27,13 +27,13 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: printelly_test
-          POSTGRES_USER: printelly
-          POSTGRES_PASSWORD: printelly_test
+          POSTGRES_DB: transferlab_test
+          POSTGRES_USER: transferlab
+          POSTGRES_PASSWORD: transferlab_test
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U printelly -d printelly_test"
+          --health-cmd "pg_isready -U transferlab -d transferlab_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
@@ -48,11 +48,11 @@ jobs:
           --health-retries 20
     env:
       APP_ENV: test
-      DATABASE_URL: postgresql+psycopg://printelly:printelly_test@127.0.0.1:5432/printelly_test
+      DATABASE_URL: postgresql+psycopg://transferlab:transferlab_test@127.0.0.1:5432/transferlab_test
       REDIS_URL: redis://127.0.0.1:6379/15
       RQ_QUEUE_NAME: background-removal-ci
-      STORAGE_ROOT: ${{ runner.temp }}/printelly-objects
-      TEMP_DIR: ${{ runner.temp }}/printelly-temp
+      STORAGE_ROOT: ${{ runner.temp }}/transferlab-objects
+      TEMP_DIR: ${{ runner.temp }}/transferlab-temp
       LOAD_LEGACY_MODEL: "false"
       ALLOW_VECTOR_CONVERSION: "true"
       SIGNING_SECRET: ci-signing-secret-not-for-production
