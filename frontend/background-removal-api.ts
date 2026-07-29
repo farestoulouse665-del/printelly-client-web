@@ -1,5 +1,6 @@
 type RemovalMode = "auto" | "person" | "design" | "product";
 type BackgroundCleanup = "light" | "normal" | "strong";
+type BlackBackgroundMode = "off" | "exterior" | "smart";
 
 interface HealthResponse {
   status: string;
@@ -15,6 +16,7 @@ interface RemovalOptions {
   edgeShift: number;
   decontaminate: boolean;
   backgroundCleanup: BackgroundCleanup;
+  blackBackgroundMode: BlackBackgroundMode;
   protectDetails: boolean;
   removeHaze: boolean;
   backgroundColor?: string;
@@ -28,6 +30,8 @@ interface RemovalMetadata {
   residualHazeRatio: number;
   sourceAlphaPreserved: boolean;
   effectiveMode: RemovalMode;
+  blackBackgroundMode: BlackBackgroundMode;
+  blackBackgroundConfidence: number;
   requestId: string;
   modelName: string;
   warnings: string[];
@@ -92,6 +96,7 @@ const client: PrintellyBackgroundApi = {
     form.append("edge_shift", String(options.edgeShift));
     form.append("decontaminate", String(options.decontaminate));
     form.append("background_cleanup", options.backgroundCleanup);
+    form.append("black_background_mode", options.blackBackgroundMode);
     form.append("protect_details", String(options.protectDetails));
     form.append("remove_haze", String(options.removeHaze));
     if (options.backgroundColor) form.append("background_color", options.backgroundColor);
@@ -122,6 +127,12 @@ const client: PrintellyBackgroundApi = {
         residualHazeRatio: Number(response.headers.get("x-residual-haze") ?? 0),
         sourceAlphaPreserved: response.headers.get("x-source-alpha-preserved") === "true",
         effectiveMode: (response.headers.get("x-effective-mode") as RemovalMode | null) ?? options.mode,
+        blackBackgroundMode: (
+          response.headers.get("x-black-background-mode") as BlackBackgroundMode | null
+        ) ?? "off",
+        blackBackgroundConfidence: Number(
+          response.headers.get("x-black-background-confidence") ?? 0
+        ),
         requestId: response.headers.get("x-request-id") ?? "",
         modelName: response.headers.get("x-model-name") ?? "modèle local",
         warnings,
