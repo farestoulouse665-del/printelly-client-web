@@ -30,3 +30,18 @@ test("large decoded PNGs have adequate timeout and temporary memory", () => {
   assert.match(nginx, /proxy_send_timeout 310s/);
   assert.match(envExample, /^REQUEST_TIMEOUT_SECONDS=300$/m);
 });
+
+
+test("Windows PNG aliases and missing MIME are normalized before upload", () => {
+  assert.match(editor, /function normalizedImageFile/);
+  assert.match(editor, /"image\/x-png": "image\/png"/);
+  assert.match(editor, /canonical === "application\/octet-stream"/);
+  assert.match(editor, /new File\(\[file\], file\.name/);
+});
+
+test("a stalled analysis is aborted after the proxy and backend deadlines", () => {
+  assert.match(editor, /var requestTimedOut = false/);
+  assert.match(editor, /requestTimedOut = true/);
+  assert.match(editor, /315000/);
+  assert.match(editor, /Le serveur n’a pas terminé dans le délai prévu/);
+});
