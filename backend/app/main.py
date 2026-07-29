@@ -6,7 +6,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -126,7 +126,19 @@ async def security_headers(request: Request, call_next):
     request_id = request.headers.get("x-request-id", "")[:64] or uuid.uuid4().hex
     request.state.request_id = request_id
     try:
+        if (
+            request.url.path.startswith("/api/v1/")
+            and request.url.path != "/api/v1/health"
+        ):
+            request.app.state.rate_limiter.check(request)
         response = await call_next(request)
+    except HTTPException as exc:
+        detail = exc.detail if isinstance(exc.detail, (str, dict, list)) else str(exc.detail)
+        response = JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": detail, "request_id": request_id},
+            headers=exc.headers,
+        )
     except Exception:
         logger.exception(
             "Unhandled request error id=%s method=%s path=%s",
