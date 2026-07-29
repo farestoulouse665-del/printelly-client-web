@@ -15,6 +15,7 @@ from app.models.entities import Asset, GuestSession, UploadSession
 from app.schemas.api import (
     AssetListOut,
     AssetOut,
+    AssetRenameIn,
     UploadChunkOut,
     UploadInitIn,
     UploadInitOut,
@@ -204,6 +205,30 @@ def get_asset(
     database: Session = Depends(get_db),
 ) -> AssetOut:
     return asset_service.serialize(asset_service.owned_asset(database, asset_id, guest.id))
+
+
+@router.post("/{asset_id}/rename", response_model=AssetOut)
+def rename_asset(
+    asset_id: str,
+    body: AssetRenameIn,
+    guest: GuestSession = Depends(current_guest),
+    database: Session = Depends(get_db),
+) -> AssetOut:
+    asset = asset_service.owned_asset(database, asset_id, guest.id)
+    asset.name = sanitize_filename(body.name, fallback="design")[:180]
+    database.commit()
+    database.refresh(asset)
+    return asset_service.serialize(asset)
+
+
+@router.post("/{asset_id}/duplicate", response_model=AssetOut, status_code=201)
+def duplicate_asset(
+    asset_id: str,
+    guest: GuestSession = Depends(current_guest),
+    database: Session = Depends(get_db),
+) -> AssetOut:
+    asset = asset_service.owned_asset(database, asset_id, guest.id)
+    return asset_service.serialize(asset_service.duplicate(database, asset, guest.id))
 
 
 @router.post("/{asset_id}/archive", response_model=AssetOut)
