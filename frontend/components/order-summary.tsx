@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ChevronUp, ShieldCheck, ShoppingBag } from "lucide-react";
 import { useMemo, useState } from "react";
-import { createQuote } from "@/lib/api";
+import { previewQuote } from "@/lib/api";
 import { useStudio } from "@/store/studio";
 
 function money(value: number) {
@@ -20,7 +20,7 @@ export function OrderSummary() {
 
   const quote = useQuery({
     queryKey: ["quote-preview", asset?.id, sizes, options],
-    queryFn: () => createQuote(asset!.id, sizes, options),
+    queryFn: () => previewQuote(asset!.id, sizes, options),
     enabled: Boolean(asset && sizes.length),
     staleTime: 30_000,
   });
