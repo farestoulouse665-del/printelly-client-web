@@ -44,3 +44,17 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Verify published TransferLab site
+        env:
+          SITE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            if curl --fail --silent --show-error --location "$SITE_URL" | grep --quiet "TransferLab"; then
+              echo "TransferLab is live at $SITE_URL"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "The deployed page did not expose the expected TransferLab content."
+          exit 1
