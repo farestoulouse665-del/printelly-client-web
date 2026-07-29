@@ -186,12 +186,13 @@ async def remove_background(request: Request) -> Response:
             "X-Processing-Ms": str(report.processing_ms),
             "X-Foreground-Ratio": f"{report.foreground_ratio:.6f}",
             "X-Residual-Haze": f"{report.residual_haze_ratio:.6f}",
+            "X-Source-Alpha-Preserved": "true" if report.source_alpha_preserved else "false",
             "X-Model-Name": provider.name,
             "X-Warnings": json.dumps(report.warnings, ensure_ascii=True, separators=(",", ":")),
             "Access-Control-Expose-Headers": (
                 "Content-Disposition,X-Image-Width,X-Image-Height,"
                 "X-Processing-Ms,X-Foreground-Ratio,X-Residual-Haze,"
-                "X-Model-Name,X-Warnings"
+                "X-Source-Alpha-Preserved,X-Model-Name,X-Warnings"
             ),
         }
         return Response(content=result.png, media_type="image/png", headers=headers)
