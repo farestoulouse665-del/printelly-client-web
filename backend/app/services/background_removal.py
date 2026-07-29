@@ -8,6 +8,7 @@ from PIL import Image
 
 from app.models.schemas import BlackBackgroundMode, ProcessingReport, RemovalMode
 from app.providers.base import BackgroundRemovalProvider
+from app.services.background_analysis import BackgroundAnalyzer
 from app.services.image_export import (
     export_png,
     preserve_source_alpha,
@@ -30,8 +31,19 @@ class BackgroundRemovalResult:
 
 
 class BackgroundRemovalPipeline:
-    def __init__(self, provider: BackgroundRemovalProvider) -> None:
+    def __init__(
+        self,
+        provider: BackgroundRemovalProvider,
+        *,
+        background_pipeline_v2_enabled: bool = False,
+    ) -> None:
         self.provider = provider
+        self.background_analyzer = (
+            BackgroundAnalyzer() if background_pipeline_v2_enabled else None
+        )
+        self.pipeline_version = (
+            "background-v2" if background_pipeline_v2_enabled else "background-v1"
+        )
 
     def process(
         self,
@@ -65,6 +77,7 @@ class BackgroundRemovalPipeline:
                 effective_mode,
                 options,
                 diagnostics,
+                background_analyzer=self.background_analyzer,
             )
             alpha = preserve_source_alpha(image, alpha)
             haze_ratio = residual_haze_ratio(image, alpha)
