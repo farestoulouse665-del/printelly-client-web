@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 import type {
   Asset,
   JobEvent,
@@ -61,7 +62,9 @@ const initialOptions: StudioOptions = {
   notes: "",
 };
 
-export const useStudio = create<StudioState>((set) => ({
+export const useStudio = create<StudioState>()(
+  persist(
+    (set) => ({
   locale: "fr",
   activeStep: 1,
   activeTab: "new",
@@ -130,4 +133,24 @@ export const useStudio = create<StudioState>((set) => ({
   setOptions: (patch) =>
     set((state) => ({ options: { ...state.options, ...patch } })),
   setPreflight: (preflight) => set({ preflight }),
-}));
+    }),
+    {
+      name: "printelly-background-studio-state",
+      storage: createJSONStorage(() => sessionStorage),
+      partialize: (state) => ({
+        locale: state.locale,
+        activeStep: state.activeStep,
+        activeTab: state.activeTab,
+        assets: state.assets,
+        selectedAssetId: state.selectedAssetId,
+        uploads: [],
+        jobs: {},
+        mode: state.mode,
+        sizes: state.sizes,
+        ratioLocked: state.ratioLocked,
+        options: state.options,
+        preflight: state.preflight,
+      }),
+    },
+  ),
+);
