@@ -27,6 +27,7 @@ interface RemovalMetadata {
   foregroundRatio: number;
   residualHazeRatio: number;
   sourceAlphaPreserved: boolean;
+  effectiveMode: RemovalMode;
   modelName: string;
   warnings: string[];
 }
@@ -112,6 +113,7 @@ const client: PrintellyBackgroundApi = {
         foregroundRatio: Number(response.headers.get("x-foreground-ratio") ?? 0),
         residualHazeRatio: Number(response.headers.get("x-residual-haze") ?? 0),
         sourceAlphaPreserved: response.headers.get("x-source-alpha-preserved") === "true",
+        effectiveMode: (response.headers.get("x-effective-mode") as RemovalMode | null) ?? options.mode,
         modelName: response.headers.get("x-model-name") ?? "modèle local",
         warnings,
       },
