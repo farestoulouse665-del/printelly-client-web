@@ -61,8 +61,13 @@ class BackgroundRemovalPipeline:
         png = export_png(
             image,
             alpha,
-            decontaminate=decontaminate,
-            recover_spill=mode is RemovalMode.design and options.remove_haze,
+            # Never rewrite RGB values when the source already contains a trusted cut-out.
+            decontaminate=decontaminate and not source_alpha_preserved,
+            recover_spill=(
+                mode is RemovalMode.design
+                and options.remove_haze
+                and not source_alpha_preserved
+            ),
         )
         elapsed_ms = int((time.perf_counter() - started) * 1000)
         report = ProcessingReport(
