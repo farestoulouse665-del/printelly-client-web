@@ -18,10 +18,14 @@ def png_bytes(size: tuple[int, int] = (8, 8)) -> bytes:
     return output.getvalue()
 
 
-def upload(payload: bytes, content_type: str = "image/png") -> UploadFile:
+def upload(
+    payload: bytes,
+    content_type: str = "image/png",
+    filename: str = "robe blanche.png",
+) -> UploadFile:
     return UploadFile(
         file=BytesIO(payload),
-        filename="robe blanche.png",
+        filename=filename,
         headers=Headers({"content-type": content_type}),
     )
 
@@ -54,3 +58,37 @@ def test_pixel_limit_is_enforced_and_temp_is_cleaned(tmp_path):
 
 def test_output_name_is_sanitized():
     assert safe_output_name("../../ma création?.jpg") == "ma-creation-sans-fond.png"
+
+
+@pytest.mark.parametrize("content_type", ["image/x-png", "application/octet-stream", ""])
+def test_windows_png_mime_variants_are_accepted_when_signature_and_extension_match(
+    tmp_path,
+    content_type,
+):
+    config = Settings(temp_dir=tmp_path, max_upload_mb=1, max_image_pixels=100)
+    result = asyncio.run(
+        validate_upload(upload(png_bytes(), content_type, "design.PNG"), config)
+    )
+    assert result.image.size == (8, 8)
+    result.image.close()
+    result.temp_path.unlink()
+
+
+def test_generic_mime_requires_a_known_image_extension(tmp_path):
+    config = Settings(temp_dir=tmp_path, max_upload_mb=1, max_image_pixels=100)
+    with pytest.raises(HTTPException) as caught:
+        asyncio.run(
+            validate_upload(
+                upload(png_bytes(), "application/octet-stream", "payload.bin"),
+                config,
+            )
+        )
+    assert caught.value.status_code == 415
+
+
+def test_declared_mime_must_match_detected_signature(tmp_path):
+    config = Settings(temp_dir=tmp_path, max_upload_mb=1, max_image_pixels=100)
+    with pytest.raises(HTTPException) as caught:
+        asyncio.run(validate_upload(upload(png_bytes(), "image/jpeg"), config))
+    assert caught.value.status_code == 415
+    assert "MIME" in caught.value.detail
