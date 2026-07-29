@@ -24,8 +24,8 @@ test("side panels are independently scrollable and collapsible", () => {
   assert.match(css, /br-right-collapsed/);
   assert.match(editor, /setupProfessionalStudio/);
   assert.match(editor, /ui\.rightControls\.appendChild\(panel\)/);
-  assert.match(editor, /printellyStudioLeft/);
-  assert.match(editor, /printellyStudioRight/);
+  assert.match(editor, /localStorage\.setItem\("printellyStudio"/);
+  assert.match(editor, /isLeft \? "Left" : "Right"/);
 });
 
 test("all existing professional tools are retained", () => {
