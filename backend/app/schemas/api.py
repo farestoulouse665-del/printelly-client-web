@@ -98,6 +98,10 @@ class AssetListOut(BaseModel):
     total: int
 
 
+class AssetRenameIn(BaseModel):
+    name: str = Field(min_length=1, max_length=180)
+
+
 class BackgroundJobCreate(BaseModel):
     asset_id: str
     mode: RemovalProfile = RemovalProfile.automatic
