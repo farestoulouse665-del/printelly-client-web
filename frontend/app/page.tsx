@@ -87,7 +87,7 @@ export default function StudioPage() {
         </section>
       </main>
       <footer className="site-footer">
-        <div><strong>PRINTELLY BACKGROUND STUDIO</strong><p>Supprimez le fond. Préservez le design. Imprimez sans erreur.</p></div>
+        <div><strong>TRANSFERLAB</strong><p>Supprimez le fond. Préservez le design. Imprimez sans erreur.</p></div>
         <div><span>Infrastructure locale</span><span>Devise DZD</span><span>Français · العربية</span></div>
       </footer>
     </>
