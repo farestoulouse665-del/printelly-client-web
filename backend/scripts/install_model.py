@@ -46,7 +46,7 @@ def main() -> int:
     partial = args.output.with_suffix(args.output.suffix + ".part")
     digest = hashlib.sha256()
     try:
-        request = urllib.request.Request(args.url, headers={"User-Agent": "PRINTELLY-model-installer/1"})
+        request = urllib.request.Request(args.url, headers={"User-Agent": "TransferLab-model-installer/1"})
         with urllib.request.urlopen(request, timeout=60) as response, partial.open("wb") as target:
             while chunk := response.read(1024 * 1024):
                 digest.update(chunk)
