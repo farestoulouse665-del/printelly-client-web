@@ -34,6 +34,7 @@
     .colors{position:absolute;z-index:3;right:22px;bottom:22px;display:flex;gap:8px;padding:8px;border:1px solid rgba(255,255,255,.8);border-radius:999px;background:rgba(255,255,255,.74);backdrop-filter:blur(10px)}.swatch{width:27px;height:27px;padding:0;border:3px solid #fff;border-radius:50%;outline:1px solid rgba(11,14,20,.12);cursor:pointer;transition:transform .2s}.swatch:hover,.swatch.active{transform:scale(1.18)}.caption{position:absolute;z-index:3;bottom:24px;left:24px;color:#586170;font-size:12px;font-weight:750}
     .stack{display:grid;gap:16px}.card{border:1px solid var(--line);border-radius:var(--r);background:#fff;box-shadow:0 10px 40px rgba(16,24,40,.055)}.card-head{display:flex;align-items:center;gap:14px;padding:20px 22px 16px}.step{display:grid;flex:0 0 auto;width:34px;height:34px;place-items:center;color:#fff;border-radius:11px;background:var(--ink);font-size:13px;font-weight:950}.card h2{margin:0;font-size:19px;letter-spacing:-.025em}.card-head p{margin:3px 0 0;color:var(--muted);font-size:12px}.card-body{padding:0 22px 22px}
     .drop{position:relative;display:grid;min-height:150px;padding:22px;place-items:center;border:1.5px dashed #b8c2ce;border-radius:16px;background:linear-gradient(45deg,#f4f6f8 25%,transparent 25%) 0 0/18px 18px,linear-gradient(45deg,transparent 75%,#f4f6f8 75%) 0 0/18px 18px,linear-gradient(45deg,transparent 75%,#f4f6f8 75%) 9px -9px/18px 18px,linear-gradient(45deg,#f4f6f8 25%,#fff 25%) 9px -9px/18px 18px;text-align:center;cursor:pointer;transition:.2s}.drop:hover,.drop.dragging{border-color:var(--blue);transform:translateY(-2px)}.drop input{position:absolute;width:1px;height:1px;opacity:0}.upload-icon{display:grid;width:43px;height:43px;margin:0 auto 9px;place-items:center;color:var(--blue);border-radius:14px;background:#eaf2ff;font-size:22px;font-weight:950}.drop strong{font-size:14px}.drop .hint{display:block;margin-top:5px;color:var(--muted);font-size:11px}.filename{margin-top:11px;color:var(--blue);font-size:12px;font-weight:850}
+    .bg-tool{margin-top:14px;padding:14px;border:1px solid #d9e4f3;border-radius:14px;background:#f6f9ff}.bg-tool-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.bg-tool-copy strong{display:block;font-size:13px}.bg-tool-copy span{display:block;margin-top:3px;color:var(--muted);font-size:10px;line-height:1.4}.bg-action{flex:0 0 auto;padding:10px 12px;border:0;border-radius:10px;color:#fff;background:var(--blue);font-size:11px;font-weight:900;cursor:pointer}.bg-action:disabled{cursor:not-allowed;opacity:.45}.bg-controls{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:end;margin-top:12px}.bg-range label{display:flex;justify-content:space-between;margin-bottom:5px;color:#495160;font-size:10px;font-weight:850;text-transform:uppercase}.bg-range input{width:100%;accent-color:var(--blue)}.bg-secondary{padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);font-size:10px;font-weight:850;cursor:pointer}.bg-secondary:disabled{cursor:not-allowed;opacity:.45}.bg-status{margin-top:9px;color:var(--muted);font-size:10px;line-height:1.45}.bg-status.working{color:var(--blue);font-weight:800}.bg-status.success{color:var(--success);font-weight:800}
     .fields{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.field label{display:block;margin-bottom:7px;color:#495160;font-size:11px;font-weight:850;letter-spacing:.06em;text-transform:uppercase}.input{position:relative}.input input{width:100%;height:48px;padding:0 34px 0 13px;border:1px solid var(--line);border-radius:12px;outline:0;background:#fbfcfd;font-weight:850}.input input:focus{border-color:var(--blue);box-shadow:0 0 0 4px rgba(23,107,255,.1)}.input span{position:absolute;top:50%;right:12px;color:#858d98;font-size:11px;transform:translateY(-50%)}
     .tiers{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:15px}.tier{padding:9px 5px;border:1px solid var(--line);border-radius:10px;color:var(--muted);background:#fbfcfd;font-size:10px;font-weight:850;text-align:center}.tier b{display:block;color:var(--ink);font-size:11px}.tier.active{color:var(--blue);border-color:rgba(23,107,255,.45);background:#eff5ff}.tier.active b{color:var(--blue)}
     .option{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0;border-top:1px solid #edf0f3}.option:first-child{border-top:0}.option strong{display:block;font-size:13px}.option span{color:var(--muted);font-size:11px}.toggle{position:relative;width:46px;height:26px;flex:0 0 auto}.toggle input{position:absolute;width:1px;height:1px;opacity:0}.toggle i{position:absolute;inset:0;border-radius:99px;background:#d7dce2;cursor:pointer;transition:.2s}.toggle i:after{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 2px 7px rgba(0,0,0,.15);content:"";transition:.2s}.toggle input:checked+i{background:var(--blue)}.toggle input:checked+i:after{transform:translateX(20px)}
@@ -99,6 +100,11 @@
           <div class="card-head"><span class="step">1</span><div><h2>Ajoutez votre visuel</h2><p>PNG transparent recommandé</p></div></div>
           <div class="card-body">
             <label class="drop" id="dropzone"><input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp"><span><span class="upload-icon">↑</span><strong>Glissez votre fichier ici</strong><span class="hint">ou cliquez pour parcourir • PNG, JPG, WEBP • 15 Mo max.</span><span class="filename" id="fileName">Aucun fichier sélectionné</span></span></label>
+            <div class="bg-tool" id="bgTool">
+              <div class="bg-tool-head"><div class="bg-tool-copy"><strong>Enlever le background</strong><span>Suppression locale des fonds unis ou simples, sans envoi serveur.</span></div><button class="bg-action" id="removeBackgroundBtn" type="button" disabled>ENLEVER LE FOND</button></div>
+              <div class="bg-controls"><div class="bg-range"><label for="bgTolerance"><span>Tolérance</span><b id="bgToleranceValue">42</b></label><input id="bgTolerance" type="range" min="10" max="110" value="42"></div><button class="bg-secondary" id="restoreBackgroundBtn" type="button" disabled>Restaurer</button><button class="bg-secondary" id="downloadTransparentBtn" type="button" disabled>Télécharger PNG</button></div>
+              <div class="bg-status" id="bgStatus">Importez d’abord une image.</div>
+            </div>
           </div>
         </article>
 
@@ -188,20 +194,51 @@
       [width,height,quantity].forEach(el=>el.addEventListener('change',()=>{el.value=clamp(Number(el.value)||Number(el.min),Number(el.min),Number(el.max));calculate()}));
 
       const fileInput=$('#fileInput'),drop=$('#dropzone'),artImage=$('#artImage'),defaultArt=$('#defaultArt');
+      let originalFile=null,originalUrl='',transparentUrl='';
       function showToast(msg){clearTimeout(toastTimer);$('#toast').textContent=msg;$('#toast').classList.add('show');toastTimer=setTimeout(()=>$('#toast').classList.remove('show'),2800)}
       function handleFile(file){
         if(!file)return;
         if(!['image/png','image/jpeg','image/webp'].includes(file.type)){showToast('Format non accepté. Utilisez PNG, JPG ou WEBP.');return}
         if(file.size>15*1024*1024){showToast('Ce fichier dépasse la limite de 15 Mo.');return}
-        if(artImage.dataset.url)URL.revokeObjectURL(artImage.dataset.url);
-        const url=URL.createObjectURL(file);artImage.src=url;artImage.dataset.url=url;artImage.style.display='block';defaultArt.style.display='none';$('#fileName').textContent=file.name;showToast('Visuel ajouté à l’aperçu.');
+        if(originalUrl)URL.revokeObjectURL(originalUrl);if(transparentUrl)URL.revokeObjectURL(transparentUrl);
+        originalFile=file;originalUrl=URL.createObjectURL(file);transparentUrl='';artImage.src=originalUrl;artImage.dataset.url=originalUrl;artImage.style.display='block';defaultArt.style.display='none';$('#fileName').textContent=file.name;$('#removeBackgroundBtn').disabled=false;$('#restoreBackgroundBtn').disabled=true;$('#downloadTransparentBtn').disabled=true;$('#bgStatus').className='bg-status';$('#bgStatus').textContent='Image prête. Ajustez la tolérance si le fond touche le sujet.';showToast('Visuel ajouté à l’aperçu.');
       }
       fileInput.addEventListener('change',e=>handleFile(e.target.files[0]));
       ['dragenter','dragover'].forEach(evt=>drop.addEventListener(evt,e=>{e.preventDefault();drop.classList.add('dragging')}));
       ['dragleave','drop'].forEach(evt=>drop.addEventListener(evt,e=>{e.preventDefault();drop.classList.remove('dragging')}));
       drop.addEventListener('drop',e=>handleFile(e.dataTransfer.files[0]));
 
-      $$('.swatch').forEach(btn=>btn.addEventListener('click',()=>{$$('.swatch').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const grad=document.querySelector('#fabric');grad.children[0].setAttribute('stop-color',btn.dataset.colorStart);grad.children[1].setAttribute('stop-color',btn.dataset.colorStart);grad.children[2].setAttribute('stop-color',btn.dataset.colorEnd)}));
+      const bgTolerance=$('#bgTolerance'),bgStatus=$('#bgStatus'),removeBackgroundBtn=$('#removeBackgroundBtn'),restoreBackgroundBtn=$('#restoreBackgroundBtn'),downloadTransparentBtn=$('#downloadTransparentBtn');
+      bgTolerance.addEventListener('input',()=>$('#bgToleranceValue').textContent=bgTolerance.value);
+      function loadImage(url){return new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=reject;image.src=url})}
+      async function removeLocalBackground(){
+        if(!originalFile||!originalUrl)return;
+        removeBackgroundBtn.disabled=true;bgStatus.className='bg-status working';bgStatus.textContent='Analyse des bords et création de la transparence…';
+        try{
+          const image=await loadImage(originalUrl),maxSide=2600,scale=Math.min(1,maxSide/Math.max(image.naturalWidth,image.naturalHeight));
+          const w=Math.max(1,Math.round(image.naturalWidth*scale)),h=Math.max(1,Math.round(image.naturalHeight*scale));
+          const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(image,0,0,w,h);
+          const frame=ctx.getImageData(0,0,w,h),data=frame.data,samples=[];
+          const stride=Math.max(1,Math.floor(Math.min(w,h)/120));
+          for(let x=0;x<w;x+=stride){samples.push((x)*4,(x+(h-1)*w)*4)}
+          for(let y=0;y<h;y+=stride){samples.push((y*w)*4,((w-1)+y*w)*4)}
+          const channels=[0,1,2].map(c=>samples.map(i=>data[i+c]).sort((a,b)=>a-b)[Math.floor(samples.length/2)]),tol=Number(bgTolerance.value),soft=28,outer=tol+soft;
+          const visited=new Uint8Array(w*h),queue=new Int32Array(w*h);let head=0,tail=0,removed=0;
+          const distance=index=>{const i=index*4,dr=data[i]-channels[0],dg=data[i+1]-channels[1],db=data[i+2]-channels[2];return Math.sqrt(dr*dr+dg*dg+db*db)};
+          const enqueue=index=>{if(!visited[index]&&distance(index)<=outer){visited[index]=1;queue[tail++]=index}};
+          for(let x=0;x<w;x++){enqueue(x);enqueue(x+(h-1)*w)}for(let y=0;y<h;y++){enqueue(y*w);enqueue((w-1)+y*w)}
+          while(head<tail){const index=queue[head++],x=index%w,y=(index/w)|0,d=distance(index),alpha=d<=tol?0:Math.round(255*(d-tol)/soft);data[index*4+3]=Math.min(data[index*4+3],alpha);if(alpha<230)removed++;if(x>0)enqueue(index-1);if(x<w-1)enqueue(index+1);if(y>0)enqueue(index-w);if(y<h-1)enqueue(index+w)}
+          ctx.putImageData(frame,0,0);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+          if(!blob)throw new Error('PNG generation failed');if(transparentUrl)URL.revokeObjectURL(transparentUrl);transparentUrl=URL.createObjectURL(blob);artImage.src=transparentUrl;artImage.dataset.url=transparentUrl;restoreBackgroundBtn.disabled=false;downloadTransparentBtn.disabled=false;removeBg.checked=true;calculate();
+          const percent=Math.round(removed/(w*h)*100);bgStatus.className='bg-status success';bgStatus.textContent='Fond supprimé localement • '+percent+' % de la surface rendue transparente.';$('#fileName').textContent=originalFile.name+' • PNG transparent';showToast('Background supprimé. Vous pouvez télécharger le PNG.');
+        }catch(error){bgStatus.className='bg-status';bgStatus.textContent='Impossible de traiter cette image. Essayez un PNG/JPG plus simple.';showToast('La suppression du fond a échoué.');}
+        finally{removeBackgroundBtn.disabled=false}
+      }
+      removeBackgroundBtn.addEventListener('click',removeLocalBackground);
+      restoreBackgroundBtn.addEventListener('click',()=>{if(!originalUrl)return;artImage.src=originalUrl;artImage.dataset.url=originalUrl;restoreBackgroundBtn.disabled=true;downloadTransparentBtn.disabled=true;removeBg.checked=false;calculate();bgStatus.className='bg-status';bgStatus.textContent='Image originale restaurée.';$('#fileName').textContent=originalFile.name;showToast('Image originale restaurée.');});
+      downloadTransparentBtn.addEventListener('click',()=>{if(!transparentUrl||!originalFile)return;const link=document.createElement('a');link.href=transparentUrl;link.download=originalFile.name.replace(/\.[^.]+$/,'')+'-sans-fond.png';document.body.appendChild(link);link.click();link.remove()});
+
+      $('.swatch').forEach(btn=>btn.addEventListener('click',()=>{$('.swatch').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const grad=document.querySelector('#fabric');grad.children[0].setAttribute('stop-color',btn.dataset.colorStart);grad.children[1].setAttribute('stop-color',btn.dataset.colorStart);grad.children[2].setAttribute('stop-color',btn.dataset.colorEnd)}));
       $$('.faq-q').forEach(btn=>btn.addEventListener('click',()=>btn.parentElement.classList.toggle('open')));
 
       function renderCart(){
