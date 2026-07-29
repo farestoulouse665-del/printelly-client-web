@@ -3,10 +3,14 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import AsyncIterator
 
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, HTTPException, Request, status
 from fastapi.responses import Response
+from starlette.datastructures import FormData, UploadFile
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
 from app.models.schemas import BackgroundCleanup, HealthResponse, RemovalMode
@@ -14,6 +18,71 @@ from app.services.image_validation import validate_upload
 from app.services.mask_refinement import RefinementOptions
 
 router = APIRouter(prefix="/api", tags=["background-removal"])
+
+
+def _text_field(form: FormData, name: str, default: str | None = None) -> str | None:
+    value = form.get(name)
+    if value is None:
+        return default
+    if not isinstance(value, str):
+        raise HTTPException(status_code=422, detail=f"Le champ {name} est invalide.")
+    return value
+
+
+def _bool_field(form: FormData, name: str, default: bool) -> bool:
+    value = _text_field(form, name)
+    if value is None:
+        return default
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise HTTPException(status_code=422, detail=f"Le champ {name} doit être un booléen.")
+
+
+def _float_field(form: FormData, name: str, default: float) -> float:
+    value = _text_field(form, name)
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=f"Le champ {name} doit être un nombre.") from exc
+
+
+def _int_field(form: FormData, name: str, default: int) -> int:
+    value = _text_field(form, name)
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=f"Le champ {name} doit être un entier.") from exc
+
+
+@asynccontextmanager
+async def open_upload_form(request: Request) -> AsyncIterator[FormData]:
+    """Parse multipart with the same explicit file limit advertised by the UI."""
+    try:
+        async with request.form(
+            max_files=1,
+            max_fields=16,
+            max_part_size=settings.max_upload_bytes,
+        ) as form:
+            yield form
+    except StarletteHTTPException as exc:
+        detail = str(exc.detail)
+        if exc.status_code == 400 and (
+            "maximum size" in detail.lower()
+            or "exceeded" in detail.lower()
+            or "too large" in detail.lower()
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"Le fichier dépasse {settings.max_upload_mb} Mo.",
+            ) from exc
+        raise
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -29,19 +98,7 @@ async def health(request: Request) -> HealthResponse:
 
 
 @router.post("/remove-background")
-async def remove_background(
-    request: Request,
-    image: UploadFile = File(...),
-    mode: RemovalMode = Form(RemovalMode.auto),
-    refine: bool = Form(True),
-    feather: float = Form(1.0),
-    edge_shift: int = Form(0),
-    decontaminate: bool = Form(False),
-    background_cleanup: BackgroundCleanup = Form(BackgroundCleanup.normal),
-    protect_details: bool = Form(True),
-    remove_haze: bool = Form(True),
-    background_color: str | None = Form(None),
-) -> Response:
+async def remove_background(request: Request) -> Response:
     request.app.state.rate_limiter.check(request)
     provider = getattr(request.app.state, "provider", None)
     pipeline = getattr(request.app.state, "pipeline", None)
@@ -53,14 +110,40 @@ async def remove_background(
                 "et BACKGROUND_MODEL_SHA256."
             ),
         )
-    if not 0 <= feather <= 3:
-        raise HTTPException(status_code=422, detail="feather doit être compris entre 0 et 3.")
-    if not -3 <= edge_shift <= 3:
-        raise HTTPException(status_code=422, detail="edge_shift doit être compris entre -3 et 3.")
-    if background_color and not re.fullmatch(r"#[0-9a-fA-F]{6}", background_color):
-        raise HTTPException(status_code=422, detail="La couleur de fond doit être au format #RRGGBB.")
 
-    validated = await validate_upload(image, settings)
+    async with open_upload_form(request) as form:
+        image = form.get("image")
+        if not isinstance(image, UploadFile):
+            raise HTTPException(status_code=422, detail="Le fichier image est obligatoire.")
+
+        mode_value = _text_field(form, "mode", RemovalMode.auto.value)
+        cleanup_value = _text_field(form, "background_cleanup", BackgroundCleanup.normal.value)
+        try:
+            mode = RemovalMode(mode_value)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="Le mode de traitement est invalide.") from exc
+        try:
+            background_cleanup = BackgroundCleanup(cleanup_value)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="Le nettoyage du fond est invalide.") from exc
+
+        refine = _bool_field(form, "refine", True)
+        feather = _float_field(form, "feather", 1.0)
+        edge_shift = _int_field(form, "edge_shift", 0)
+        decontaminate = _bool_field(form, "decontaminate", False)
+        protect_details = _bool_field(form, "protect_details", True)
+        remove_haze = _bool_field(form, "remove_haze", True)
+        background_color = _text_field(form, "background_color")
+
+        if not 0 <= feather <= 3:
+            raise HTTPException(status_code=422, detail="feather doit être compris entre 0 et 3.")
+        if not -3 <= edge_shift <= 3:
+            raise HTTPException(status_code=422, detail="edge_shift doit être compris entre -3 et 3.")
+        if background_color and not re.fullmatch(r"#[0-9a-fA-F]{6}", background_color):
+            raise HTTPException(status_code=422, detail="La couleur de fond doit être au format #RRGGBB.")
+
+        validated = await validate_upload(image, settings)
+
     try:
         options = RefinementOptions(
             refine=refine,
