@@ -101,6 +101,7 @@ def create_order(
     order = Order(
         order_number=f"PB-{datetime.now(timezone.utc):%Y%m%d}-{secrets.token_hex(3).upper()}",
         guest_session_id=guest.id,
+        user_id=guest.user_id,
         status="submitted",
         payment_status="pending",
         payment_method=body.payment_method,
@@ -156,6 +157,10 @@ def get_order(
     database: Session = Depends(get_db),
 ) -> OrderOut:
     order = database.get(Order, order_id)
-    if order is None or order.guest_session_id != guest.id:
+    owns_order = order is not None and (
+        order.guest_session_id == guest.id
+        or (guest.user_id is not None and order.user_id == guest.user_id)
+    )
+    if not owns_order:
         raise HTTPException(status_code=404, detail="Commande introuvable.")
     return OrderOut.model_validate(order)
