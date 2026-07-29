@@ -297,8 +297,10 @@
 
     var head = 0;
     var tail = 0;
+    var queued = new Uint8Array(total);
     function seedBorder(index) {
-      if (candidate[index] && !selected[index]) {
+      if (candidate[index] && !queued[index]) {
+        queued[index] = 1;
         selected[index] = 1;
         queue[tail++] = index;
       }
@@ -315,7 +317,8 @@
       var current = queue[head++];
       borderCount += 1;
       forEachNeighbour(current, width, height, function (neighbour) {
-        if (candidate[neighbour] && !selected[neighbour]) {
+        if (candidate[neighbour] && !queued[neighbour]) {
+          queued[neighbour] = 1;
           selected[neighbour] = 1;
           queue[tail++] = neighbour;
         }
