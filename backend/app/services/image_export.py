@@ -11,8 +11,37 @@ def preserve_source_alpha(image: Image.Image, predicted: np.ndarray) -> np.ndarr
     if "A" not in image.getbands():
         return predicted
     source_alpha = np.asarray(image.getchannel("A"), dtype=np.float32) / 255.0
-    # Existing transparency is authoritative and can never become opaque.
     return np.minimum(predicted, source_alpha)
+
+
+def _estimate_border_background(rgb: np.ndarray) -> np.ndarray:
+    height, width = rgb.shape[:2]
+    strip = max(1, min(12, round(min(height, width) * 0.015)))
+    border = np.concatenate(
+        (
+            rgb[:strip].reshape(-1, 3),
+            rgb[-strip:].reshape(-1, 3),
+            rgb[:, :strip].reshape(-1, 3),
+            rgb[:, -strip:].reshape(-1, 3),
+        ),
+        axis=0,
+    )
+    return np.median(border.astype(np.float32), axis=0)
+
+
+def recover_background_spill(rgb: np.ndarray, alpha: np.ndarray) -> np.ndarray:
+    """Recover foreground RGB from C = alpha*F + (1-alpha)*B."""
+    boundary = (alpha > 0.045) & (alpha < 0.97)
+    if not np.any(boundary):
+        return rgb
+    source = rgb.astype(np.float32)
+    background = _estimate_border_background(rgb)
+    alpha_3d = np.clip(alpha[:, :, None], 0.045, 1.0)
+    unmixed = (source - (1.0 - alpha_3d) * background) / alpha_3d
+    unmixed = np.clip(unmixed, 0.0, 255.0)
+    strength = np.where(boundary, 0.82, 0.0)[:, :, None]
+    recovered = source * (1.0 - strength) + unmixed * strength
+    return np.clip(recovered, 0, 255).astype(np.uint8)
 
 
 def decontaminate_edges(rgb: np.ndarray, alpha: np.ndarray) -> np.ndarray:
@@ -24,8 +53,7 @@ def decontaminate_edges(rgb: np.ndarray, alpha: np.ndarray) -> np.ndarray:
     interior_weight = (alpha >= 0.96).astype(np.float32)
     denominator = cv2.GaussianBlur(interior_weight, (0, 0), 1.6)
     cleaned = rgb.astype(np.float32).copy()
-    # Keep genuine semi-transparent colour: correction is strongest only near 50% alpha.
-    strength = np.clip(1.0 - np.abs(alpha - 0.5) * 2.0, 0.0, 1.0) * 0.42
+    strength = np.clip(1.0 - np.abs(alpha - 0.5) * 2.0, 0.0, 1.0) * 0.32
     strength = np.where(boundary & (denominator > 0.02), strength, 0.0)
     for channel in range(3):
         weighted = rgb[:, :, channel].astype(np.float32) * interior_weight
@@ -42,8 +70,11 @@ def export_png(
     alpha: np.ndarray,
     *,
     decontaminate: bool,
+    recover_spill: bool = False,
 ) -> bytes:
     rgb = np.asarray(image.convert("RGB"), dtype=np.uint8)
+    if recover_spill:
+        rgb = recover_background_spill(rgb, alpha)
     if decontaminate:
         rgb = decontaminate_edges(rgb, alpha)
     alpha_u8 = np.round(np.clip(alpha, 0.0, 1.0) * 255).astype(np.uint8)
@@ -52,10 +83,7 @@ def export_png(
     metadata = PngImagePlugin.PngInfo()
     metadata.add_text("Software", "PRINTELLY Local Background Removal")
     metadata.add_text("Privacy", "Processed locally; no third-party image API")
-    save_options: dict[str, object] = {
-        "compress_level": 6,
-        "pnginfo": metadata,
-    }
+    save_options: dict[str, object] = {"compress_level": 6, "pnginfo": metadata}
     dpi = image.info.get("dpi")
     if isinstance(dpi, tuple) and len(dpi) == 2 and all(float(value) > 0 for value in dpi):
         save_options["dpi"] = dpi
