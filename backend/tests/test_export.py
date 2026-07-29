@@ -6,7 +6,12 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from app.services.image_export import export_png, preserve_source_alpha
+from app.services.image_export import (
+    export_png,
+    preserve_source_alpha,
+    source_alpha_is_authoritative,
+    source_alpha_mask,
+)
 
 
 def test_png_is_rgba_transparent_and_keeps_dimensions_and_interior_rgb():
@@ -65,3 +70,22 @@ def test_export_recovers_foreground_rgb_from_a_white_matte():
         assert green < 40
         assert blue < 40
         assert 126 <= opacity <= 129
+
+
+def test_material_transparent_border_is_authoritative():
+    image = Image.new("RGBA", (20, 20), (0, 0, 0, 0))
+    for y in range(5, 15):
+        for x in range(5, 15):
+            image.putpixel((x, y), (220, 30, 40, 255))
+
+    assert source_alpha_is_authoritative(image) is True
+    alpha = source_alpha_mask(image)
+    assert alpha[0, 0] == 0
+    assert alpha[10, 10] == 1
+
+
+def test_single_accidental_transparent_pixel_does_not_disable_segmentation():
+    image = Image.new("RGBA", (20, 20), (10, 20, 30, 255))
+    image.putpixel((0, 0), (10, 20, 30, 0))
+
+    assert source_alpha_is_authoritative(image) is False
