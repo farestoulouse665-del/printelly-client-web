@@ -150,3 +150,30 @@ Les objets binaires restent dans le stockage objet/local sécurisé ; PostgreSQL
 - Aucun push sur `main`.
 - Aucun déploiement public ni fusion sans validation du propriétaire.
 - Les commits sont atomiques et associés à des tests ou vérifications identifiables.
+
+
+## 9. État d’implémentation au 29 juillet 2026
+
+### Réalisé sur la branche isolée
+
+- Frontend Next.js/TypeScript, parcours en trois étapes, bibliothèque, compte, commande et administration.
+- API FastAPI `/api/v1`, PostgreSQL/SQLAlchemy, deux migrations Alembic, Redis/RQ et SSE.
+- BiRefNet ONNX persistant avec priorité CUDA/DirectML/CPU et inférence tuilée.
+- Analyse de fond, fond noir, protection sémantique, raffinements et vrai export RGBA.
+- Éditeur Konva non destructif, versions, annulation/rétablissement et outils connectés.
+- Préflight DTF, sous-couche informative, PNG, masque alpha, JPG d’aperçu, PDF, rapport JSON et ZIP.
+- Comptes scrypt, sessions signées, rattachement des designs et actions de bibliothèque.
+- Devis DZD, commandes, options de paiement modulaires et livraison 58 wilayas.
+- Administration, audit, vérification humaine, heartbeat worker et maintenance de rétention.
+- Docker Compose CPU/GPU, Nginx, scripts Windows/WSL2, README et CI.
+
+### Validation écrite mais non encore déclarée verte
+
+- Tests historiques du pipeline, du fond noir et de la préservation alpha.
+- Tests du tuilage, des URL signées, de l’éditeur, du DPI, des exports et de la validation MIME.
+- Test d’intégration PostgreSQL/Redis : invité → upload → compte → reconnexion → bibliothèque → job → annulation.
+- Tests Vitest des unités physiques et DPI.
+- Tests Playwright desktop/mobile et invariants visuels.
+- Workflow GitHub Actions pour migrations, pytest, lint, TypeScript, Vitest, build Next, Playwright et Docker.
+
+Les résultats ne seront inscrits comme « réussis » qu’après réception effective d’un run GitHub Actions. Le modèle ONNX réel reste un prérequis séparé pour les régressions d’inférence.
