@@ -150,7 +150,7 @@ test("print studio exposes physical size, DPI and real PNG export", () => {
 test("exterior magic eraser is explicit, protected and undoable", () => {
   assert.match(html, /data-br-tool="magic-exterior"/);
   assert.match(html, /id="brMagicTolerance"/);
-  assert.match(html, /zones intérieures fermées? ne (sera|seront) jamais supprimée/);
+  assert.match(html, /zone intérieure fermée ne sera jamais supprimée/);
   assert.match(editor, /function eraseMagicExterior/);
   assert.match(editor, /PrintellyColorSelection\.magicExterior/);
   assert.match(editor, /source: "magic-exterior"/);
