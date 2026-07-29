@@ -23,7 +23,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
 )
-logger = logging.getLogger("printelly.api")
+logger = logging.getLogger("transferlab.api")
 
 
 def cleanup_expired_temp_files() -> None:
