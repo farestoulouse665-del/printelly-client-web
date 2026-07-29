@@ -44,6 +44,40 @@ def test_guest_upload_library_queue_and_cancellation_are_connected():
         assert library_response.status_code == 200
         assert library_response.json()["total"] == 1
 
+        register_response = client.post(
+            "/api/v1/accounts/register",
+            headers=headers,
+            json={
+                "email": "atelier@example.dz",
+                "display_name": "Atelier test",
+                "password": "une-phrase-secrete-solide",
+                "locale": "fr",
+            },
+        )
+        assert register_response.status_code == 201, register_response.text
+        assert register_response.json()["user"]["email"] == "atelier@example.dz"
+        assert register_response.json()["retention_days"] > 7
+
+        me_response = client.get("/api/v1/accounts/me", headers=headers)
+        assert me_response.status_code == 200
+
+        assert client.post("/api/v1/accounts/logout", headers=headers).status_code == 204
+        next_guest = client.post("/api/v1/sessions/guest").json()["token"]
+        login_response = client.post(
+            "/api/v1/accounts/login",
+            headers={"X-Guest-Token": next_guest},
+            json={
+                "email": "atelier@example.dz",
+                "password": "une-phrase-secrete-solide",
+            },
+        )
+        assert login_response.status_code == 200, login_response.text
+        token = login_response.json()["token"]
+        headers = {"X-Guest-Token": token}
+        persistent_library = client.get("/api/v1/assets", headers=headers)
+        assert persistent_library.status_code == 200
+        assert persistent_library.json()["total"] == 1
+
         job_response = client.post(
             "/api/v1/background-removal/jobs",
             headers=headers,
