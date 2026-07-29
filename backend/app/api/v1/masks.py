@@ -5,9 +5,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.v1.dependencies import current_guest
+from app.api.v1.jobs import create_job
 from app.db.session import get_db
 from app.models.entities import GuestSession, MaskOperation, MaskVersion
-from app.schemas.api import MaskOperationIn, MaskVersionOut
+from app.schemas.api import BackgroundJobCreate, JobOut, MaskOperationIn, MaskVersionOut
 from app.services.assets import asset_service
 from app.services.mask_editor import mask_editor
 from app.storage.local import storage
@@ -100,6 +101,19 @@ def redo(
     database.commit()
     database.refresh(result)
     return serialize_version(result)
+
+
+@router.post("/{asset_id}/recalculate", response_model=JobOut, status_code=202)
+def recalculate(
+    asset_id: str,
+    body: BackgroundJobCreate,
+    guest: GuestSession = Depends(current_guest),
+    database: Session = Depends(get_db),
+) -> JobOut:
+    """Re-run the real pipeline using editor constraints and selected mode."""
+    asset_service.owned_asset(database, asset_id, guest.id)
+    normalized = body.model_copy(update={"asset_id": asset_id})
+    return create_job(normalized, guest, database)
 
 
 @router.get("/{asset_id}/versions", response_model=list[MaskVersionOut])
