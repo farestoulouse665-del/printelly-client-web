@@ -14,8 +14,9 @@ def download_file(
     key: str,
     expires: int = Query(...),
     signature: str = Query(..., min_length=64, max_length=64),
+    filename: str | None = Query(default=None, max_length=160),
 ) -> FileResponse:
-    if not storage.verify_signature(key, expires, signature):
+    if not storage.verify_signature(key, expires, signature, filename):
         raise HTTPException(status_code=403, detail="Lien expiré ou signature invalide.")
     if not storage.exists(key):
         raise HTTPException(status_code=404, detail="Fichier introuvable.")
@@ -26,10 +27,12 @@ def download_file(
         ".jpeg": "image/jpeg",
         ".pdf": "application/pdf",
         ".zip": "application/zip",
+        ".json": "application/json",
     }.get(suffix, "application/octet-stream")
+    download_name = sanitize_filename(filename or storage.internal_path(key).name)
     return FileResponse(
         storage.internal_path(key),
         media_type=media,
-        filename=sanitize_filename(storage.internal_path(key).name),
+        filename=download_name,
         headers={"Cache-Control": "private, no-store"},
     )
