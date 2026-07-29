@@ -11,6 +11,7 @@ from app.models.schemas import (
     BlackBackgroundMode,
     RemovalMode,
 )
+from app.services.background_analysis import BackgroundAnalyzer
 from app.services.black_background import remove_black_background
 
 
@@ -235,6 +236,9 @@ def combine_semantic_and_design_mask(
     semantic_mask: np.ndarray,
     mode: RemovalMode,
     options: RefinementOptions | None = None,
+    *,
+    background_analyzer: BackgroundAnalyzer | None = None,
+    diagnostics: dict[str, float] | None = None,
 ) -> tuple[np.ndarray, float]:
     """Fuse semantic understanding, topology and flat-background alpha recovery."""
     options = options or RefinementOptions()
@@ -250,7 +254,30 @@ def combine_semantic_and_design_mask(
         return black_result.alpha, black_result.confidence
     rgb = np.asarray(image.convert("RGB"), dtype=np.uint8)
     force = mode is RemovalMode.design or options.background_color is not None
-    estimate = _connected_uniform_background(rgb, mask, options, force=force)
+    if background_analyzer is None:
+        estimate = _connected_uniform_background(rgb, mask, options, force=force)
+    else:
+        analysis = background_analyzer.analyze(
+            image,
+            mask,
+            options.background_cleanup,
+            protect_details=options.protect_details,
+            force=force,
+            background_color=options.background_color,
+        )
+        estimate = (
+            None
+            if analysis is None
+            else BackgroundEstimate(
+                analysis.background_mask,
+                analysis.background_rgb,
+                analysis.confidence,
+            )
+        )
+        if diagnostics is not None and analysis is not None:
+            diagnostics["background_confidence"] = analysis.confidence
+            diagnostics["background_border_coverage"] = analysis.border_coverage
+            diagnostics["background_risk_ratio"] = float(np.mean(analysis.risk_mask))
     if estimate is None:
         return mask, 0.0
 
@@ -302,12 +329,16 @@ def refine_mask(
     mode: RemovalMode,
     options: RefinementOptions,
     diagnostics: dict[str, float] | None = None,
+    *,
+    background_analyzer: BackgroundAnalyzer | None = None,
 ) -> np.ndarray:
     mask, background_confidence = combine_semantic_and_design_mask(
         image,
         raw_mask,
         mode,
         options,
+        background_analyzer=background_analyzer,
+        diagnostics=diagnostics,
     )
     if diagnostics is not None and options.black_background_mode is not BlackBackgroundMode.off:
         diagnostics["black_background_confidence"] = background_confidence
