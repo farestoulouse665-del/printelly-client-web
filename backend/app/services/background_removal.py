@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import numpy as np
 from PIL import Image
 
-from app.models.schemas import ProcessingReport, RemovalMode
+from app.models.schemas import BlackBackgroundMode, ProcessingReport, RemovalMode
 from app.providers.base import BackgroundRemovalProvider
 from app.services.image_export import (
     export_png,
@@ -43,6 +43,7 @@ class BackgroundRemovalPipeline:
     ) -> BackgroundRemovalResult:
         started = time.perf_counter()
         source_alpha_preserved = source_alpha_is_authoritative(image)
+        diagnostics: dict[str, float] = {}
         effective_mode = (
             mode if source_alpha_preserved else choose_effective_mode(image, mode)
         )
@@ -58,10 +59,24 @@ class BackgroundRemovalPipeline:
                 raise RuntimeError(
                     f"Masque de taille {raw_mask.shape}, image de taille {expected_shape}."
                 )
-            alpha = refine_mask(raw_mask, image, effective_mode, options)
+            alpha = refine_mask(
+                raw_mask,
+                image,
+                effective_mode,
+                options,
+                diagnostics,
+            )
             alpha = preserve_source_alpha(image, alpha)
             haze_ratio = residual_haze_ratio(image, alpha)
             warnings = mask_warnings(alpha, image)
+            black_confidence = diagnostics.get("black_background_confidence", 0.0)
+            if (
+                options.black_background_mode is not BlackBackgroundMode.off
+                and black_confidence < 0.35
+            ):
+                warnings.append(
+                    "Le bord de l’image n’est pas majoritairement noir; vérifiez le résultat."
+                )
         png = export_png(
             image,
             alpha,
@@ -83,5 +98,10 @@ class BackgroundRemovalPipeline:
             warnings=warnings,
             source_alpha_preserved=source_alpha_preserved,
             effective_mode=effective_mode,
+            black_background_mode=options.black_background_mode,
+            black_background_confidence=diagnostics.get(
+                "black_background_confidence",
+                0.0,
+            ),
         )
         return BackgroundRemovalResult(png=png, report=report)
