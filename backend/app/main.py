@@ -54,16 +54,19 @@ async def lifespan(app: FastAPI):
     app.state.provider = None
     app.state.pipeline = None
     app.state.model_error = None
-    try:
-        await asyncio.to_thread(provider.load)
-        app.state.provider = provider
-        app.state.pipeline = BackgroundRemovalPipeline(
-            provider,
-            background_pipeline_v2_enabled=settings.background_pipeline_v2_enabled,
-        )
-    except Exception as exc:
-        app.state.model_error = str(exc)
-        logger.warning("Legacy model endpoint unavailable: %s", exc)
+    if settings.load_legacy_model:
+        try:
+            await asyncio.to_thread(provider.load)
+            app.state.provider = provider
+            app.state.pipeline = BackgroundRemovalPipeline(
+                provider,
+                background_pipeline_v2_enabled=settings.background_pipeline_v2_enabled,
+            )
+        except Exception as exc:
+            app.state.model_error = str(exc)
+            logger.warning("Legacy model endpoint unavailable: %s", exc)
+    else:
+        app.state.model_error = "disabled: inference is owned by the RQ worker"
     yield
     app.state.pipeline = None
     app.state.provider = None
