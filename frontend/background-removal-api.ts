@@ -60,11 +60,9 @@ async function apiError(response: Response): Promise<Error> {
 
 const client: PrintellyBackgroundApi = {
   async health(baseUrl, signal) {
-    const response = await fetch(endpoint(baseUrl, "/api/health"), {
-      method: "GET",
-      cache: "no-store",
-      signal,
-    });
+    const request: RequestInit = { method: "GET", cache: "no-store" };
+    if (signal) request.signal = signal;
+    const response = await fetch(endpoint(baseUrl, "/api/health"), request);
     if (!response.ok) throw await apiError(response);
     return (await response.json()) as HealthResponse;
   },
@@ -78,11 +76,9 @@ const client: PrintellyBackgroundApi = {
     form.append("edge_shift", String(options.edgeShift));
     form.append("decontaminate", String(options.decontaminate));
 
-    const response = await fetch(endpoint(baseUrl, "/api/remove-background"), {
-      method: "POST",
-      body: form,
-      signal,
-    });
+    const request: RequestInit = { method: "POST", body: form };
+    if (signal) request.signal = signal;
+    const response = await fetch(endpoint(baseUrl, "/api/remove-background"), request);
     if (!response.ok) throw await apiError(response);
     if (!(response.headers.get("content-type") ?? "").includes("image/png")) {
       throw new Error("Le serveur n’a pas retourné un PNG.");
