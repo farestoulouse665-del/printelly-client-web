@@ -17,7 +17,10 @@ services:
       RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-10}
       MAX_CONCURRENT_JOBS: ${MAX_CONCURRENT_JOBS:-1}
       REQUEST_TIMEOUT_SECONDS: ${REQUEST_TIMEOUT_SECONDS:-180}
+      TRUST_PROXY_HEADERS: "true"
       CORS_ORIGINS: http://localhost:8080,http://127.0.0.1:8080,https://farestoulouse665-del.github.io
+    ports:
+      - "8000:8000"
     volumes:
       - ./models:/models:ro
     tmpfs:
