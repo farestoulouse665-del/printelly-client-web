@@ -12,4 +12,4 @@ if [ ! -f models/background-removal.onnx ]; then
 fi
 docker compose up -d --build
 docker compose ps
-echo "PRINTELLY Background Studio: http://localhost:8080"
+echo "TransferLab: http://localhost:8080"
