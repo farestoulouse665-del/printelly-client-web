@@ -2,7 +2,8 @@
 
 import { CheckCircle2, LoaderCircle, PackageCheck, ShieldCheck } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
 import { Header } from "@/components/header";
 import { apiFetch } from "@/lib/api";
 import type { Quote } from "@/lib/types";
