@@ -52,7 +52,7 @@ def test_tiled_inference_blends_without_seams_and_preserves_dimensions(tmp_path)
     finally:
         engine.cleanup()
         image.close()
-    assert not list(tmp_path.glob("printelly-mask-*"))
+    assert not list(tmp_path.glob("transferlab-mask-*"))
 
 
 def test_signed_download_binds_safe_filename_and_rejects_tampering(tmp_path):
