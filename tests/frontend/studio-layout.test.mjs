@@ -63,13 +63,16 @@ test("desktop canvas keeps a stable geometry between images", () => {
   assert.match(css, /Keep the central studio geometrically stable/);
 });
 
-test("background editor enters and exits dedicated fullscreen mode", () => {
-  assert.match(appSource, /classList\.toggle\("br-studio-active",name==="background-remover"\)/);
-  assert.match(html, /id="brExitStudio"/);
-  assert.match(html, /id="brExitStudio"[^>]+data-view="dashboard"/);
-  assert.match(css, /body\.br-studio-active \.app-sidebar/);
+test("expanded canvas mode keeps editor side panels and is user controlled", () => {
+  assert.doesNotMatch(appSource, /classList\.toggle\("br-studio-active",name==="background-remover"\)/);
+  assert.match(html, /id="brCanvasFullscreen"/);
+  assert.ok(html.indexOf('id="brCanvasShell"') < html.indexOf('id="brCanvasFullscreen"'));
+  assert.match(editor, /function setExpandedWorkspace/);
+  assert.match(editor, /canvasFullscreen\.addEventListener\("click"/);
+  assert.match(editor, /key === "escape"/);
   assert.match(css, /body\.br-studio-active \.app-content/);
-  assert.match(css, /height:100dvh/);
+  assert.doesNotMatch(css, /body\.br-studio-active \.br-controls[^}]*display:none/);
+  assert.doesNotMatch(css, /body\.br-studio-active \.br-right-controls[^}]*display:none/);
 });
 
 test("layers and visual snapshots are functional and non destructive", () => {
