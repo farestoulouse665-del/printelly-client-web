@@ -25,6 +25,10 @@
       form.append("feather", String(options.feather));
       form.append("edge_shift", String(options.edgeShift));
       form.append("decontaminate", String(options.decontaminate));
+      form.append("background_cleanup", options.backgroundCleanup || "normal");
+      form.append("protect_details", String(options.protectDetails !== false));
+      form.append("remove_haze", String(options.removeHaze !== false));
+      if (options.backgroundColor) form.append("background_color", options.backgroundColor);
       const response = await fetch(endpoint(baseUrl, "/api/remove-background"), { method: "POST", body: form, signal });
       if (!response.ok) throw await apiError(response);
       if (!(response.headers.get("content-type") || "").includes("image/png")) throw new Error("Le serveur n’a pas retourné un PNG.");
@@ -42,6 +46,7 @@
           height: Number(response.headers.get("x-image-height") || 0),
           processingMs: Number(response.headers.get("x-processing-ms") || 0),
           foregroundRatio: Number(response.headers.get("x-foreground-ratio") || 0),
+          residualHazeRatio: Number(response.headers.get("x-residual-haze") || 0),
           modelName: response.headers.get("x-model-name") || "modèle local",
           warnings
         }
