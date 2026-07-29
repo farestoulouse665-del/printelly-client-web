@@ -7,11 +7,38 @@ import numpy as np
 from PIL import Image, PngImagePlugin
 
 
+def source_alpha_mask(image: Image.Image) -> np.ndarray:
+    """Return the source alpha as a normalized float mask."""
+    if "A" not in image.getbands():
+        return np.ones((image.height, image.width), dtype=np.float32)
+    return np.asarray(image.getchannel("A"), dtype=np.float32) / 255.0
+
+
+def source_alpha_is_authoritative(image: Image.Image) -> bool:
+    """Detect an image that is already genuinely cut out.
+
+    A few accidental transparent pixels must not disable semantic inference. We trust the
+    source alpha only when transparency is material and either reaches the image border or
+    occupies a substantial part of the canvas.
+    """
+    if "A" not in image.getbands():
+        return False
+    alpha = source_alpha_mask(image)
+    transparent_ratio = float(np.mean(alpha < 0.98))
+    if transparent_ratio < 0.005:
+        return False
+    border = np.concatenate((alpha[0], alpha[-1], alpha[:, 0], alpha[:, -1]))
+    clear_border_ratio = float(np.mean(border < 0.05))
+    return (
+        (transparent_ratio >= 0.02 and clear_border_ratio >= 0.05)
+        or transparent_ratio >= 0.15
+    )
+
+
 def preserve_source_alpha(image: Image.Image, predicted: np.ndarray) -> np.ndarray:
     if "A" not in image.getbands():
         return predicted
-    source_alpha = np.asarray(image.getchannel("A"), dtype=np.float32) / 255.0
-    return np.minimum(predicted, source_alpha)
+    return np.minimum(predicted, source_alpha_mask(image))
 
 
 def _estimate_border_background(rgb: np.ndarray) -> np.ndarray:
