@@ -69,8 +69,9 @@ test("guided manual selection never escapes the painted safety zone", () => {
   guide[1 * width + 3] = 1;
   const offset = (1 * width + 2) * 4;
   pixels.data[offset] = pixels.data[offset + 1] = pixels.data[offset + 2] = 0;
-  const color = engine.colorAt(pixels, width, height, 1, 1);
-  const result = engine.guidedSelection(pixels, width, height, guide, color, 8);
+  const dominant = engine.dominantGuideColor(pixels, width, height, guide);
+  const result = engine.guidedSelection(pixels, width, height, guide, null, 8);
+  assert.deepEqual(dominant, { red: 255, green: 255, blue: 255 });
   assert.deepEqual(Array.from(result.mask), [
     0, 0, 0, 0, 0, 0,
     0, 1, 0, 1, 0, 0,
