@@ -37,7 +37,8 @@ class Settings:
         ).split(",")
         if item.strip()
     )
-    enable_docs: bool = _bool("ENABLE_API_DOCS", False)\n    trust_proxy_headers: bool = _bool("TRUST_PROXY_HEADERS", False)
+    enable_docs: bool = _bool("ENABLE_API_DOCS", False)
+    trust_proxy_headers: bool = _bool("TRUST_PROXY_HEADERS", False)
 
     @property
     def max_upload_bytes(self) -> int:
