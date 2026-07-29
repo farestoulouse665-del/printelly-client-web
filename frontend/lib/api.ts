@@ -10,7 +10,7 @@ import type {
 } from "@/lib/types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api/v1";
-const SESSION_KEY = "printelly-background-studio-guest";
+const SESSION_KEY = "transferlab-background-studio-guest";
 let sessionPromise: Promise<string> | null = null;
 
 type GuestSession = {
