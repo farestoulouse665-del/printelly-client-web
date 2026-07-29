@@ -13,6 +13,7 @@ from app.services.mask_refinement import (
     RefinementOptions,
     mask_warnings,
     refine_mask,
+    residual_haze_ratio,
 )
 
 
@@ -43,13 +44,20 @@ class BackgroundRemovalPipeline:
             )
         alpha = refine_mask(raw_mask, image, mode, options)
         alpha = preserve_source_alpha(image, alpha)
-        warnings = mask_warnings(alpha)
-        png = export_png(image, alpha, decontaminate=decontaminate)
+        haze_ratio = residual_haze_ratio(image, alpha)
+        warnings = mask_warnings(alpha, image)
+        png = export_png(
+            image,
+            alpha,
+            decontaminate=decontaminate,
+            recover_spill=mode is RemovalMode.design and options.remove_haze,
+        )
         elapsed_ms = int((time.perf_counter() - started) * 1000)
         report = ProcessingReport(
             width=image.width,
             height=image.height,
             foreground_ratio=float(np.mean(alpha > 0.5)),
+            residual_haze_ratio=haze_ratio,
             processing_ms=elapsed_ms,
             warnings=warnings,
         )
