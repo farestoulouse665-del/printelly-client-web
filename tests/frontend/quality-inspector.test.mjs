@@ -80,4 +80,7 @@ test("quality inspector is wired into HTML and Docker", () => {
   assert.match(htmlSource, /id="brQualityPanel"/);
   assert.match(htmlSource, /background-quality\.js/);
   assert.match(dockerSource, /background-quality\.js/);
+  assert.match(dockerSource, /background-print-export\.js/);
+  assert.match(htmlSource, /id="brExportDpi"/);
+  assert.match(htmlSource, /id="brDpiMode"/);
 });
