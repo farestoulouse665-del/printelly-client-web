@@ -135,3 +135,57 @@ test("editor exposes every removal method and remains valid JavaScript", () => {
   assert.match(editorSource, /deleteSelectedPaletteColor/);
   assert.match(htmlSource, /id="brPaletteList"/);
 });
+
+
+test("connected selection follows diagonal anti-aliased pixels", () => {
+  const engine = loadEngine();
+  const width = 3;
+  const height = 3;
+  const pixels = image(width, height, [0, 0, 0]);
+  [[0, 0], [1, 1], [2, 2]].forEach(([x, y]) => {
+    const offset = (y * width + x) * 4;
+    pixels.data[offset] = pixels.data[offset + 1] = pixels.data[offset + 2] = 255;
+  });
+  const result = engine.connectedRegion(pixels, width, height, 0, 0, 2);
+  assert.equal(result.count, 3);
+  assert.equal(result.mask[2 * width + 2], 1);
+});
+
+test("guided region expands around a brush mark but stops at a contrasting barrier", () => {
+  const engine = loadEngine();
+  const width = 9;
+  const height = 5;
+  const pixels = image(width, height, [250, 250, 250]);
+  for (let y = 0; y < height; y += 1) {
+    const offset = (y * width + 5) * 4;
+    pixels.data[offset] = pixels.data[offset + 1] = pixels.data[offset + 2] = 0;
+  }
+  const guide = new Uint8Array(width * height);
+  guide[2 * width + 2] = 1;
+  const result = engine.guidedRegion(pixels, width, height, guide, null, 6);
+  assert.ok(result.count > 1);
+  assert.equal(result.mask[2 * width + 4], 1);
+  assert.equal(result.mask[2 * width + 7], 0);
+});
+
+test("residue scanner selects background-colored haze and protects the opaque subject", () => {
+  const engine = loadEngine();
+  const width = 7;
+  const height = 7;
+  const pixels = image(width, height, [255, 255, 255]);
+  const alpha = new Float32Array(width * height).fill(0.2);
+  for (let y = 2; y <= 4; y += 1) {
+    for (let x = 2; x <= 4; x += 1) {
+      const index = y * width + x;
+      const offset = index * 4;
+      pixels.data[offset] = 220;
+      pixels.data[offset + 1] = 20;
+      pixels.data[offset + 2] = 20;
+      alpha[index] = 1;
+    }
+  }
+  const result = engine.scanResidualBackground(pixels, alpha, width, height, 8);
+  assert.ok(result.count >= 40);
+  assert.equal(result.mask[0], 1);
+  assert.equal(result.mask[3 * width + 3], 0);
+});
