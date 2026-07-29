@@ -1,4 +1,4 @@
-# PRINTELLY Background Studio — plan d’implémentation
+# TransferLab — plan d’implémentation
 
 Branche de travail : `transferlab-background-studio`
 
