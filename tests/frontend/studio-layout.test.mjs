@@ -113,3 +113,35 @@ test("mobile layout returns to one column without losing the canvas", () => {
   assert.match(css, /grid-template-columns:1fr/);
   assert.match(css, /\.br-preview-column\{order:1/);
 });
+
+
+test("Simple and Pro modes expose progressive professional controls", () => {
+  assert.match(html, /data-studio-mode="simple"/);
+  assert.match(html, /data-br-studio-mode="simple"/);
+  assert.match(html, /data-br-studio-mode="pro"/);
+  assert.match(html, /data-br-pro-only/);
+  assert.match(css, /data-studio-mode="simple"/);
+  assert.match(editor, /function setStudioMode/);
+  assert.match(editor, /printellyStudioMode/);
+});
+
+test("print studio exposes physical size, DPI and real PNG export", () => {
+  [
+    "brPrintWidth",
+    "brPrintHeight",
+    "brPrintUnit",
+    "brExportDpi",
+    "brCustomDpi",
+    "brDpiMode",
+    "brLockPrintRatio",
+    "brPrintSummary",
+    "brPrintPixels",
+    "brEffectiveDpi"
+  ].forEach((id) => assert.match(html, new RegExp('id="' + id + '"')));
+  assert.match(html, /background-print-export\.js/);
+  assert.match(editor, /PrintellyPrintExport\.calculate/);
+  assert.match(editor, /PrintellyPrintExport\.embedPngDpi/);
+  assert.match(editor, /imageSmoothingQuality = "high"/);
+  assert.match(editor, /40 mégapixels/);
+  assert.doesNotThrow(() => new vm.Script(editor));
+});
