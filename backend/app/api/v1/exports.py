@@ -113,7 +113,7 @@ def create_batch_export(
         raise HTTPException(status_code=422, detail="Aucun design à exporter.")
     payload = archive_buffer.getvalue()
     export_id = str(uuid.uuid4())
-    filename = "PRINTELLY_exports_DTF.zip"
+    filename = "TRANSFERLAB_exports_DTF.zip"
     key = f"assets/{first_asset.id}/exports/{export_id}.zip"
     storage.put_bytes(key, payload)
     record = ExportRecord(
