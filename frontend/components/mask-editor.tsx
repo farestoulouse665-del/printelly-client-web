@@ -81,7 +81,9 @@ const tools: Array<{ value: Tool; label: string; icon: typeof Brush }> = [
   { value: "forgotten_background", label: "Fond oublié", icon: CircleDot },
   { value: "background_point", label: "Point fond", icon: MousePointer2 },
   { value: "subject_point", label: "Point sujet", icon: Check },
+  { value: "lasso_restore", label: "Lasso restaurer", icon: LassoSelect },
   { value: "lasso_erase", label: "Lasso effacer", icon: LassoSelect },
+  { value: "lasso_protect", label: "Lasso protéger", icon: LassoSelect },
 ];
 
 export function MaskEditor({ assetId }: { assetId: string }) {
