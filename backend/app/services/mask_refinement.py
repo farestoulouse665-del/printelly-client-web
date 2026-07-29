@@ -18,7 +18,7 @@ class RefinementOptions:
 
 def _remove_isolated_specks(mask: np.ndarray, min_area: int) -> np.ndarray:
     binary = (mask >= 0.5).astype(np.uint8)
-    count, labels, stats, _ = cv2.connectedComponentsWithStats(binary, 8)
+    count, labels, stats, _ = cv2.connectedComponentsWithStats(binary, connectivity=8)
     if count <= 1:
         return mask
     keep = np.zeros_like(binary)
@@ -77,7 +77,7 @@ def _connected_uniform_background(
 
     # Semantic foreground is a hard protection, including colours identical to the background.
     candidate = ((distance <= tolerance) & (semantic_mask < 0.34)).astype(np.uint8)
-    count, labels = cv2.connectedComponents(candidate, 8)
+    count, labels = cv2.connectedComponents(candidate, connectivity=8)
     if count <= 1:
         return None, confidence
 
