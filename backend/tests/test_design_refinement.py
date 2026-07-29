@@ -172,16 +172,24 @@ def test_strong_cleanup_removes_more_matte_than_light_cleanup():
     semantic = np.zeros((40, 60), dtype=np.float32)
 
     light = refine_mask(
-        image,
-        semantic,
-        RemovalMode.design,
-        RefinementOptions(refine=True, feather=0, background_cleanup=BackgroundCleanup.light),
+        raw_mask=semantic,
+        image=image,
+        mode=RemovalMode.design,
+        options=RefinementOptions(
+            refine=True,
+            feather=0,
+            background_cleanup=BackgroundCleanup.light,
+        ),
     )
     strong = refine_mask(
-        image,
-        semantic,
-        RemovalMode.design,
-        RefinementOptions(refine=True, feather=0, background_cleanup=BackgroundCleanup.strong),
+        raw_mask=semantic,
+        image=image,
+        mode=RemovalMode.design,
+        options=RefinementOptions(
+            refine=True,
+            feather=0,
+            background_cleanup=BackgroundCleanup.strong,
+        ),
     )
 
     assert strong[20, 30] < light[20, 30]
