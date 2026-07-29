@@ -81,7 +81,10 @@
     cleanMicro: document.getElementById("brCleanMicro"),
     qualitySummary: document.getElementById("brQualitySummary"),
     qualityIssues: document.getElementById("brQualityIssues"),
-    qualityCertificate: document.getElementById("brQualityCertificate")
+    qualityCertificate: document.getElementById("brQualityCertificate"),
+    createSnapshot: document.getElementById("brCreateSnapshot"),
+    snapshotList: document.getElementById("brSnapshotList"),
+    snapshotCount: document.getElementById("brSnapshotCount")
   };
 
   if (!ui.canvas) return;
@@ -178,6 +181,8 @@
     paletteSelectedIndex: -1,
     qualityReport: null,
     qualityIssueIndex: -1,
+    snapshots: [],
+    snapshotSequence: 0,
     drawing: false,
     panning: false,
     activeStroke: null,
@@ -475,6 +480,7 @@
     clearPendingSelection(false);
     clearPalette(false);
     clearQuality(false);
+    clearSnapshots();
     ui.download.disabled = true;
     ui.add.disabled = true;
     updateHistory();
@@ -573,6 +579,8 @@
       ui.resultInfo.textContent = "PNG RGBA • " + remover.sourceImage.naturalWidth + " × " + remover.sourceImage.naturalHeight + " px";
       ui.download.disabled = false;
       ui.add.disabled = false;
+      if (ui.createSnapshot) ui.createSnapshot.disabled = false;
+      createSnapshot("Résultat IA", true);
       setMessage(warnings.length ? "Résultat créé avec " + warnings.length + " zone à vérifier." : "Fond supprimé. Vérifiez les contours avant l’export.", warnings.length ? "warning" : "success");
       renderPreview();
     } catch (error) {
@@ -1286,6 +1294,80 @@
     if (tool === "pan" || tool === "color-select" || tool === "manual-background") ui.cursor.classList.add("hidden");
   }
 
+  function cloneStudioAction(action) {
+    var copy = Object.assign({}, action);
+    if (action.points) copy.points = action.points.map(function (point) { return { x: point.x, y: point.y }; });
+    if (action.selection) copy.selection = new Uint8Array(action.selection);
+    return copy;
+  }
+
+  function clearSnapshots() {
+    remover.snapshots = [];
+    remover.snapshotSequence = 0;
+    if (ui.createSnapshot) ui.createSnapshot.disabled = true;
+    renderSnapshots();
+  }
+
+  function renderSnapshots() {
+    if (!ui.snapshotList || !ui.snapshotCount) return;
+    var count = remover.snapshots.length;
+    ui.snapshotCount.textContent = count + (count > 1 ? " instantanés" : " instantané");
+    if (!count) {
+      ui.snapshotList.innerHTML = "<p>Aucun instantané enregistré.</p>";
+      return;
+    }
+    ui.snapshotList.innerHTML = "";
+    remover.snapshots.slice().reverse().forEach(function (snapshot) {
+      var item = document.createElement("div");
+      item.className = "br-snapshot-item";
+      var info = document.createElement("div");
+      var title = document.createElement("strong");
+      title.textContent = snapshot.name;
+      var meta = document.createElement("small");
+      meta.textContent = snapshot.actions.length + " correction(s) • " + snapshot.time;
+      info.appendChild(title);
+      info.appendChild(meta);
+      var restore = document.createElement("button");
+      restore.type = "button";
+      restore.className = "secondary";
+      restore.textContent = "RESTAURER";
+      restore.addEventListener("click", function () { restoreSnapshot(snapshot.id); });
+      item.appendChild(info);
+      item.appendChild(restore);
+      ui.snapshotList.appendChild(item);
+    });
+  }
+
+  function createSnapshot(label, automatic) {
+    if (!remover.currentMask) return;
+    remover.snapshotSequence += 1;
+    var snapshot = {
+      id: Date.now() + "-" + remover.snapshotSequence,
+      name: label || "Version " + remover.snapshotSequence,
+      time: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+      actions: remover.actions.map(cloneStudioAction),
+      paletteHidden: Object.assign({}, remover.paletteHidden),
+      view: remover.view
+    };
+    remover.snapshots.push(snapshot);
+    if (remover.snapshots.length > 10) remover.snapshots.shift();
+    if (ui.createSnapshot) ui.createSnapshot.disabled = false;
+    renderSnapshots();
+    if (!automatic) setMessage("Instantané enregistré. Vous pouvez revenir à cette version à tout moment.", "success");
+  }
+
+  function restoreSnapshot(id) {
+    var snapshot = remover.snapshots.find(function (item) { return item.id === id; });
+    if (!snapshot || !remover.baseMask) return;
+    remover.actions = snapshot.actions.map(cloneStudioAction);
+    remover.redo = [];
+    remover.paletteHidden = Object.assign({}, snapshot.paletteHidden);
+    rebuildMask();
+    setView(snapshot.view || "result");
+    if (typeof renderPalette === "function") renderPalette();
+    setMessage("Version restaurée sans modifier l’image originale.", "success");
+  }
+
   function updateHistory() {
     ui.undo.disabled = remover.actions.length === 0;
     ui.redo.disabled = remover.redo.length === 0;
@@ -1576,6 +1658,7 @@
     if (remover.paletteSelectedIndex >= 0) selectPaletteColor(remover.paletteSelectedIndex);
   });
   ui.deleteSelectedColor.addEventListener("click", deleteSelectedPaletteColor);
+  if (ui.createSnapshot) ui.createSnapshot.addEventListener("click", function () { createSnapshot(); });
   ui.runQuality.addEventListener("click", function () { runQualityInspection(false); });
   ui.nextIssue.addEventListener("click", focusNextQualityIssue);
   ui.cleanMicro.addEventListener("click", previewMicroCleanup);
@@ -1609,6 +1692,30 @@
     event.preventDefault();
     changeZoom(event.deltaY < 0 ? 1.15 : 0.87);
   }, { passive: false });
+
+  document.addEventListener("keydown", function (event) {
+    var target = event.target;
+    if (target && (target.matches("input,textarea,select") || target.isContentEditable)) return;
+    var key = event.key.toLowerCase();
+    if ((event.ctrlKey || event.metaKey) && key === "z") {
+      event.preventDefault();
+      if (event.shiftKey) ui.redo.click(); else ui.undo.click();
+      return;
+    }
+    if ((event.ctrlKey || event.metaKey) && key === "y") {
+      event.preventDefault();
+      ui.redo.click();
+      return;
+    }
+    if (!document.body.classList.contains("br-studio-active")) return;
+    if (key === "b") setTool("protect");
+    else if (key === "e") setTool("erase");
+    else if (key === "r") setTool("protect");
+    else if (key === "f") fitPreview();
+    else if (key === "h") setView("mask");
+    else if (key === "o") setView("original");
+    else if (key === "v" || event.code === "Space") setTool("pan");
+  });
 
   window.addEventListener("resize", function () { if (remover.zoom === 1) { sizeCanvasToShell(); applyTransform(); } });
   window.addEventListener("beforeunload", clearUrls);
