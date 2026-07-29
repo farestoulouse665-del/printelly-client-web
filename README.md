@@ -18,7 +18,9 @@ FastAPI
   -> vérification MIME + signature + décodage + limites
   -> LocalOnnxProvider (BiRefNet chargé une fois)
   -> masque sémantique du premier plan
-  -> raffinement léger et optionnel des contours
+  -> protection des objets, textes, logos et couleurs internes
+  -> détection structurelle des fonds unis connectés aux bords
+  -> trimap et affinage alpha guidé par les contours de l'image
   -> fusion avec l'alpha déjà présent
   -> vérification du PNG RGBA
   -> suppression du fichier temporaire
@@ -180,7 +182,8 @@ npm run test:frontend
 
 La CI exécute les tests sans poids ONNX grâce à un fournisseur factice. Elle couvre la
 validation, le nettoyage en erreur, la conservation des dimensions/RGB, l'alpha existant,
-les exports invalides, le pipeline, les en-têtes de sécurité, le client typé et le cache PWA.
+le fond noir avec design blanc, les couleurs de fond présentes dans un sujet protégé,
+les designs multicolores, le pipeline, les en-têtes de sécurité, le client typé et le cache PWA.
 
 Les 20 images de recette ne sont pas fournies pour des raisons de droit et de
 confidentialité. Leur convention et les mesures attendues sont décrites dans
