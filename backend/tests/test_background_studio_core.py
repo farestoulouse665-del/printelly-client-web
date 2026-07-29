@@ -213,3 +213,30 @@ def test_onnx_provider_priority_is_cuda_then_directml_then_cpu():
         "CPUExecutionProvider",
     ]
     assert device == "cuda"
+
+
+def test_resolution_enhancement_is_separate_and_reversible():
+    source = _png(Image.new("RGBA", (100, 50), (20, 40, 80, 255)))
+    service = ExportService()
+    original_payload, _, _ = service.render(
+        source,
+        ExportCreateIn(
+            asset_id="asset",
+            format="png",
+            width_cm=10,
+            resize_to_target=False,
+        ),
+    )
+    doubled_payload, _, _ = service.render(
+        source,
+        ExportCreateIn(
+            asset_id="asset",
+            format="png",
+            width_cm=10,
+            scale_factor=2,
+        ),
+    )
+    with Image.open(BytesIO(original_payload)) as original:
+        assert original.size == (100, 50)
+    with Image.open(BytesIO(doubled_payload)) as doubled:
+        assert doubled.size == (200, 100)
