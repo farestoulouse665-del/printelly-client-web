@@ -1,1 +1,1 @@
-"""Database package for PRINTELLY Background Studio."""
+"""Database package for TransferLab."""
