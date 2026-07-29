@@ -1034,6 +1034,7 @@
     remover.redo = [];
     clearPendingSelection(false);
     rebuildMask();
+    runQualityInspection(true);
     setMessage("La zone sélectionnée est maintenant transparente. Vous pouvez annuler cette action.", "success");
   }
 
@@ -1511,6 +1512,11 @@
     if (remover.paletteSelectedIndex >= 0) selectPaletteColor(remover.paletteSelectedIndex);
   });
   ui.deleteSelectedColor.addEventListener("click", deleteSelectedPaletteColor);
+  ui.runQuality.addEventListener("click", function () { runQualityInspection(false); });
+  ui.nextIssue.addEventListener("click", focusNextQualityIssue);
+  ui.cleanMicro.addEventListener("click", previewMicroCleanup);
+  ui.printWidth.addEventListener("change", function () { if (remover.currentMask) runQualityInspection(true); });
+  ui.microLimit.addEventListener("change", function () { if (remover.currentMask) runQualityInspection(true); });
   ui.feather.addEventListener("input", function () { ui.featherValue.textContent = Number(ui.feather.value).toFixed(1).replace(".", ",") + " px"; });
   ui.edge.addEventListener("input", function () { ui.edgeValue.textContent = ui.edge.value + " px"; });
   ui.brush.addEventListener("input", function () { ui.brushValue.textContent = ui.brush.value + " px"; });
@@ -1520,8 +1526,8 @@
 
   ui.analyze.addEventListener("click", analyze);
   ui.cancel.addEventListener("click", function () { if (remover.abortController) remover.abortController.abort(); });
-  ui.undo.addEventListener("click", function () { if (remover.actions.length) { remover.redo.push(remover.actions.pop()); rebuildMask(); } });
-  ui.redo.addEventListener("click", function () { if (remover.redo.length) { remover.actions.push(remover.redo.pop()); rebuildMask(); } });
+  ui.undo.addEventListener("click", function () { if (remover.actions.length) { remover.redo.push(remover.actions.pop()); rebuildMask(); runQualityInspection(true); } });
+  ui.redo.addEventListener("click", function () { if (remover.redo.length) { remover.actions.push(remover.redo.pop()); rebuildMask(); runQualityInspection(true); } });
   ui.zoomIn.addEventListener("click", function () { changeZoom(1.25); });
   ui.zoomOut.addEventListener("click", function () { changeZoom(0.8); });
   ui.fit.addEventListener("click", fitPreview);
