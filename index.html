@@ -211,65 +211,76 @@
             </aside>
           </form>
         </section>
-
         <section id="bgRemoverView" class="app-page br-page hidden">
           <div class="page-head br-page-head">
-            <div><p class="eyebrow">OUTIL GRATUIT • 100 % LOCAL</p><h2>Enlever le fond</h2><p>Créez un PNG transparent propre, précis et prêt pour l’impression DTF.</p></div>
-            <span class="br-pro-badge">SUPPRESSION DE FOND PRO</span>
+            <div><p class="eyebrow">IA LOCALE • OPEN SOURCE • SANS ABONNEMENT</p><h2>Enlever le fond intelligemment</h2><p>Le moteur détecte le sujet, pas une couleur : vêtements, cheveux, objets, textes et détails du design restent protégés.</p></div>
+            <span class="br-pro-badge">DÉTOURAGE SÉMANTIQUE</span>
           </div>
 
           <div class="br-local-note">
             <svg class="icon"><use href="#i-check"/></svg>
-            <span><strong>Votre fichier reste privé.</strong> Tout le traitement est réalisé sur votre appareil, sans envoi vers un service externe. Seul le fond relié aux bords est supprimé : les détails intérieurs de la même couleur restent protégés.</span>
+            <span><strong>Traitement privé sur votre serveur.</strong> Vos images ne sont envoyées à aucune API externe. Le modèle open source fonctionne sur CPU et le fichier temporaire est supprimé après le traitement.</span>
           </div>
 
           <div class="br-workspace">
             <aside class="panel br-controls">
               <section class="br-control-section">
-                <div class="br-section-head"><span>01</span><div><h3>Votre image</h3><p>PNG, JPG ou WebP • jusqu’à 60 Mo</p></div></div>
+                <div class="br-section-head"><span>01</span><div><h3>Moteur local</h3><p>Connexion sécurisée au serveur de détourage</p></div></div>
+                <label class="br-api-field"><span>Adresse du serveur</span><input id="brApiUrl" type="url" spellcheck="false" placeholder="http://localhost:8000"></label>
+                <div class="br-api-row"><span id="brApiStatus" class="br-status" data-state="checking">Vérification…</span><button id="brTestApi" class="secondary" type="button">TESTER</button></div>
+                <p class="br-help">Avec Docker sur cet ordinateur, utilisez l’adresse proposée. Sur le site public, indiquez l’adresse HTTPS de votre serveur privé.</p>
+              </section>
+
+              <section class="br-control-section">
+                <div class="br-section-head"><span>02</span><div><h3>Votre image</h3><p>PNG, JPEG ou WebP • 20 Mo • 40 mégapixels</p></div></div>
                 <input id="brFileInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
                 <div id="brDropzone" class="br-dropzone" role="button" tabindex="0" aria-label="Choisir ou déposer une image">
                   <span class="upload-circle"><svg class="icon"><use href="#i-upload"/></svg></span>
-                  <strong>Déposez votre design ici</strong>
-                  <span>ou sélectionnez-le depuis votre appareil</span>
+                  <strong>Déposez votre image ici</strong>
+                  <span>L’original reste intact pendant toutes les corrections</span>
                   <button id="brPickFile" class="secondary" type="button">CHOISIR UNE IMAGE</button>
                 </div>
               </section>
 
               <section class="br-control-section">
-                <div class="br-section-head"><span>02</span><div><h3>Détection du fond</h3><p>Analyse intelligente depuis les bords</p></div></div>
-                <div class="br-color-row">
-                  <label>Couleur détectée<div class="br-color-field"><input id="brBackgroundColor" type="color" value="#ffffff"><strong id="brColorLabel">#FFFFFF</strong></div></label>
-                  <div class="br-color-actions">
-                    <button id="brAutoBackground" class="secondary" type="button">AUTO</button>
-                    <button id="brPipette" class="secondary" type="button">PIPETTE</button>
-                  </div>
+                <div class="br-section-head"><span>03</span><div><h3>Type de sujet</h3><p>Le mode adapte la segmentation, jamais les couleurs</p></div></div>
+                <div class="br-mode-grid" role="group" aria-label="Type de sujet">
+                  <button class="active" type="button" data-br-mode="auto"><strong>Auto intelligent</strong><small>Analyse générale</small></button>
+                  <button type="button" data-br-mode="person"><strong>Personne / vêtement</strong><small>Cheveux et tissus</small></button>
+                  <button type="button" data-br-mode="design"><strong>Logo / design DTF</strong><small>Protection maximale</small></button>
+                  <button type="button" data-br-mode="product"><strong>Produit / objet</strong><small>Contours et ombres</small></button>
                 </div>
-                <label class="br-range"><span>Tolérance <output id="brToleranceValue">18 %</output></span><input id="brTolerance" type="range" min="0" max="60" value="18"><small>Augmentez-la si des parties du fond restent visibles.</small></label>
-                <button id="brAnalyze" class="primary br-analyze" type="button" disabled>ANALYSER ET ENLEVER LE FOND</button>
-                <div class="br-rule-note"><svg class="icon"><use href="#i-check"/></svg><span>PRINTELLY ne supprime jamais une couleur dans toute l’image. Seules les zones extérieures connectées sont retirées.</span></div>
+                <button id="brAnalyze" class="primary br-analyze" type="button" disabled>ANALYSER LE SUJET</button>
+                <button id="brCancel" class="secondary br-cancel hidden" type="button">ANNULER LE TRAITEMENT</button>
+                <ol id="brStages" class="br-stages" aria-label="Progression">
+                  <li data-stage="upload">Analyse de l’image</li>
+                  <li data-stage="segment">Détection du sujet</li>
+                  <li data-stage="refine">Création et raffinement du masque</li>
+                  <li data-stage="verify">Vérification finale</li>
+                </ol>
               </section>
 
               <section class="br-control-section">
-                <div class="br-section-head"><span>03</span><div><h3>Finition des contours</h3><p>Réglages précis pour un bord propre</p></div></div>
-                <label class="br-range"><span>Lissage <output id="brSmoothValue">2 px</output></span><input id="brSmooth" type="range" min="0" max="8" value="2"></label>
-                <label class="br-range"><span>Nettoyage du halo <output id="brHaloValue">35 %</output></span><input id="brHalo" type="range" min="0" max="100" value="35"></label>
-                <label class="br-range"><span>Ajustement du masque <output id="brEdgeValue">0 px</output></span><input id="brEdge" type="range" min="-3" max="3" value="0"><small>Valeur positive : retire davantage le contour.</small></label>
+                <div class="br-section-head"><span>04</span><div><h3>Finition des contours</h3><p>Réglages localisés, sans filtre sur l’image</p></div></div>
+                <label class="br-range"><span>Contour progressif <output id="brFeatherValue">1,0 px</output></span><input id="brFeather" type="range" min="0" max="3" step="0.5" value="1"></label>
+                <label class="br-range"><span>Ajustement du masque <output id="brEdgeValue">0 px</output></span><input id="brEdge" type="range" min="-3" max="3" value="0"><small>Positif : conserver davantage. Négatif : resserrer.</small></label>
+                <label class="br-check"><input id="brDecontaminate" type="checkbox"><span><strong>Nettoyer les halos</strong><small>Modifie uniquement le RGB des pixels semi-transparents du bord.</small></span></label>
               </section>
 
               <section class="br-control-section">
-                <div class="br-section-head"><span>04</span><div><h3>Corrections manuelles</h3><p>Retouchez sans modifier l’original</p></div></div>
+                <div class="br-section-head"><span>05</span><div><h3>Corrections du masque</h3><p>Non destructives : seule la transparence change</p></div></div>
                 <div class="br-tools" role="group" aria-label="Outils de retouche">
                   <button class="active" type="button" data-br-tool="pan" aria-pressed="true">DÉPLACER</button>
-                  <button type="button" data-br-tool="protect" aria-pressed="false">PROTÉGER</button>
+                  <button type="button" data-br-tool="protect" aria-pressed="false">RESTAURER</button>
                   <button type="button" data-br-tool="erase" aria-pressed="false">EFFACER</button>
                 </div>
-                <label class="br-range"><span>Taille du pinceau <output id="brBrushValue">36 px</output></span><input id="brBrush" type="range" min="5" max="150" value="36"></label>
+                <label class="br-range"><span>Taille <output id="brBrushValue">36 px</output></span><input id="brBrush" type="range" min="5" max="180" value="36"></label>
+                <label class="br-range"><span>Dureté <output id="brHardnessValue">80 %</output></span><input id="brHardness" type="range" min="0" max="100" value="80"></label>
+                <label class="br-range"><span>Opacité <output id="brOpacityValue">100 %</output></span><input id="brOpacity" type="range" min="5" max="100" value="100"></label>
                 <div class="br-history">
                   <button id="brUndo" class="secondary" type="button" disabled>↶ ANNULER</button>
                   <button id="brRedo" class="secondary" type="button" disabled>↷ RÉTABLIR</button>
                 </div>
-                <p class="br-help">« Protéger » récupère un détail supprimé. « Effacer » enlève une zone restante.</p>
               </section>
             </aside>
 
@@ -281,6 +292,8 @@
                     <button type="button" data-br-view="split">AVANT / APRÈS</button>
                     <button type="button" data-br-view="original">ORIGINAL</button>
                     <button type="button" data-br-view="mask">MASQUE</button>
+                    <button type="button" data-br-view="edges">CONTOURS</button>
+                    <button type="button" data-br-view="ambiguous">ZONES À VÉRIFIER</button>
                   </div>
                   <div class="br-zoom">
                     <button id="brZoomOut" type="button" aria-label="Dézoomer">−</button>
@@ -293,55 +306,61 @@
                 <div class="br-backgrounds" role="group" aria-label="Simulation du support">
                   <span>APERÇU SUR :</span>
                   <button class="active checker" type="button" data-br-background="checker" aria-label="Transparence"></button>
-                  <button class="white" type="button" data-br-background="white" aria-label="T-shirt blanc"></button>
-                  <button class="black" type="button" data-br-background="black" aria-label="T-shirt noir"></button>
-                  <button class="red" type="button" data-br-background="red" aria-label="T-shirt rouge"></button>
+                  <button class="white" type="button" data-br-background="white" aria-label="Blanc"></button>
+                  <button class="black" type="button" data-br-background="black" aria-label="Noir"></button>
+                  <button class="gray" type="button" data-br-background="gray" aria-label="Gris"></button>
+                  <button class="red" type="button" data-br-background="red" aria-label="Rouge"></button>
+                  <button class="green" type="button" data-br-background="green" aria-label="Vert"></button>
+                  <label class="br-custom-color" title="Couleur personnalisée"><input id="brPreviewColor" type="color" value="#2563eb"></label>
                 </div>
+                <label id="brSplitControl" class="br-split-control hidden"><span>Comparaison</span><input id="brSplit" type="range" min="0" max="100" value="50"><output id="brSplitValue">50 %</output></label>
 
                 <div id="brCanvasShell" class="br-canvas-shell br-bg-checker">
-                  <canvas id="brCanvas" aria-label="Aperçu de la suppression de fond"></canvas>
+                  <canvas id="brCanvas" aria-label="Aperçu du masque de sujet"></canvas>
                   <div id="brPreviewEmpty" class="br-preview-empty">
                     <span class="br-empty-icon"><svg class="icon"><use href="#i-upload"/></svg></span>
                     <strong>Votre aperçu apparaîtra ici</strong>
-                    <span>Ajoutez une image pour détecter automatiquement son fond extérieur.</span>
+                    <span>Ajoutez une image puis lancez l’analyse sémantique du sujet.</span>
                   </div>
                   <div id="brBrushCursor" class="br-brush-cursor hidden"></div>
                 </div>
 
                 <div class="br-preview-footer">
                   <span id="brImageMeta">Aucune image chargée</span>
-                  <span id="brResultInfo">PNG transparent • qualité originale</span>
+                  <span id="brResultInfo">PNG transparent • dimensions originales</span>
                 </div>
               </article>
 
               <article class="panel br-result-panel">
                 <div id="brBackgroundInfo" class="br-info-card">
                   <svg class="icon"><use href="#i-check"/></svg>
-                  <div><strong>Détection sécurisée</strong><span>Le fond sera retiré depuis les bords, sans effacer les détails intérieurs.</span></div>
+                  <div><strong>Segmentation du sujet</strong><span>Une robe blanche peut rester entière devant un fond blanc grâce au contexte et aux formes.</span></div>
                 </div>
                 <div id="brQualityInfo" class="br-info-card">
                   <svg class="icon"><use href="#i-meter"/></svg>
-                  <div><strong>Export DTF</strong><span>PNG avec transparence et métadonnées 300 DPI.</span></div>
+                  <div><strong>En attente d’analyse</strong><span>Les zones ambiguës et les alertes apparaîtront ici.</span></div>
                 </div>
               </article>
 
               <article class="panel br-export-panel">
                 <div>
                   <p class="eyebrow">FICHIER FINAL</p>
-                  <h3>Prêt pour votre commande PRINTELLY</h3>
-                  <p>Téléchargez le PNG ou ajoutez-le directement à une nouvelle commande.</p>
+                  <h3>PNG transparent prêt pour PRINTELLY</h3>
+                  <p>Dimensions et couleurs d’origine, sans damier intégré et sans conversion JPEG.</p>
                 </div>
                 <div class="br-actions">
                   <button id="brReset" class="secondary" type="button" disabled>RÉINITIALISER</button>
-                  <button id="brDownload" class="secondary" type="button" disabled>TÉLÉCHARGER LE PNG</button>
+                  <button id="brDownload" class="secondary" type="button" disabled>TÉLÉCHARGER LE PNG TRANSPARENT</button>
                   <button id="brAddToOrder" class="primary" type="button" disabled>AJOUTER À MA COMMANDE</button>
                 </div>
-                <div id="brProgress" class="br-progress hidden"><i></i><span>Création du PNG haute résolution…</span></div>
+                <div id="brProgress" class="br-progress hidden"><i></i><span>Préparation du PNG dans sa résolution originale…</span></div>
                 <p id="brMessage" class="br-message" role="status"></p>
               </article>
             </div>
           </div>
         </section>
+
+
 
         <section id="notificationsView" class="app-page hidden">
           <div class="page-head notification-page-head">
