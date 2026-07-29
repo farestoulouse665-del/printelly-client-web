@@ -55,6 +55,7 @@ class MaskEditor:
         point_x: float,
         point_y: float,
         tolerance: float,
+        allowed: np.ndarray | None = None,
     ) -> np.ndarray:
         height, width = rgb.shape[:2]
         x = min(width - 1, max(0, round(point_x * (width - 1))))
@@ -63,6 +64,11 @@ class MaskEditor:
         reference = lab[y, x]
         distance = np.linalg.norm(lab - reference, axis=2)
         candidate = distance <= max(2.0, tolerance * 100.0)
+        if allowed is not None:
+            # The semantic alpha is a barrier: an exterior colour selection must
+            # not cross into confidently preserved hair, text or dark details.
+            candidate &= allowed.astype(bool)
+            candidate[y, x] = True
         count, labels = cv2.connectedComponents(candidate.astype(np.uint8), connectivity=8)
         if count <= 1:
             return np.zeros((height, width), dtype=np.float32)
@@ -134,7 +140,11 @@ class MaskEditor:
         elif kind in {"magic_exterior", "forgotten_background"}:
             point = operation.points[0]
             selection = self._connected_colour(
-                original_rgba[:, :, :3], point.x, point.y, operation.tolerance
+                original_rgba[:, :, :3],
+                point.x,
+                point.y,
+                operation.tolerance,
+                allowed=(alpha < 0.65) if kind == "magic_exterior" else None,
             )
         elif kind in {"background_point", "subject_point"}:
             selection = self._brush(alpha.shape, operation)
