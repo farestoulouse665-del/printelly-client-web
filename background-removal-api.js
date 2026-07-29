@@ -3,12 +3,18 @@
   function endpoint(baseUrl, path) {
     return baseUrl.trim().replace(/\/+$/, "") + path;
   }
+  function withRequestReference(message, reference) {
+    var clean = typeof reference === "string" ? reference.trim() : "";
+    return clean ? message + " Référence: " + clean.slice(0, 12) + "." : message;
+  }
   async function apiError(response) {
+    var headerReference = response.headers.get("x-request-id") || "";
     try {
       const body = await response.json();
-      return new Error(typeof body.detail === "string" ? body.detail : "Erreur serveur " + response.status + ".");
+      var message = typeof body.detail === "string" ? body.detail : "Erreur serveur " + response.status + ".";
+      return new Error(withRequestReference(message, headerReference || body.request_id));
     } catch (_) {
-      return new Error("Erreur serveur " + response.status + ".");
+      return new Error(withRequestReference("Erreur serveur " + response.status + ".", headerReference));
     }
   }
   window.PrintellyBackgroundApi = {
@@ -49,6 +55,7 @@
           residualHazeRatio: Number(response.headers.get("x-residual-haze") || 0),
           sourceAlphaPreserved: response.headers.get("x-source-alpha-preserved") === "true",
           effectiveMode: response.headers.get("x-effective-mode") || options.mode,
+          requestId: response.headers.get("x-request-id") || "",
           modelName: response.headers.get("x-model-name") || "modèle local",
           warnings
         }
