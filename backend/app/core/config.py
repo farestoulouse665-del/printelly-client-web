@@ -110,7 +110,16 @@ class Settings:
             "",
         }
         if self.signing_secret in weak or self.admin_token in weak:
-            raise RuntimeError("SIGNING_SECRET et ADMIN_TOKEN doivent être définis en production.")
+            raise RuntimeError(
+                "SIGNING_SECRET et ADMIN_TOKEN doivent être définis en production."
+            )
+        if (
+            len(self.model_sha256) != 64
+            or any(character not in "0123456789abcdef" for character in self.model_sha256)
+        ):
+            raise RuntimeError(
+                "BACKGROUND_MODEL_SHA256 doit être l’empreinte approuvée en production."
+            )
 
 
 settings = Settings()
