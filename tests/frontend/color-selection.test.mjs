@@ -189,3 +189,46 @@ test("residue scanner selects background-colored haze and protects the opaque su
   assert.equal(result.mask[0], 1);
   assert.equal(result.mask[3 * width + 3], 0);
 });
+
+
+test("magic exterior eraser removes only the clicked region connected to an image edge", () => {
+  const engine = loadEngine();
+  const width = 7;
+  const height = 7;
+  const pixels = image(width, height, [255, 255, 255]);
+  const alpha = new Float32Array(width * height).fill(1);
+  const ring = [];
+  for (let x = 1; x <= 5; x += 1) { ring.push([x, 1], [x, 5]); }
+  for (let y = 2; y <= 4; y += 1) { ring.push([1, y], [5, y]); }
+  for (const [x, y] of ring) {
+    const offset = (y * width + x) * 4;
+    pixels.data[offset] = pixels.data[offset + 1] = pixels.data[offset + 2] = 0;
+  }
+  const exterior = engine.magicExterior(pixels, alpha, width, height, 0, 3, 5);
+  assert.equal(exterior.touchesExterior, true);
+  assert.equal(exterior.mask[3 * width], 1);
+  assert.equal(exterior.mask[3 * width + 3], 0);
+});
+
+test("magic exterior eraser refuses an enclosed interior click", () => {
+  const engine = loadEngine();
+  const width = 7;
+  const height = 7;
+  const pixels = image(width, height, [255, 255, 255]);
+  const alpha = new Float32Array(width * height).fill(1);
+  for (let x = 1; x <= 5; x += 1) {
+    for (const y of [1, 5]) {
+      const offset = (y * width + x) * 4;
+      pixels.data[offset] = pixels.data[offset + 1] = pixels.data[offset + 2] = 0;
+    }
+  }
+  for (let y = 1; y <= 5; y += 1) {
+    for (const x of [1, 5]) {
+      const offset = (y * width + x) * 4;
+      pixels.data[offset] = pixels.data[offset + 1] = pixels.data[offset + 2] = 0;
+    }
+  }
+  const interior = engine.magicExterior(pixels, alpha, width, height, 3, 3, 5);
+  assert.equal(interior.touchesExterior, false);
+  assert.equal(interior.count, 0);
+});
