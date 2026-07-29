@@ -136,6 +136,19 @@ async def validate_upload(upload: UploadFile, config: Settings) -> ValidatedImag
                         )
                     probe.verify()
                 with Image.open(temp_path) as source:
+                    source_width, source_height = source.size
+                    if (
+                        source_width < 2
+                        or source_height < 2
+                        or source_width * source_height > config.max_image_pixels
+                    ):
+                        raise HTTPException(
+                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            detail=(
+                                "Résolution refusée avant décodage. "
+                                f"Maximum: {config.max_image_pixels:,} pixels."
+                            ),
+                        )
                     source.load()
                     image = ImageOps.exif_transpose(source).copy()
                     image.info.update(source.info)
