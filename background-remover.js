@@ -110,9 +110,9 @@
     var url = apiEndpoint("/api/health");
     setApiState("Vérification…", "checking");
     try {
-      var response = await fetch(url, { method: "GET", cache: "no-store" });
-      var data = await response.json();
-      if (!response.ok || !data.model_loaded) {
+      if (!window.PrintellyBackgroundApi) throw new Error("Client API non chargé.");
+      var data = await window.PrintellyBackgroundApi.health(apiBase());
+      if (!data.model_loaded) {
         setApiState("Modèle non prêt", "error");
         setMessage(data.status || "Le serveur répond, mais le modèle ONNX n’est pas chargé.", "warning");
         return false;
@@ -275,28 +275,20 @@
     setMessage("Analyse de l’image en cours…", "");
     stage("upload", "active");
 
-    var form = new FormData();
-    form.append("image", remover.file, remover.file.name);
-    form.append("mode", remover.mode);
-    form.append("refine", "true");
-    form.append("feather", ui.feather.value);
-    form.append("edge_shift", ui.edge.value);
-    form.append("decontaminate", ui.decontaminate.checked ? "true" : "false");
-
     remover.progressTimers.push(setTimeout(function () { stage("segment", "active"); setMessage("Le modèle local détecte le sujet et ses détails…", ""); }, 350));
     remover.progressTimers.push(setTimeout(function () { stage("refine", "active"); setMessage("Raffinement des cheveux, tissus et contours…", ""); }, 1800));
 
     try {
-      var response = await fetch(apiEndpoint("/api/remove-background"), {
-        method: "POST",
-        body: form,
-        signal: remover.abortController.signal
-      });
-      if (!response.ok) throw new Error(await errorDetail(response));
-      if (!(response.headers.get("content-type") || "").includes("image/png")) throw new Error("Le serveur n’a pas retourné un PNG.");
+      if (!window.PrintellyBackgroundApi) throw new Error("Client API non chargé.");
+      var apiResult = await window.PrintellyBackgroundApi.remove(apiBase(), remover.file, {
+        mode: remover.mode,
+        feather: Number(ui.feather.value),
+        edgeShift: Number(ui.edge.value),
+        decontaminate: ui.decontaminate.checked
+      }, remover.abortController.signal);
 
       stage("verify", "active");
-      var blob = await response.blob();
+      var blob = apiResult.blob;
       var loaded = await loadImageFromBlob(blob);
       if (loaded.image.naturalWidth !== remover.sourceImage.naturalWidth || loaded.image.naturalHeight !== remover.sourceImage.naturalHeight) {
         URL.revokeObjectURL(loaded.url);
@@ -308,11 +300,10 @@
       buildBaseMask();
       stage("verify", "done");
 
-      var processingMs = Number(response.headers.get("x-processing-ms") || 0);
-      var ratio = Number(response.headers.get("x-foreground-ratio") || 0);
-      var model = response.headers.get("x-model-name") || "modèle local";
-      var warnings = [];
-      try { warnings = JSON.parse(response.headers.get("x-warnings") || "[]"); } catch (_) {}
+      var processingMs = apiResult.metadata.processingMs;
+      var ratio = apiResult.metadata.foregroundRatio;
+      var model = apiResult.metadata.modelName;
+      var warnings = apiResult.metadata.warnings;
       updateQuality(model, processingMs, ratio, warnings);
       ui.resultInfo.textContent = "PNG RGBA • " + remover.sourceImage.naturalWidth + " × " + remover.sourceImage.naturalHeight + " px";
       ui.download.disabled = false;
@@ -488,6 +479,15 @@
     context.putImageData(overlay, 0, 0);
   }
 
+  function sizeCanvasToShell() {
+    if (!remover.previewWidth || !remover.previewHeight) return;
+    var availableWidth = Math.max(120, ui.shell.clientWidth - 24);
+    var availableHeight = Math.max(120, ui.shell.clientHeight - 24);
+    var scale = Math.min(1, availableWidth / remover.previewWidth, availableHeight / remover.previewHeight);
+    ui.canvas.style.width = Math.max(1, Math.round(remover.previewWidth * scale)) + "px";
+    ui.canvas.style.height = Math.max(1, Math.round(remover.previewHeight * scale)) + "px";
+  }
+
   function applyTransform() {
     ui.canvas.style.transform = "translate(" + remover.panX + "px," + remover.panY + "px) scale(" + remover.zoom + ")";
     ui.zoomValue.textContent = Math.round(remover.zoom * 100) + " %";
@@ -497,6 +497,7 @@
     remover.zoom = 1;
     remover.panX = 0;
     remover.panY = 0;
+    sizeCanvasToShell();
     applyTransform();
   }
 
@@ -573,7 +574,8 @@
       return;
     }
     var shellRect = ui.shell.getBoundingClientRect();
-    var size = Number(ui.brush.value) * remover.zoom;
+    var canvasRect = ui.canvas.getBoundingClientRect();
+    var size = Number(ui.brush.value) * (canvasRect.width / Math.max(1, remover.previewWidth));
     ui.cursor.style.width = size + "px";
     ui.cursor.style.height = size + "px";
     ui.cursor.style.left = event.clientX - shellRect.left + "px";
@@ -807,6 +809,7 @@
     changeZoom(event.deltaY < 0 ? 1.15 : 0.87);
   }, { passive: false });
 
+  window.addEventListener("resize", function () { if (remover.zoom === 1) { sizeCanvasToShell(); applyTransform(); } });
   window.addEventListener("beforeunload", clearUrls);
   setTool("pan");
   setBackground("checker");
