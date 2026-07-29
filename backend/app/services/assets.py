@@ -277,10 +277,11 @@ class AssetService:
 
     @staticmethod
     def serialize(asset: Asset) -> AssetOut:
-        source_key = asset.source_key or asset.original_key
+        # The browser always receives the validated working raster. Original
+        # SVG/PSD/PDF/AI sources remain private and are never rendered inline.
         return AssetOut.model_validate(asset).model_copy(
             update={
-                "original_download_url": storage.signed_download_path(source_key),
+                "original_download_url": storage.signed_download_path(asset.original_key),
                 "final_download_url": (
                     storage.signed_download_path(asset.final_key)
                     if asset.final_key
