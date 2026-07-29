@@ -4,8 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#111318">
+  <meta name="color-scheme" content="light">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="PRINTELLY Client — commandes DTF, production et livraison">
   <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./printelly-logo.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./printelly-logo.svg">
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./background-remover.css">
   <title>PRINTELLY — Espace client DTF</title>
@@ -31,10 +36,10 @@
 
   <header class="public-topbar">
     <a class="brand" href="#" aria-label="PRINTELLY">
-      <span class="brand-mark">P</span>
+      <img class="brand-mark brand-logo" src="./printelly-logo.svg" alt="">
       <span><strong>PRINTELLY</strong><small>ESPACE CLIENT DTF</small></span>
     </a>
-    <div id="connectionBadge" class="connection-badge">Connexion…</div>
+    <div id="connectionBadge" class="connection-badge" role="status" aria-live="polite">Connexion…</div>
   </header>
 
   <section id="authView" class="auth-view">
@@ -43,7 +48,7 @@
       <h1>Vos commandes DTF,<br><span>claires à chaque étape.</span></h1>
       <p>Envoyez vos fichiers, consultez le métrage et le prix, puis suivez la production et la livraison depuis un seul espace.</p>
       <div class="hero-points">
-        <span>✓ Compte partagé avec l’application</span>
+        <span>✓ Compte unique PRINTELLY</span>
         <span>✓ Suivi Guepex / Yalidine</span>
         <span>✓ Aucune validation BAT</span>
       </div>
@@ -53,7 +58,7 @@
       <div class="auth-card-head">
         <p class="eyebrow">BIENVENUE</p>
         <h2>Accéder à mon espace</h2>
-        <p>Utilisez le même compte que sur l’application PRINTELLY.</p>
+        <p>Connectez-vous avec votre compte PRINTELLY.</p>
       </div>
       <div class="segmented">
         <button class="active" data-auth-tab="login">Connexion</button>
@@ -61,14 +66,14 @@
       </div>
       <form id="loginForm" class="form">
         <label>Téléphone ou e-mail<input id="loginIdentity" autocomplete="username" required placeholder="0550… ou nom@email.com"></label>
-        <label>Mot de passe<input id="loginPassword" type="password" autocomplete="current-password" required minlength="6" placeholder="Votre mot de passe"></label>
+        <label>Mot de passe<span class="password-field"><input id="loginPassword" type="password" autocomplete="current-password" required minlength="6" placeholder="Votre mot de passe"><button class="password-toggle" type="button" data-password-toggle="loginPassword" aria-label="Afficher le mot de passe" aria-pressed="false">Afficher</button></span></label>
         <button class="primary auth-submit" type="submit">SE CONNECTER</button>
       </form>
       <form id="signupForm" class="form hidden">
-        <div class="two"><label>Prénom<input id="signupFirst" required></label><label>Nom<input id="signupLast" required></label></div>
-        <label>Téléphone<input id="signupPhone" inputmode="tel" required placeholder="0550 00 00 00"></label>
+        <div class="two"><label>Prénom<input id="signupFirst" autocomplete="given-name" required></label><label>Nom<input id="signupLast" autocomplete="family-name" required></label></div>
+        <label>Téléphone<input id="signupPhone" inputmode="tel" autocomplete="tel" required placeholder="0550 00 00 00"></label>
         <label>E-mail réel<input id="signupEmail" type="email" autocomplete="email" required placeholder="votre@email.com"></label>
-        <label>Atelier<input id="signupWorkshop" placeholder="Nom de votre atelier"></label>
+        <label>Atelier<input id="signupWorkshop" autocomplete="organization" placeholder="Nom de votre atelier"></label>
         <div class="delivery-location">
           <p class="delivery-title">Adresse de livraison</p>
           <div class="two">
@@ -79,21 +84,21 @@
             <label class="delivery-choice selected"><input type="radio" name="signupDelivery" value="home" checked><span><strong>À domicile</strong><small>Livraison à votre adresse exacte</small></span></label>
             <label class="delivery-choice" id="signupStopdeskChoice"><input type="radio" name="signupDelivery" value="stopdesk" disabled><span><strong>Stop Desk</strong><small>Bureau disponible dans votre commune</small></span></label>
           </div>
-          <div id="signupHomeFields"><label>Adresse exacte<input id="signupAddress" required placeholder="Rue, quartier, numéro…"></label></div>
+          <div id="signupHomeFields"><label>Adresse exacte<input id="signupAddress" autocomplete="street-address" required placeholder="Rue, quartier, numéro…"></label></div>
           <div id="signupStopdeskFields" class="stopdesk-result hidden"></div>
-          <p id="signupDeliveryStatus" class="delivery-status">Choisissez votre wilaya puis votre commune.</p>
+          <p id="signupDeliveryStatus" class="delivery-status" role="status" aria-live="polite">Choisissez votre wilaya puis votre commune.</p>
         </div>
-        <label>Mot de passe<input id="signupPassword" type="password" required minlength="8"></label>
+        <label>Mot de passe<span class="password-field"><input id="signupPassword" type="password" autocomplete="new-password" required minlength="8" placeholder="8 caractères minimum"><button class="password-toggle" type="button" data-password-toggle="signupPassword" aria-label="Afficher le mot de passe" aria-pressed="false">Afficher</button></span></label>
         <button class="primary auth-submit" type="submit">CRÉER MON COMPTE</button>
       </form>
-      <p id="authMessage" class="message"></p>
+      <p id="authMessage" class="message" role="status" aria-live="polite"></p>
     </div>
   </section>
 
   <section id="appView" class="app-shell hidden">
     <aside class="app-sidebar">
       <div class="sidebar-brand">
-        <span class="brand-mark">P</span>
+        <img class="brand-mark brand-logo" src="./printelly-logo.svg" alt="">
         <span><strong>PRINTELLY</strong><small>ESPACE CLIENT DTF</small></span>
       </div>
       <p class="nav-caption">MENU PRINCIPAL</p>
@@ -115,7 +120,7 @@
 
     <div class="app-workspace">
       <header class="app-topbar">
-        <div class="mobile-brand"><span>P</span><strong>PRINTELLY</strong></div>
+        <div class="mobile-brand"><img src="./printelly-logo.svg" alt=""><strong>PRINTELLY</strong></div>
         <div class="search-box"><svg class="icon"><use href="#i-search"/></svg><input id="orderSearch" placeholder="Rechercher une commande…" aria-label="Rechercher une commande"></div>
         <div class="top-spacer"></div>
         <div class="service-online"><i></i>Service en ligne</div>
@@ -206,7 +211,7 @@
                 <div class="direct-production-note"><svg class="icon"><use href="#i-check"/></svg><span>Après confirmation, la commande est transmise directement à PRINTELLY. Aucune validation BAT n’est demandée.</span></div>
                 <div id="uploadProgress" class="progress-box hidden"><div class="progress-head"><span id="progressText">Préparation…</span><strong id="progressPercent">0%</strong></div><div class="progress"><i id="progressBar"></i></div></div>
                 <button id="submitOrderBtn" class="primary large" type="submit">ENVOYER LA COMMANDE</button>
-                <p id="orderMessage" class="message"></p>
+                <p id="orderMessage" class="message" role="status" aria-live="polite"></p>
               </article>
             </aside>
           </form>
@@ -358,7 +363,7 @@
         </section>
 
         <section id="profileView" class="app-page hidden">
-          <div class="page-head"><div><p class="eyebrow">MON COMPTE</p><h2>Profil et livraison</h2><p>Ces informations sont partagées avec l’application client.</p></div></div>
+          <div class="page-head"><div><p class="eyebrow">MON COMPTE</p><h2>Profil et livraison</h2><p>Ces informations restent synchronisées avec votre espace client PRINTELLY.</p></div></div>
           <div class="profile-layout">
             <form id="profileForm" class="panel form profile-form">
               <h3>Informations personnelles</h3>
@@ -377,10 +382,10 @@
                 </div>
                 <div id="profileHomeFields"><label>Adresse exacte<input id="profileAddress" required placeholder="Rue, quartier, numéro…"></label></div>
                 <div id="profileStopdeskFields" class="stopdesk-result hidden"></div>
-                <p id="profileDeliveryStatus" class="delivery-status">Choisissez votre wilaya puis votre commune.</p>
+                <p id="profileDeliveryStatus" class="delivery-status" role="status" aria-live="polite">Choisissez votre wilaya puis votre commune.</p>
               </div>
               <button class="primary" type="submit">ENREGISTRER</button>
-              <p id="profileMessage" class="message"></p>
+              <p id="profileMessage" class="message" role="status" aria-live="polite"></p>
             </form>
             <article class="panel delivery-profile-card">
               <p class="section-label">LIVRAISON ENREGISTRÉE</p>
