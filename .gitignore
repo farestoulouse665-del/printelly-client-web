@@ -8,8 +8,9 @@ backend/.venv/
 node_modules/
 .typecheck-output/
 
-# Local configuration and model weights
+# Local configuration, credentials and model weights
 .env
+.htpasswd
 models/*
 !models/.gitkeep
 !models/README.md
