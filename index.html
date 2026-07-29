@@ -223,7 +223,8 @@
           </div>
 
           <div class="br-workspace">
-            <aside class="panel br-controls">
+            <aside id="brLeftControls" class="panel br-controls" aria-label="Préparation et analyse IA">
+              <div class="br-side-title"><span>OUTILS IA</span><strong>Préparation du détourage</strong><small>Importation, sujet et réglages du moteur</small></div>
               <section class="br-control-section">
                 <div class="br-section-head"><span>01</span><div><h3>Moteur local</h3><p>Connexion sécurisée au serveur de détourage</p></div></div>
                 <label class="br-api-field"><span>Adresse du serveur</span><input id="brApiUrl" type="url" spellcheck="false" placeholder="http://localhost:8000"></label>
@@ -332,9 +333,17 @@
               </section>
             </aside>
 
+            <aside id="brRightControls" class="panel br-right-controls" aria-label="Retouches et export">
+              <div class="br-side-title"><span>FINITION</span><strong>Retouches professionnelles</strong><small>Masque, couleurs, qualité DTF et export</small></div>
+            </aside>
+
             <div class="br-preview-column">
               <article class="panel br-preview-panel">
                 <div class="br-preview-toolbar">
+                  <div class="br-panel-toggles" role="group" aria-label="Afficher ou masquer les panneaux latéraux">
+                    <button id="brToggleLeft" type="button" aria-pressed="true" title="Afficher ou masquer les outils IA"><span>☰</span> OUTILS IA</button>
+                    <button id="brToggleRight" type="button" aria-pressed="true" title="Afficher ou masquer les retouches">FINITION <span>☰</span></button>
+                  </div>
                   <div class="br-view-tabs" role="group" aria-label="Mode d’aperçu">
                     <button class="active" type="button" data-br-view="result">RÉSULTAT</button>
                     <button type="button" data-br-view="split">AVANT / APRÈS</button>
