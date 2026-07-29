@@ -6,10 +6,10 @@ from io import BytesIO
 from pathlib import Path
 
 from PIL import Image
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.models.entities import Asset
+from app.models.entities import Asset, GuestSession
 from app.schemas.api import AssetListOut, AssetOut
 from app.services.image_validation import ValidatedImage
 from app.storage.local import sanitize_filename, storage
@@ -44,7 +44,9 @@ def _image_metadata(image: Image.Image) -> tuple[float | None, float | None, str
     dpi_x = float(dpi[0]) if isinstance(dpi, tuple) and len(dpi) >= 2 else None
     dpi_y = float(dpi[1]) if isinstance(dpi, tuple) and len(dpi) >= 2 else None
     profile = "ICC intégré" if image.info.get("icc_profile") else image.mode
-    has_transparency = "A" in image.getbands() and image.getchannel("A").getextrema()[0] < 255
+    has_transparency = (
+        "A" in image.getbands() and image.getchannel("A").getextrema()[0] < 255
+    )
     return dpi_x, dpi_y, profile[:80], has_transparency
 
 
@@ -57,6 +59,23 @@ def _preview_png(image: Image.Image, maximum: int = 1200) -> bytes:
 
 
 class AssetService:
+    @staticmethod
+    def _session(database: Session, guest_session_id: str) -> GuestSession:
+        session = database.get(GuestSession, guest_session_id)
+        if session is None:
+            raise RuntimeError("Session propriétaire introuvable.")
+        return session
+
+    @classmethod
+    def _owner_filter(cls, database: Session, guest_session_id: str):
+        session = cls._session(database, guest_session_id)
+        if session.user_id:
+            return or_(
+                Asset.user_id == session.user_id,
+                Asset.guest_session_id == guest_session_id,
+            )
+        return Asset.guest_session_id == guest_session_id
+
     def create_from_validated(
         self,
         database: Session,
@@ -64,18 +83,28 @@ class AssetService:
         validated: ValidatedImage,
         declared_mime: str | None,
     ) -> Asset:
+        owner_session = self._session(database, guest_session_id)
         asset_id = str(uuid.uuid4())
         safe_name = sanitize_filename(validated.original_filename)
         suffix = Path(validated.original_filename).suffix.lower()
-        mime_type = _MIME_BY_SUFFIX.get(suffix, declared_mime or "application/octet-stream")
+        mime_type = _MIME_BY_SUFFIX.get(
+            suffix,
+            declared_mime or "application/octet-stream",
+        )
         converted = validated.source_temp_path is not None
-        working_extension = ".png" if converted else (suffix if suffix in _RASTER_SUFFIXES else ".png")
-        original_key = f"assets/{asset_id}/original/{uuid.uuid4().hex}{working_extension}"
+        working_extension = (
+            ".png" if converted else (suffix if suffix in _RASTER_SUFFIXES else ".png")
+        )
+        original_key = (
+            f"assets/{asset_id}/original/{uuid.uuid4().hex}{working_extension}"
+        )
         source_key: str | None = None
         source_path = validated.source_temp_path or validated.temp_path
         if converted and validated.source_temp_path:
             source_extension = suffix if suffix in _MIME_BY_SUFFIX else ".source"
-            source_key = f"assets/{asset_id}/source/{uuid.uuid4().hex}{source_extension}"
+            source_key = (
+                f"assets/{asset_id}/source/{uuid.uuid4().hex}{source_extension}"
+            )
             storage.put_file(source_key, validated.source_temp_path)
         preview_key = f"assets/{asset_id}/previews/import.png"
         storage.put_file(original_key, validated.temp_path)
@@ -86,7 +115,10 @@ class AssetService:
             warnings.append(
                 {
                     "code": "converted_to_working_png",
-                    "message": f"L’original {validated.detected_format} est conservé; une copie PNG locale est utilisée pour le traitement.",
+                    "message": (
+                        f"L’original {validated.detected_format} est conservé; "
+                        "une copie PNG locale est utilisée pour le traitement."
+                    ),
                 }
             )
         if not dpi_x:
@@ -100,11 +132,14 @@ class AssetService:
             warnings.append(
                 {
                     "code": "low_pixel_dimensions",
-                    "message": "La résolution peut être insuffisante pour une grande impression.",
+                    "message": (
+                        "La résolution peut être insuffisante pour une grande impression."
+                    ),
                 }
             )
         asset = Asset(
             id=asset_id,
+            user_id=owner_session.user_id,
             guest_session_id=guest_session_id,
             name=Path(safe_name).stem[:180],
             original_filename=validated.original_filename[:255],
@@ -128,12 +163,17 @@ class AssetService:
         database.refresh(asset)
         return asset
 
-    @staticmethod
-    def owned_asset(database: Session, asset_id: str, guest_session_id: str) -> Asset:
+    @classmethod
+    def owned_asset(
+        cls,
+        database: Session,
+        asset_id: str,
+        guest_session_id: str,
+    ) -> Asset:
         asset = database.scalar(
             select(Asset).where(
                 Asset.id == asset_id,
-                Asset.guest_session_id == guest_session_id,
+                cls._owner_filter(database, guest_session_id),
                 Asset.deleted_at.is_(None),
             )
         )
@@ -143,15 +183,17 @@ class AssetService:
             raise HTTPException(status_code=404, detail="Design introuvable.")
         return asset
 
-    @staticmethod
+    @classmethod
     def query(
+        cls,
+        database: Session,
         guest_session_id: str,
         *,
         archived: bool | None,
         search_text: str | None,
     ) -> Select[tuple[Asset]]:
         statement = select(Asset).where(
-            Asset.guest_session_id == guest_session_id,
+            cls._owner_filter(database, guest_session_id),
             Asset.deleted_at.is_(None),
         )
         if archived is not None:
@@ -167,7 +209,9 @@ class AssetService:
             update={
                 "original_download_url": storage.signed_download_path(source_key),
                 "final_download_url": (
-                    storage.signed_download_path(asset.final_key) if asset.final_key else None
+                    storage.signed_download_path(asset.final_key)
+                    if asset.final_key
+                    else None
                 ),
             }
         )
@@ -183,6 +227,7 @@ class AssetService:
         limit: int,
     ) -> AssetListOut:
         base = self.query(
+            database,
             guest_session_id,
             archived=archived,
             search_text=search_text,
