@@ -167,6 +167,119 @@
     return { mask: selected, count: count, color: target };
   }
 
+
+  function colorDistance(a, b) {
+    var redMean = (a.red + b.red) / 2;
+    var deltaRed = a.red - b.red;
+    var deltaGreen = a.green - b.green;
+    var deltaBlue = a.blue - b.blue;
+    return Math.sqrt(
+      (2 + redMean / 256) * deltaRed * deltaRed +
+      4 * deltaGreen * deltaGreen +
+      (2.5 + (255 - redMean) / 256) * deltaBlue * deltaBlue
+    );
+  }
+
+  function extractPalette(imageData, width, height, alphaMask, requestedMaxColors) {
+    validate(imageData, width, height);
+    if (alphaMask && alphaMask.length !== width * height) {
+      throw new Error("Le masque alpha et l’image n’ont pas les mêmes dimensions.");
+    }
+    var maxColors = Math.max(2, Math.min(12, Number(requestedMaxColors) || 8));
+    var buckets = Object.create(null);
+    var visibleCount = 0;
+    for (var index = 0; index < width * height; index += 1) {
+      if (alphaMask && alphaMask[index] <= 0.05) continue;
+      var offset = index * 4;
+      var red = imageData.data[offset];
+      var green = imageData.data[offset + 1];
+      var blue = imageData.data[offset + 2];
+      var key = (red >> 5) + ":" + (green >> 5) + ":" + (blue >> 5);
+      var bucket = buckets[key];
+      if (!bucket) bucket = buckets[key] = { count: 0, red: 0, green: 0, blue: 0 };
+      bucket.count += 1;
+      bucket.red += red;
+      bucket.green += green;
+      bucket.blue += blue;
+      visibleCount += 1;
+    }
+    if (!visibleCount) return { colors: [], assignments: new Int32Array(width * height).fill(-1), visibleCount: 0 };
+
+    var ordered = Object.keys(buckets).map(function (key) {
+      var bucket = buckets[key];
+      return {
+        count: bucket.count,
+        red: bucket.red / bucket.count,
+        green: bucket.green / bucket.count,
+        blue: bucket.blue / bucket.count
+      };
+    }).sort(function (a, b) { return b.count - a.count; });
+
+    var clusters = [];
+    ordered.forEach(function (bucket) {
+      var nearest = -1;
+      var nearestDistance = Infinity;
+      for (var clusterIndex = 0; clusterIndex < clusters.length; clusterIndex += 1) {
+        var distance = colorDistance(bucket, clusters[clusterIndex]);
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          nearest = clusterIndex;
+        }
+      }
+      if (nearest < 0 || (clusters.length < maxColors && nearestDistance > 72)) {
+        clusters.push({
+          count: bucket.count,
+          red: bucket.red,
+          green: bucket.green,
+          blue: bucket.blue
+        });
+        return;
+      }
+      var cluster = clusters[nearest];
+      var total = cluster.count + bucket.count;
+      cluster.red = (cluster.red * cluster.count + bucket.red * bucket.count) / total;
+      cluster.green = (cluster.green * cluster.count + bucket.green * bucket.count) / total;
+      cluster.blue = (cluster.blue * cluster.count + bucket.blue * bucket.count) / total;
+      cluster.count = total;
+    });
+
+    clusters.sort(function (a, b) { return b.count - a.count; });
+    var assignments = new Int32Array(width * height);
+    assignments.fill(-1);
+    var counts = new Int32Array(clusters.length);
+    for (var pixel = 0; pixel < width * height; pixel += 1) {
+      if (alphaMask && alphaMask[pixel] <= 0.05) continue;
+      var pixelOffset = pixel * 4;
+      var color = {
+        red: imageData.data[pixelOffset],
+        green: imageData.data[pixelOffset + 1],
+        blue: imageData.data[pixelOffset + 2]
+      };
+      var bestIndex = 0;
+      var bestDistance = Infinity;
+      for (var candidate = 0; candidate < clusters.length; candidate += 1) {
+        var candidateDistance = colorDistance(color, clusters[candidate]);
+        if (candidateDistance < bestDistance) {
+          bestDistance = candidateDistance;
+          bestIndex = candidate;
+        }
+      }
+      assignments[pixel] = bestIndex;
+      counts[bestIndex] += 1;
+    }
+
+    var colors = clusters.map(function (cluster, index) {
+      return {
+        red: Math.round(cluster.red),
+        green: Math.round(cluster.green),
+        blue: Math.round(cluster.blue),
+        count: counts[index],
+        ratio: counts[index] / visibleCount
+      };
+    }).filter(function (color) { return color.count > 0; });
+    return { colors: colors, assignments: assignments, visibleCount: visibleCount };
+  }
+
   function eraseMask(alphaMask, selection) {
     if (!alphaMask || !selection || alphaMask.length !== selection.length) {
       throw new Error("Le masque et la sélection n’ont pas les mêmes dimensions.");
@@ -183,6 +296,7 @@
     exteriorColor: exteriorColor,
     dominantGuideColor: dominantGuideColor,
     guidedSelection: guidedSelection,
+    extractPalette: extractPalette,
     eraseMask: eraseMask
   };
 })();
