@@ -163,6 +163,28 @@ def test_upload_validation_checks_signature_and_mime(tmp_path):
         raise AssertionError("Un MIME incohérent doit être refusé.")
 
 
+
+def test_upload_rejects_oversized_dimensions_before_full_processing(tmp_path):
+    config = replace(
+        settings,
+        temp_dir=tmp_path,
+        max_upload_mb=1,
+        max_image_pixels=10_000,
+    )
+    upload = UploadFile(
+        filename="trop-grand.png",
+        file=BytesIO(_png(Image.new("RGB", (120, 120), "white"))),
+        headers=Headers({"content-type": "image/png"}),
+    )
+    try:
+        asyncio.run(validate_upload(upload, config))
+    except Exception as exc:
+        assert getattr(exc, "status_code", None) == 413
+        assert "avant décodage" in str(getattr(exc, "detail", ""))
+    else:
+        raise AssertionError("Une résolution dépassant la limite doit être refusée.")
+
+
 def test_pdf_preview_and_dtf_report_are_explicit_validation_outputs():
     source = Image.new("RGBA", (300, 200), (0, 0, 0, 0))
     for y in range(30, 170):
