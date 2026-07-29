@@ -141,6 +141,14 @@ async def validate_upload(upload: UploadFile, config: Settings) -> ValidatedImag
                     image.info.update(source.info)
             except HTTPException:
                 raise
+            except MemoryError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=(
+                        "Mémoire insuffisante pour décoder ce fichier. "
+                        "Réduisez sa résolution ou augmentez la mémoire du worker."
+                    ),
+                ) from exc
             except (
                 UnidentifiedImageError,
                 OSError,
