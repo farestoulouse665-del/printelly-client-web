@@ -16,22 +16,23 @@ def preserve_source_alpha(image: Image.Image, predicted: np.ndarray) -> np.ndarr
 
 
 def decontaminate_edges(rgb: np.ndarray, alpha: np.ndarray) -> np.ndarray:
-    """Replace only partially transparent fringe RGB with nearby interior colors."""
-    boundary = (alpha > 0.02) & (alpha < 0.98)
+    """Gently correct only the partially transparent fringe RGB."""
+    boundary = (alpha > 0.04) & (alpha < 0.96)
     if not np.any(boundary):
         return rgb
 
-    interior_weight = (alpha >= 0.98).astype(np.float32)
-    denominator = cv2.GaussianBlur(interior_weight, (0, 0), 2.0)
+    interior_weight = (alpha >= 0.96).astype(np.float32)
+    denominator = cv2.GaussianBlur(interior_weight, (0, 0), 1.6)
     cleaned = rgb.astype(np.float32).copy()
+    # Keep genuine semi-transparent colour: correction is strongest only near 50% alpha.
+    strength = np.clip(1.0 - np.abs(alpha - 0.5) * 2.0, 0.0, 1.0) * 0.42
+    strength = np.where(boundary & (denominator > 0.02), strength, 0.0)
     for channel in range(3):
         weighted = rgb[:, :, channel].astype(np.float32) * interior_weight
-        nearby = cv2.GaussianBlur(weighted, (0, 0), 2.0)
+        nearby = cv2.GaussianBlur(weighted, (0, 0), 1.6)
         estimate = nearby / np.maximum(denominator, 1e-5)
-        cleaned[:, :, channel] = np.where(
-            boundary & (denominator > 0.01),
-            estimate,
-            cleaned[:, :, channel],
+        cleaned[:, :, channel] = (
+            cleaned[:, :, channel] * (1.0 - strength) + estimate * strength
         )
     return np.clip(cleaned, 0, 255).astype(np.uint8)
 
@@ -51,14 +52,19 @@ def export_png(
     metadata = PngImagePlugin.PngInfo()
     metadata.add_text("Software", "PRINTELLY Local Background Removal")
     metadata.add_text("Privacy", "Processed locally; no third-party image API")
+    save_options: dict[str, object] = {
+        "compress_level": 6,
+        "pnginfo": metadata,
+    }
+    dpi = image.info.get("dpi")
+    if isinstance(dpi, tuple) and len(dpi) == 2 and all(float(value) > 0 for value in dpi):
+        save_options["dpi"] = dpi
+    icc_profile = image.info.get("icc_profile")
+    if isinstance(icc_profile, bytes) and icc_profile:
+        save_options["icc_profile"] = icc_profile
+
     output = BytesIO()
-    Image.fromarray(rgba, mode="RGBA").save(
-        output,
-        format="PNG",
-        compress_level=6,
-        pnginfo=metadata,
-        dpi=(300, 300),
-    )
+    Image.fromarray(rgba, mode="RGBA").save(output, format="PNG", **save_options)
     payload = output.getvalue()
     verify_png(payload, image.size)
     return payload
@@ -71,3 +77,5 @@ def verify_png(payload: bytes, expected_size: tuple[int, int]) -> None:
             raise RuntimeError("L'export n'est pas un PNG RGBA valide.")
         if exported.size != expected_size:
             raise RuntimeError("Les dimensions de l'export ont changé.")
+        if "A" not in exported.getbands():
+            raise RuntimeError("Le fichier exporté ne contient pas de canal alpha.")
