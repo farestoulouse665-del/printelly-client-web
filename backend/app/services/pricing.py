@@ -3,7 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
 from app.core.config import settings
+from app.models.entities import PriceRule
 from app.schemas.api import QuoteCreateIn
 
 
@@ -19,7 +23,7 @@ class CalculatedQuote:
 
 
 class PricingService:
-    """Deterministic DZD pricing with explicit, auditable components."""
+    """Deterministic DZD pricing with database-backed administrative overrides."""
 
     quantity_tiers = (
         (100, 0.18),
@@ -28,7 +32,42 @@ class PricingService:
         (10, 0.04),
     )
 
-    def calculate(self, request: QuoteCreateIn) -> CalculatedQuote:
+    @staticmethod
+    def _rules(database: Session | None) -> dict[str, PriceRule]:
+        if database is None:
+            return {}
+        return {
+            rule.code: rule
+            for rule in database.scalars(
+                select(PriceRule).where(PriceRule.active.is_(True))
+            )
+        }
+
+    @staticmethod
+    def _amount(
+        rules: dict[str, PriceRule],
+        code: str,
+        fallback: float,
+    ) -> float:
+        rule = rules.get(code)
+        return float(rule.amount_dzd) if rule is not None else float(fallback)
+
+    def calculate(
+        self,
+        request: QuoteCreateIn,
+        database: Session | None = None,
+    ) -> CalculatedQuote:
+        rules = self._rules(database)
+        surface_rate = self._amount(
+            rules,
+            "surface_cm2",
+            settings.price_per_square_cm_dzd,
+        )
+        minimum_line = self._amount(
+            rules,
+            "minimum_line",
+            settings.minimum_line_item_dzd,
+        )
         lines: list[dict] = []
         subtotal = 0.0
         service_fees = 0.0
@@ -37,23 +76,23 @@ class PricingService:
         for line in request.lines:
             surface = line.width_cm * line.height_cm
             base_unit = max(
-                float(settings.minimum_line_item_dzd) / line.quantity,
-                surface * settings.price_per_square_cm_dzd,
+                minimum_line / line.quantity,
+                surface * surface_rate,
             )
             line_base = base_unit * line.quantity * line.variants
             line_fees = 0.0
             if line.individual_cut:
-                line_fees += 25.0 * line.quantity
+                line_fees += self._amount(rules, "individual_cut_each", 25) * line.quantity
             if line.human_review:
-                line_fees += 350.0
+                line_fees += self._amount(rules, "human_review", 350)
             if line.cleanup_required:
-                line_fees += 180.0
+                line_fees += self._amount(rules, "cleanup", 180)
             enhancement = {
                 "none": 0.0,
-                "2x": 150.0,
-                "4x": 300.0,
-                "300dpi": 220.0,
-                "600dpi": 420.0,
+                "2x": self._amount(rules, "enhancement_2x", 150),
+                "4x": self._amount(rules, "enhancement_4x", 300),
+                "300dpi": self._amount(rules, "enhancement_300dpi", 220),
+                "600dpi": self._amount(rules, "enhancement_600dpi", 420),
             }[line.resolution_enhancement]
             line_fees += enhancement
             subtotal += line_base
@@ -71,20 +110,41 @@ class PricingService:
             )
 
         discount_rate = 0.0
-        for minimum, rate in self.quantity_tiers:
+        configured_tiers = [
+            (
+                int(rule.conditions.get("minimum_quantity", 0)),
+                max(0.0, min(0.8, float(rule.amount_dzd) / 100.0)),
+            )
+            for rule in rules.values()
+            if rule.kind == "quantity_discount"
+        ]
+        tiers = sorted(configured_tiers, reverse=True) or list(self.quantity_tiers)
+        for minimum, rate in tiers:
             if total_quantity >= minimum:
                 discount_rate = rate
                 break
         if request.professional:
-            discount_rate = max(discount_rate, 0.12)
-        if request.promo_code and request.promo_code.strip().upper() == "PRINTELLY5":
-            discount_rate = min(0.30, discount_rate + 0.05)
+            professional = self._amount(rules, "professional_discount", 12) / 100.0
+            discount_rate = max(discount_rate, professional)
+        if request.promo_code:
+            promo = rules.get("promo_" + request.promo_code.strip().lower())
+            if promo and promo.kind == "promo_discount":
+                discount_rate = min(
+                    0.8,
+                    discount_rate + max(0.0, float(promo.amount_dzd) / 100.0),
+                )
+            elif request.promo_code.strip().upper() == "PRINTELLY5":
+                discount_rate = min(0.30, discount_rate + 0.05)
 
         discount = subtotal * discount_rate
         delivery = (
             float(request.delivery_dzd)
             if request.delivery_dzd is not None
-            else float(settings.default_delivery_dzd)
+            else self._amount(
+                rules,
+                "delivery_default",
+                settings.default_delivery_dzd,
+            )
         )
         total = max(0.0, subtotal - discount + service_fees + delivery)
         return CalculatedQuote(
@@ -98,8 +158,9 @@ class PricingService:
                 "lines": lines,
                 "quantity": total_quantity,
                 "discount_rate": discount_rate,
-                "price_per_square_cm_dzd": settings.price_per_square_cm_dzd,
-                "minimum_line_item_dzd": settings.minimum_line_item_dzd,
+                "price_per_square_cm_dzd": surface_rate,
+                "minimum_line_item_dzd": minimum_line,
+                "active_rule_codes": sorted(rules),
             },
             expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
         )
