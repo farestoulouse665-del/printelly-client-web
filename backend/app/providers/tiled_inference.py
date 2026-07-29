@@ -70,7 +70,7 @@ class TiledInferenceEngine:
     def _memmap(self, shape: tuple[int, int], suffix: str) -> np.memmap:
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         descriptor, raw_path = tempfile.mkstemp(
-            prefix="printelly-mask-",
+            prefix="transferlab-mask-",
             suffix=suffix,
             dir=self.temp_dir,
         )
