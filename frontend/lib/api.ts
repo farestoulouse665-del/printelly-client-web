@@ -310,15 +310,16 @@ export function createPngExport(
   assetId: string,
   widthCm?: number,
   quantity = 1,
+  options?: StudioOptions,
 ): Promise<{ download_url: string; filename: string }> {
   return apiFetch("/exports", {
     method: "POST",
     body: JSON.stringify({
       asset_id: assetId,
       format: "png",
-      preserve_canvas: true,
-      crop_to_content: false,
-      margin_mm: 0,
+      preserve_canvas: !options?.autoCenter,
+      crop_to_content: Boolean(options?.autoCenter),
+      margin_mm: options?.transparentMargin ? 5 : 0,
       width_cm: widthCm,
       dpi: 300,
       quantity,
