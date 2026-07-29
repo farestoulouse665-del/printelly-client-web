@@ -1,8 +1,8 @@
-# PRINTELLY Background Studio
+# TransferLab
 
 > Supprimez le fond. Préservez le design. Imprimez sans erreur.
 
-Cette branche contient le nouveau **TransferLab autonome** : une application séparée du site client PRINTELLY, avec Next.js, FastAPI, PostgreSQL, Redis/RQ et BiRefNet ONNX local.
+Cette branche contient le nouveau **TransferLab autonome** : une application séparée du site client TransferLab, avec Next.js, FastAPI, PostgreSQL, Redis/RQ et BiRefNet ONNX local.
 
 - Branche de développement : `transferlab-background-studio`
 - Branche d’origine conservée : `transferlab-autonome`
@@ -140,7 +140,7 @@ docker compose exec api alembic current
 Créer ou promouvoir un administrateur :
 
 ```powershell
-docker compose exec api python scripts/create_admin.py --email admin@printelly.dz --name "Administrateur PRINTELLY"
+docker compose exec api python scripts/create_admin.py --email admin@transferlab.dz --name "Administrateur TransferLab"
 ```
 
 Le mot de passe est demandé sans être affiché. L’accès technique à `/admin` utilise aussi `ADMIN_TOKEN`, distribué hors du dépôt.
