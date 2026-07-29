@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import secrets
-import shlex
 import subprocess
 from pathlib import Path
 from xml.etree import ElementTree
@@ -13,6 +12,7 @@ from starlette.datastructures import Headers
 
 from app.core.config import Settings
 from app.services.image_validation import ValidatedImage, validate_upload
+from app.services.security_scan import scan_local_file
 
 
 _DOCUMENT_MIMES = {
@@ -128,45 +128,6 @@ def _run(command: list[str], timeout: int) -> None:
         raise HTTPException(status_code=422, detail=f"Conversion locale refusée: {error or 'erreur inconnue'}")
 
 
-def _scan_source(path: Path, config: Settings) -> None:
-    if not config.antivirus_command:
-        return
-    try:
-        command = shlex.split(config.antivirus_command, posix=True)
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=503,
-            detail="Configuration antivirus invalide.",
-        ) from exc
-    if not command:
-        return
-    try:
-        result = subprocess.run(
-            [*command, str(path)],
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-            timeout=90,
-            shell=False,
-            env={
-                "PATH": "/usr/local/bin:/usr/bin:/bin",
-                "TMPDIR": "/tmp",
-                "LANG": "C.UTF-8",
-            },
-        )
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        raise HTTPException(
-            status_code=503,
-            detail="Le scanner antivirus local est indisponible.",
-        ) from exc
-    if result.returncode != 0:
-        raise HTTPException(
-            status_code=422,
-            detail="Le fichier a été refusé par le scanner antivirus local.",
-        )
-
-
 def _convert_document(source: Path, kind: str, config: Settings) -> Path:
     output = config.temp_dir / f"{secrets.token_hex(16)}.png"
     if kind == "PSD":
@@ -216,7 +177,7 @@ async def validate_or_convert_upload(upload: UploadFile, config: Settings) -> Va
     source = await _save_source(upload, config)
     converted: Path | None = None
     try:
-        _scan_source(source, config)
+        scan_local_file(source, config)
         with source.open("rb") as input_file:
             header = input_file.read(4096)
         detected = _document_type(header, suffix)
