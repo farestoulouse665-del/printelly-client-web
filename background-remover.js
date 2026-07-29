@@ -92,7 +92,6 @@
   function initialApiUrl() {
     var saved = localStorage.getItem("printellyBackgroundApi");
     if (saved !== null) return saved;
-    if ((location.hostname === "localhost" || location.hostname === "127.0.0.1") && location.port === "8080") return "";
     return "http://localhost:8000";
   }
 
