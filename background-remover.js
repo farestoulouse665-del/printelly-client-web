@@ -90,6 +90,8 @@
     redo: [],
     pendingSelection: null,
     pendingSelectionCount: 0,
+    manualGuide: null,
+    manualGuideColor: null,
     drawing: false,
     panning: false,
     activeStroke: null,
@@ -498,6 +500,7 @@
       }
     }
     if (remover.pendingSelection) drawSelectionOverlay(context);
+    if (remover.manualGuide) drawManualGuideOverlay(context);
     applyTransform();
   }
 
@@ -509,6 +512,18 @@
       overlay.data[pixel + 1] = 38;
       overlay.data[pixel + 2] = 145;
       overlay.data[pixel + 3] = 125;
+    }
+    blendOverlay(context, overlay);
+  }
+
+  function drawManualGuideOverlay(context) {
+    var overlay = context.createImageData(remover.previewWidth, remover.previewHeight);
+    for (var index = 0, pixel = 0; index < remover.manualGuide.length; index += 1, pixel += 4) {
+      if (!remover.manualGuide[index]) continue;
+      overlay.data[pixel] = 37;
+      overlay.data[pixel + 1] = 99;
+      overlay.data[pixel + 2] = 235;
+      overlay.data[pixel + 3] = 105;
     }
     blendOverlay(context, overlay);
   }
@@ -609,6 +624,8 @@
   function clearPendingSelection(render) {
     remover.pendingSelection = null;
     remover.pendingSelectionCount = 0;
+    remover.manualGuide = null;
+    remover.manualGuideColor = null;
     if (ui.applyRemoval) ui.applyRemoval.disabled = true;
     if (ui.cancelRemoval) ui.cancelRemoval.disabled = true;
     if (render !== false && remover.sourceImage) renderPreview();
@@ -634,7 +651,7 @@
     ui.applyRemoval.disabled = false;
     ui.cancelRemoval.disabled = false;
     var percent = remover.pendingSelectionCount * 100 / Math.max(1, remover.previewWidth * remover.previewHeight);
-    setMessage("Prévisualisation : " + percent.toFixed(1).replace(".", ",") + " % de l’image sera rendu transparent.", "warning");
+    setMessage("Prévisualisation : " + percent.toFixed(1).replace(".", ",") + " % de l’image sera rendue transparente.", "warning");
     renderPreview();
   }
 
@@ -692,15 +709,83 @@
       auto: "Relance l’analyse sémantique complète du sujet.",
       global: "Supprime la couleur choisie partout, même dans les zones intérieures séparées.",
       exterior: "Supprime uniquement la couleur connectée aux bords. Les zones intérieures restent protégées.",
-      manual: "Cliquez sur chaque endroit oublié : le système détecte et ajoute seulement la région de fond connectée."
+      manual: "Dessinez sur le fond oublié. Seuls les pixels de fond situés dans la zone peinte seront sélectionnés."
     };
     ui.removalHint.textContent = descriptions[method];
     ui.removalHint.classList.toggle("warning", method === "global");
-    ui.previewRemoval.textContent = method === "manual" ? "ACTIVER LA SÉLECTION" : (method === "auto" ? "RELANCER L’IA" : "PRÉVISUALISER");
+    ui.previewRemoval.textContent = method === "manual" ? "DESSINER LA ZONE" : (method === "auto" ? "RELANCER L’IA" : "PRÉVISUALISER");
     clearPendingSelection(true);
     if (method === "manual") setTool("manual-background");
     else if (method !== "auto") setTool("color-select");
     else setTool("pan");
+    if (remover.currentMask && (method === "global" || method === "exterior")) previewRemoval();
+  }
+
+  function beginManualGuide(point) {
+    if (!window.PrintellyColorSelection) throw new Error("Moteur de sélection couleur non chargé.");
+    remover.manualGuide = new Uint8Array(remover.previewWidth * remover.previewHeight);
+    remover.manualGuideColor = window.PrintellyColorSelection.colorAt(
+      remover.originalPixels,
+      remover.previewWidth,
+      remover.previewHeight,
+      point.x * (remover.previewWidth - 1),
+      point.y * (remover.previewHeight - 1)
+    );
+    remover.drawing = true;
+    remover.activeStroke = { tool: "manual-guide", points: [point] };
+    paintManualGuidePoint(point);
+  }
+
+  function paintManualGuidePoint(point) {
+    if (!remover.manualGuide) return;
+    var cx = point.x * remover.previewWidth;
+    var cy = point.y * remover.previewHeight;
+    var radius = Math.max(2, Number(ui.brush.value) * Math.max(remover.previewWidth, remover.previewHeight) / Math.max(remover.sourceImage.naturalWidth, remover.sourceImage.naturalHeight) / 2);
+    var minX = Math.max(0, Math.floor(cx - radius));
+    var maxX = Math.min(remover.previewWidth - 1, Math.ceil(cx + radius));
+    var minY = Math.max(0, Math.floor(cy - radius));
+    var maxY = Math.min(remover.previewHeight - 1, Math.ceil(cy + radius));
+    for (var y = minY; y <= maxY; y += 1) {
+      for (var x = minX; x <= maxX; x += 1) {
+        var dx = x - cx;
+        var dy = y - cy;
+        if (dx * dx + dy * dy <= radius * radius) remover.manualGuide[y * remover.previewWidth + x] = 1;
+      }
+    }
+  }
+
+  function paintManualGuideSegment(a, b) {
+    var dx = (b.x - a.x) * remover.previewWidth;
+    var dy = (b.y - a.y) * remover.previewHeight;
+    var distance = Math.sqrt(dx * dx + dy * dy);
+    var steps = Math.max(1, Math.ceil(distance / 2));
+    for (var step = 1; step <= steps; step += 1) {
+      var t = step / steps;
+      paintManualGuidePoint({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+    }
+  }
+
+  function finishManualGuide() {
+    if (!remover.manualGuide || !remover.manualGuideColor || !window.PrintellyColorSelection) return;
+    try {
+      var result = window.PrintellyColorSelection.guidedSelection(
+        remover.originalPixels,
+        remover.previewWidth,
+        remover.previewHeight,
+        remover.manualGuide,
+        remover.manualGuideColor,
+        Number(ui.colorTolerance.value)
+      );
+      remover.manualGuide = null;
+      remover.manualGuideColor = null;
+      setPendingSelection(result, true);
+      if (result.count) setMessage("Zone affinée en rose. Dessinez ailleurs pour l’agrandir ou cliquez sur Rendre transparent.", "success");
+    } catch (error) {
+      remover.manualGuide = null;
+      remover.manualGuideColor = null;
+      setMessage(error.message, "warning");
+      renderPreview();
+    }
   }
 
   function pointerDown(event) {
@@ -717,7 +802,13 @@
         setMessage("Lancez d’abord l’analyse du sujet.", "warning");
         return;
       }
-      previewRemoval(normalizedPoint(event));
+      var selectionPoint = normalizedPoint(event);
+      if (remover.tool === "manual-background") {
+        beginManualGuide(selectionPoint);
+        renderPreview();
+      } else {
+        previewRemoval(selectionPoint);
+      }
       return;
     }
     if (!remover.currentMask) {
@@ -753,15 +844,22 @@
     if (!remover.drawing || !remover.activeStroke) return;
     var stroke = remover.activeStroke;
     var previousLength = stroke.points.length;
-    stroke.points.push(normalizedPoint(event));
-    applyStroke(remover.currentMask, stroke, Math.max(0, previousLength - 1));
+    var nextPoint = normalizedPoint(event);
+    stroke.points.push(nextPoint);
+    if (stroke.tool === "manual-guide") {
+      paintManualGuideSegment(stroke.points[previousLength - 1], nextPoint);
+    } else {
+      applyStroke(remover.currentMask, stroke, Math.max(0, previousLength - 1));
+    }
     renderPreview();
   }
 
   function pointerUp() {
+    var wasManualGuide = remover.activeStroke && remover.activeStroke.tool === "manual-guide";
     remover.drawing = false;
     remover.panning = false;
     remover.activeStroke = null;
+    if (wasManualGuide) finishManualGuide();
   }
 
   function updateCursor(event) {
@@ -1037,7 +1135,10 @@
     ui.backgroundColor.disabled = !ui.useBackgroundColor.checked;
   });
   ui.removalMethod.addEventListener("change", updateRemovalMethod);
-  ui.targetColor.addEventListener("input", function () { clearPendingSelection(true); });
+  ui.targetColor.addEventListener("input", function () {
+    if (remover.currentMask && (ui.removalMethod.value === "global" || ui.removalMethod.value === "exterior")) previewRemoval();
+    else clearPendingSelection(true);
+  });
   ui.pickColor.addEventListener("click", function () {
     if (!remover.currentMask) { setMessage("Lancez d’abord l’analyse du sujet.", "warning"); return; }
     setTool(ui.removalMethod.value === "manual" ? "manual-background" : "color-select");
@@ -1045,12 +1146,13 @@
   });
   ui.colorTolerance.addEventListener("input", function () {
     ui.colorToleranceValue.textContent = ui.colorTolerance.value;
-    clearPendingSelection(true);
+    if (remover.currentMask && (ui.removalMethod.value === "global" || ui.removalMethod.value === "exterior")) previewRemoval();
+    else clearPendingSelection(true);
   });
   ui.previewRemoval.addEventListener("click", function () {
     if (ui.removalMethod.value === "manual") {
       setTool("manual-background");
-      setMessage("Cliquez sur chaque zone de fond oubliée, puis confirmez avec Rendre transparent.", "success");
+      setMessage("Maintenez le clic et dessinez sur le fond oublié. La sélection restera limitée à la zone peinte.", "success");
     } else previewRemoval();
   });
   ui.applyRemoval.addEventListener("click", applyPendingSelection);
