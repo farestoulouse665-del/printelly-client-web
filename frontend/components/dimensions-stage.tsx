@@ -10,6 +10,13 @@ import {
   Trash2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import {
+  dpiAtWidth,
+  fromCentimeters,
+  qualityForDpi,
+  toCentimeters,
+  type MeasurementUnit,
+} from "@/lib/dtf";
 import type { SizeLine } from "@/lib/types";
 import { useStudio } from "@/store/studio";
 
@@ -24,40 +31,26 @@ const presets = [
   { label: "Étiquette de cou", width: 6 },
 ];
 
-type Unit = "cm" | "mm" | "in" | "px";
-
-function fromCm(value: number, unit: Unit, dpi: number) {
-  if (unit === "mm") return value * 10;
-  if (unit === "in") return value / 2.54;
-  if (unit === "px") return (value / 2.54) * dpi;
-  return value;
-}
-
-function toCm(value: number, unit: Unit, dpi: number) {
-  if (unit === "mm") return value / 10;
-  if (unit === "in") return value * 2.54;
-  if (unit === "px") return (value / dpi) * 2.54;
-  return value;
-}
-
-function qualityFor(dpi: number) {
-  if (dpi >= 300) return { label: "Excellente", tone: "good" };
-  if (dpi >= 200) return { label: "À vérifier", tone: "warning" };
-  return { label: "Insuffisante", tone: "danger" };
-}
-
-function SizeRow({ line, unit, ratio }: { line: SizeLine; unit: Unit; ratio: number }) {
+function SizeRow({
+  line,
+  unit,
+  ratio,
+}: {
+  line: SizeLine;
+  unit: MeasurementUnit;
+  ratio: number;
+}) {
   const locked = useStudio((state) => state.ratioLocked);
   const update = useStudio((state) => state.updateSize);
   const remove = useStudio((state) => state.removeSize);
   const assets = useStudio((state) => state.assets);
   const selectedId = useStudio((state) => state.selectedAssetId);
   const asset = assets.find((item) => item.id === selectedId) ?? assets[0];
-  const dpi = asset ? asset.width / (line.widthCm / 2.54) : 0;
-  const quality = qualityFor(dpi);
+  const dpi = asset ? dpiAtWidth(asset.width, line.widthCm) : 0;
+  const quality = qualityForDpi(dpi);
 
   function widthChanged(displayValue: number) {
-    const widthCm = Math.max(0.1, toCm(displayValue, unit, dpi || 300));
+    const widthCm = Math.max(0.1, toCentimeters(displayValue, unit, dpi || 300));
     update(line.id, {
       widthCm,
       ...(locked ? { heightCm: widthCm * ratio } : {}),
@@ -65,7 +58,7 @@ function SizeRow({ line, unit, ratio }: { line: SizeLine; unit: Unit; ratio: num
   }
 
   function heightChanged(displayValue: number) {
-    const heightCm = Math.max(0.1, toCm(displayValue, unit, dpi || 300));
+    const heightCm = Math.max(0.1, toCentimeters(displayValue, unit, dpi || 300));
     update(line.id, {
       heightCm,
       ...(locked ? { widthCm: heightCm / ratio } : {}),
@@ -80,7 +73,7 @@ function SizeRow({ line, unit, ratio }: { line: SizeLine; unit: Unit; ratio: num
           type="number"
           min="0.1"
           step="0.1"
-          value={Number(fromCm(line.widthCm, unit, dpi || 300).toFixed(2))}
+          value={Number(fromCentimeters(line.widthCm, unit, dpi || 300).toFixed(2))}
           onChange={(event) => widthChanged(Number(event.target.value))}
         />
       </label>
@@ -91,7 +84,7 @@ function SizeRow({ line, unit, ratio }: { line: SizeLine; unit: Unit; ratio: num
           type="number"
           min="0.1"
           step="0.1"
-          value={Number(fromCm(line.heightCm, unit, dpi || 300).toFixed(2))}
+          value={Number(fromCentimeters(line.heightCm, unit, dpi || 300).toFixed(2))}
           onChange={(event) => heightChanged(Number(event.target.value))}
         />
       </label>
@@ -122,7 +115,7 @@ export function DimensionsStage() {
   const locked = useStudio((state) => state.ratioLocked);
   const setLocked = useStudio((state) => state.setRatioLocked);
   const setStep = useStudio((state) => state.setStep);
-  const [unit, setUnit] = useState<Unit>("cm");
+  const [unit, setUnit] = useState<MeasurementUnit>("cm");
   const asset = assets.find((item) => item.id === selectedId) ?? assets[0];
   const ratio = asset ? asset.height / asset.width : 1;
 
@@ -157,7 +150,7 @@ export function DimensionsStage() {
           <div className="dimension-toolbar">
             <label>
               <span>Unité</span>
-              <select value={unit} onChange={(event) => setUnit(event.target.value as Unit)}>
+              <select value={unit} onChange={(event) => setUnit(event.target.value as MeasurementUnit)}>
                 <option value="cm">Centimètres</option>
                 <option value="mm">Millimètres</option>
                 <option value="in">Pouces</option>
