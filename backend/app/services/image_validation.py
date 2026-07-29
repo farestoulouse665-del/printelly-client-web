@@ -11,7 +11,15 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 from app.core.config import Settings
 
-_ALLOWED_MIME = {"image/png", "image/jpeg", "image/webp"}
+_MIME_TO_FORMAT = {
+    "image/png": "PNG",
+    "image/x-png": "PNG",
+    "image/jpeg": "JPEG",
+    "image/jpg": "JPEG",
+    "image/webp": "WEBP",
+}
+_GENERIC_MIME = {"", "application/octet-stream"}
+_ALLOWED_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
 _EXTENSIONS = {"PNG": ".png", "JPEG": ".jpg", "WEBP": ".webp"}
 
 
@@ -49,8 +57,11 @@ def safe_output_name(filename: str | None) -> str:
 
 
 async def validate_upload(upload: UploadFile, config: Settings) -> ValidatedImage:
-    declared = (upload.content_type or "").lower()
-    if declared not in _ALLOWED_MIME:
+    declared = (upload.content_type or "").split(";", 1)[0].strip().lower()
+    suffix = Path(upload.filename or "").suffix.lower()
+    declared_format = _MIME_TO_FORMAT.get(declared)
+    generic_with_known_extension = declared in _GENERIC_MIME and suffix in _ALLOWED_SUFFIXES
+    if declared_format is None and not generic_with_known_extension:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail="Format refusé. Utilisez PNG, JPEG ou WEBP.",
@@ -93,6 +104,11 @@ async def validate_upload(upload: UploadFile, config: Settings) -> ValidatedImag
             raise HTTPException(
                 status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
                 detail="La signature du fichier ne correspond pas à une image autorisée.",
+            )
+        if declared_format is not None and declared_format != detected:
+            raise HTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail="Le type MIME annoncé ne correspond pas au contenu réel du fichier.",
             )
 
         previous_pixel_limit = Image.MAX_IMAGE_PIXELS
