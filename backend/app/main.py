@@ -71,6 +71,7 @@ app.add_middleware(
         "X-Image-Height",
         "X-Processing-Ms",
         "X-Foreground-Ratio",
+        "X-Residual-Haze",
         "X-Model-Name",
         "X-Warnings",
     ],
