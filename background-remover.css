@@ -304,3 +304,20 @@
 .br-canvas-pan:hover,.br-canvas-pan.active{border-color:var(--red);background:var(--red);color:#fff}
 .br-canvas-pan:focus-visible{outline:3px solid rgba(214,49,43,.25);outline-offset:2px}
 @media(max-width:600px){.br-canvas-pan{top:8px;left:8px;min-height:32px;padding:7px 10px}}
+
+/* Keep the central studio geometrically stable between images and results */
+@media(min-width:1101px){
+  .br-workspace{height:clamp(590px,calc(100dvh - 235px),900px)}
+  .br-preview-column{grid-template-rows:minmax(0,1fr) 84px}
+  .br-preview-panel{height:100%;min-height:0}
+  .br-result-panel{
+    height:84px;
+    min-height:84px;
+    max-height:84px;
+    overflow:hidden;
+    align-content:stretch;
+  }
+  .br-result-panel .br-info-card{min-width:0;overflow:hidden}
+  .br-result-panel .br-info-card span{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+  .br-canvas-shell{height:100%;min-height:0!important}
+}
