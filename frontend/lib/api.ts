@@ -321,7 +321,16 @@ export function createPngExport(
       crop_to_content: Boolean(options?.autoCenter),
       margin_mm: options?.transparentMargin ? 5 : 0,
       width_cm: widthCm,
-      dpi: 300,
+      dpi: options?.resolutionEnhancement === "600dpi" ? 600 : 300,
+      resize_to_target:
+        options?.resolutionEnhancement === "300dpi" ||
+        options?.resolutionEnhancement === "600dpi",
+      scale_factor:
+        options?.resolutionEnhancement === "4x"
+          ? 4
+          : options?.resolutionEnhancement === "2x"
+            ? 2
+            : 1,
       quantity,
       remove_sensitive_metadata: true,
     }),
