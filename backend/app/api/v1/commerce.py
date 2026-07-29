@@ -39,7 +39,7 @@ def preview_quote(
 ) -> QuoteOut:
     for line in body.lines:
         asset_service.owned_asset(database, line.asset_id, guest.id)
-    calculated = pricing_service.calculate(body)
+    calculated = pricing_service.calculate(body, database)
     return QuoteOut(
         id="preview",
         currency="DZD",
@@ -61,7 +61,7 @@ def create_quote(
 ) -> QuoteOut:
     for line in body.lines:
         asset_service.owned_asset(database, line.asset_id, guest.id)
-    calculated = pricing_service.calculate(body)
+    calculated = pricing_service.calculate(body, database)
     quote = Quote(
         guest_session_id=guest.id,
         currency="DZD",
