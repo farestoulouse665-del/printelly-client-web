@@ -118,22 +118,53 @@
   }
 
 
+  function dominantGuideColor(imageData, width, height, guide) {
+    validate(imageData, width, height);
+    if (!guide || guide.length !== width * height) {
+      throw new Error("La zone dessinée n’a pas les mêmes dimensions que l’image.");
+    }
+    var buckets = Object.create(null);
+    var winner = null;
+    for (var index = 0; index < guide.length; index += 1) {
+      if (!guide[index]) continue;
+      var offset = index * 4;
+      var red = imageData.data[offset];
+      var green = imageData.data[offset + 1];
+      var blue = imageData.data[offset + 2];
+      var key = (red >> 4) + ":" + (green >> 4) + ":" + (blue >> 4);
+      var bucket = buckets[key];
+      if (!bucket) bucket = buckets[key] = { count: 0, red: 0, green: 0, blue: 0 };
+      bucket.count += 1;
+      bucket.red += red;
+      bucket.green += green;
+      bucket.blue += blue;
+      if (!winner || bucket.count > winner.count) winner = bucket;
+    }
+    if (!winner) throw new Error("Dessinez une zone avant de lancer la détection.");
+    return {
+      red: Math.round(winner.red / winner.count),
+      green: Math.round(winner.green / winner.count),
+      blue: Math.round(winner.blue / winner.count)
+    };
+  }
+
   function guidedSelection(imageData, width, height, guide, color, tolerance) {
     validate(imageData, width, height);
     if (!guide || guide.length !== width * height) {
       throw new Error("La zone dessinée n’a pas les mêmes dimensions que l’image.");
     }
+    var target = color || dominantGuideColor(imageData, width, height, guide);
     var threshold = thresholdFor(tolerance);
     var selected = new Uint8Array(width * height);
     var count = 0;
     for (var index = 0; index < selected.length; index += 1) {
       if (!guide[index]) continue;
-      if (weightedDistance(imageData.data, index * 4, color.red, color.green, color.blue) <= threshold) {
+      if (weightedDistance(imageData.data, index * 4, target.red, target.green, target.blue) <= threshold) {
         selected[index] = 1;
         count += 1;
       }
     }
-    return { mask: selected, count: count, color: color };
+    return { mask: selected, count: count, color: target };
   }
 
   function eraseMask(alphaMask, selection) {
@@ -150,6 +181,7 @@
     matchingColor: matchingColor,
     connectedRegion: connectedRegion,
     exteriorColor: exteriorColor,
+    dominantGuideColor: dominantGuideColor,
     guidedSelection: guidedSelection,
     eraseMask: eraseMask
   };
