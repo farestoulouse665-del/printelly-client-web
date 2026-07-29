@@ -21,7 +21,7 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => { setToken(sessionStorage.getItem("printelly-admin-token") ?? ""); }, []);
+  useEffect(() => { setToken(sessionStorage.getItem("transferlab-admin-token") ?? ""); }, []);
 
   async function load(value = token) {
     if (!value) return;
@@ -34,7 +34,7 @@ export default function AdminPage() {
         apiFetch<AdminJob[]>("/admin/jobs", init, false),
         apiFetch<Review[]>("/admin/reviews", init, false),
       ]);
-      sessionStorage.setItem("printelly-admin-token", value);
+      sessionStorage.setItem("transferlab-admin-token", value);
       setDashboard(overview);
       setJobs(activeJobs);
       setReviews(pendingReviews);
