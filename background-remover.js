@@ -374,14 +374,12 @@
       ui.printHeight.value = String(Math.round(settings.height * 100) / 100);
     }
     if (ui.printBadge) ui.printBadge.textContent = settings.dpi + " DPI";
-    if (ui.printQuality) ui.printQuality.textContent = settings.qualityLabel;
-    if (ui.printPixels) ui.printPixels.textContent = settings.outputWidth + " × " + settings.outputHeight + " px";
-    if (ui.effectiveDpi) ui.effectiveDpi.textContent = Math.round(settings.effectiveDpi) + " DPI";
-    ui.printSummary.dataset.state = settings.quality;
     var modeText = settings.mode === "resample" ? "redimensionnement haute qualité" : "pixels originaux + métadonnée";
-    ui.printSummary.innerHTML = "<strong>" + settings.qualityLabel + "</strong><span>" +
-      formatPrintNumber(settings.width) + " × " + formatPrintNumber(settings.height) + " " + settings.unit +
-      " • " + settings.dpi + " DPI • " + modeText + ". " + settings.message + "</span>";
+    if (ui.printQuality) ui.printQuality.textContent = settings.qualityLabel + " — " +
+      formatPrintNumber(settings.width) + " × " + formatPrintNumber(settings.height) + " " + settings.unit;
+    if (ui.printPixels) ui.printPixels.textContent = "Sortie : " + settings.outputWidth + " × " + settings.outputHeight + " px • " + modeText;
+    if (ui.effectiveDpi) ui.effectiveDpi.textContent = "DPI réel de la source : " + Math.round(settings.effectiveDpi) + " • " + settings.message;
+    ui.printSummary.dataset.state = settings.quality;
     if (refreshQuality && remover.currentMask) runQualityInspection(true);
     return settings;
   }
