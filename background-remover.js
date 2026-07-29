@@ -22,6 +22,7 @@
     edgeValue: document.getElementById("brEdgeValue"),
     decontaminate: document.getElementById("brDecontaminate"),
     backgroundCleanup: document.getElementById("brBackgroundCleanup"),
+    blackBackgroundMode: document.getElementById("brBlackBackgroundMode"),
     removeHaze: document.getElementById("brRemoveHaze"),
     protectDetails: document.getElementById("brProtectDetails"),
     useBackgroundColor: document.getElementById("brUseBackgroundColor"),
@@ -607,6 +608,7 @@
         edgeShift: Number(ui.edge.value),
         decontaminate: ui.decontaminate.checked,
         backgroundCleanup: ui.backgroundCleanup.value,
+        blackBackgroundMode: ui.blackBackgroundMode ? ui.blackBackgroundMode.value : "off",
         removeHaze: ui.removeHaze.checked,
         protectDetails: ui.protectDetails.checked,
         backgroundColor: ui.useBackgroundColor.checked ? ui.backgroundColor.value : ""
@@ -631,10 +633,21 @@
       var residualHaze = Number(apiResult.metadata.residualHazeRatio || 0);
       var sourceAlphaPreserved = apiResult.metadata.sourceAlphaPreserved === true;
       var effectiveMode = apiResult.metadata.effectiveMode || remover.mode;
+      var blackBackgroundMode = apiResult.metadata.blackBackgroundMode || "off";
+      var blackBackgroundConfidence = Number(apiResult.metadata.blackBackgroundConfidence || 0);
       var warnings = Array.isArray(apiResult.metadata.warnings)
         ? apiResult.metadata.warnings
         : [];
-      updateQuality(model, processingMs, ratio, residualHaze, warnings, effectiveMode);
+      updateQuality(
+        model,
+        processingMs,
+        ratio,
+        residualHaze,
+        warnings,
+        effectiveMode,
+        blackBackgroundMode,
+        blackBackgroundConfidence
+      );
       ui.resultInfo.textContent = (sourceAlphaPreserved ? "Alpha original protégé • " : "PNG RGBA • ") + remover.sourceImage.naturalWidth + " × " + remover.sourceImage.naturalHeight + " px";
       ui.download.disabled = false;
       ui.add.disabled = false;
@@ -669,12 +682,25 @@
     }
   }
 
-  function updateQuality(model, milliseconds, ratio, residualHaze, warnings, effectiveMode) {
+  function updateQuality(
+    model,
+    milliseconds,
+    ratio,
+    residualHaze,
+    warnings,
+    effectiveMode,
+    blackBackgroundMode,
+    blackBackgroundConfidence
+  ) {
     var percent = Math.round(ratio * 100);
     var hazePercent = Math.min(100, Math.max(0, residualHaze * 100));
     var profile = String(effectiveMode || "auto").toUpperCase();
     ui.backgroundInfo.querySelector("strong").textContent = "Sujet détecté • " + percent + " % de l’image";
-    ui.backgroundInfo.querySelector("span").textContent = "Moteur " + model + " • profil " + profile + (milliseconds ? " • " + (milliseconds / 1000).toFixed(1).replace(".", ",") + " s" : "") + " • résidu " + hazePercent.toFixed(1).replace(".", ",") + " %";
+    var blackProfile = blackBackgroundMode && blackBackgroundMode !== "off"
+      ? " • fond noir " + String(blackBackgroundMode).toUpperCase()
+        + " " + Math.round(blackBackgroundConfidence * 100) + " %"
+      : "";
+    ui.backgroundInfo.querySelector("span").textContent = "Moteur " + model + " • profil " + profile + blackProfile + (milliseconds ? " • " + (milliseconds / 1000).toFixed(1).replace(".", ",") + " s" : "") + " • résidu " + hazePercent.toFixed(1).replace(".", ",") + " %";
     ui.qualityInfo.classList.toggle("warning", warnings.length > 0);
     ui.qualityInfo.querySelector("strong").textContent = warnings.length ? "Vérification recommandée" : "Fond réellement transparent";
     ui.qualityInfo.querySelector("span").textContent = warnings.length ? warnings.join(" ") : "Le canal alpha est valide et aucun voile de fond important n’a été détecté.";
@@ -1623,6 +1649,16 @@
   });
   ui.useBackgroundColor.addEventListener("change", function () {
     ui.backgroundColor.disabled = !ui.useBackgroundColor.checked;
+  });
+  if (ui.blackBackgroundMode) ui.blackBackgroundMode.addEventListener("change", function () {
+    var selected = ui.blackBackgroundMode.value;
+    if (selected === "off") {
+      setMessage("Mode fond noir désactivé : traitement universel.", "");
+    } else if (selected === "exterior") {
+      setMessage("Le noir relié aux bords sera supprimé; les zones noires intérieures resteront protégées.", "success");
+    } else {
+      setMessage("Le moteur supprimera aussi les grands fonds noirs intérieurs, tout en protégeant cheveux, barbe, ombres et textes.", "success");
+    }
   });
   ui.removalMethod.addEventListener("change", updateRemovalMethod);
   ui.targetColor.addEventListener("input", function () {
