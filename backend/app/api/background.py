@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import Response
 
 from app.core.config import settings
-from app.models.schemas import HealthResponse, RemovalMode
+from app.models.schemas import BackgroundCleanup, HealthResponse, RemovalMode
 from app.services.image_validation import validate_upload
 from app.services.mask_refinement import RefinementOptions
 
@@ -36,6 +37,10 @@ async def remove_background(
     feather: float = Form(1.0),
     edge_shift: int = Form(0),
     decontaminate: bool = Form(False),
+    background_cleanup: BackgroundCleanup = Form(BackgroundCleanup.normal),
+    protect_details: bool = Form(True),
+    remove_haze: bool = Form(True),
+    background_color: str | None = Form(None),
 ) -> Response:
     request.app.state.rate_limiter.check(request)
     provider = getattr(request.app.state, "provider", None)
@@ -52,6 +57,8 @@ async def remove_background(
         raise HTTPException(status_code=422, detail="feather doit être compris entre 0 et 3.")
     if not -3 <= edge_shift <= 3:
         raise HTTPException(status_code=422, detail="edge_shift doit être compris entre -3 et 3.")
+    if background_color and not re.fullmatch(r"#[0-9a-fA-F]{6}", background_color):
+        raise HTTPException(status_code=422, detail="La couleur de fond doit être au format #RRGGBB.")
 
     validated = await validate_upload(image, settings)
     try:
@@ -59,6 +66,10 @@ async def remove_background(
             refine=refine,
             feather=feather,
             edge_shift=edge_shift,
+            background_cleanup=background_cleanup,
+            protect_details=protect_details,
+            remove_haze=remove_haze,
+            background_color=background_color,
         )
         try:
             async with request.app.state.processing_slots:
@@ -91,11 +102,13 @@ async def remove_background(
             "X-Image-Height": str(report.height),
             "X-Processing-Ms": str(report.processing_ms),
             "X-Foreground-Ratio": f"{report.foreground_ratio:.6f}",
+            "X-Residual-Haze": f"{report.residual_haze_ratio:.6f}",
             "X-Model-Name": provider.name,
             "X-Warnings": json.dumps(report.warnings, ensure_ascii=True, separators=(",", ":")),
             "Access-Control-Expose-Headers": (
                 "Content-Disposition,X-Image-Width,X-Image-Height,"
-                "X-Processing-Ms,X-Foreground-Ratio,X-Model-Name,X-Warnings"
+                "X-Processing-Ms,X-Foreground-Ratio,X-Residual-Haze,"
+                "X-Model-Name,X-Warnings"
             ),
         }
         return Response(content=result.png, media_type="image/png", headers=headers)
