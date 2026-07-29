@@ -255,16 +255,23 @@
                 <ol id="brStages" class="br-stages" aria-label="Progression">
                   <li data-stage="upload">Analyse de l’image</li>
                   <li data-stage="segment">Détection du sujet</li>
-                  <li data-stage="refine">Création et raffinement du masque</li>
+                  <li data-stage="refine">Récupération du matte et des contours</li>
                   <li data-stage="verify">Vérification finale</li>
                 </ol>
               </section>
 
               <section class="br-control-section">
-                <div class="br-section-head"><span>04</span><div><h3>Finition des contours</h3><p>Réglages localisés, sans filtre sur l’image</p></div></div>
+                <div class="br-section-head"><span>04</span><div><h3>Récupération du fond</h3><p>Élimine les restes et protège les détails du design</p></div></div>
+                <label class="br-api-field"><span>Puissance du nettoyage</span><select id="brBackgroundCleanup"><option value="light">Léger — contours délicats</option><option value="normal" selected>Normal — recommandé</option><option value="strong">Fort — fond blanc/noir tenace</option></select></label>
+                <label class="br-check"><input id="brRemoveHaze" type="checkbox" checked><span><strong>Supprimer les voiles du fond</strong><small>Reconstruit l’alpha pour retirer les halos blancs, noirs ou colorés autour du sujet.</small></span></label>
+                <label class="br-check"><input id="brProtectDetails" type="checkbox" checked><span><strong>Protéger les micro-détails</strong><small>Conserve textes, gouttelettes, cheveux, fleurs et éléments fins reconnus comme sujet.</small></span></label>
+                <div class="br-matte-color">
+                  <label class="br-check"><input id="brUseBackgroundColor" type="checkbox"><span><strong>Couleur du fond connue</strong><small>Activez-la seulement si la détection automatique se trompe.</small></span></label>
+                  <input id="brBackgroundColor" type="color" value="#ffffff" disabled aria-label="Couleur du fond à supprimer">
+                </div>
                 <label class="br-range"><span>Contour progressif <output id="brFeatherValue">1,0 px</output></span><input id="brFeather" type="range" min="0" max="3" step="0.5" value="1"></label>
                 <label class="br-range"><span>Ajustement du masque <output id="brEdgeValue">0 px</output></span><input id="brEdge" type="range" min="-3" max="3" value="0"><small>Positif : conserver davantage. Négatif : resserrer.</small></label>
-                <label class="br-check"><input id="brDecontaminate" type="checkbox"><span><strong>Nettoyer les halos</strong><small>Modifie uniquement le RGB des pixels semi-transparents du bord.</small></span></label>
+                <label class="br-check"><input id="brDecontaminate" type="checkbox" checked><span><strong>Nettoyer les couleurs de bord</strong><small>Retire localement la couleur contaminée par l’ancien fond, sans recolorer le centre du design.</small></span></label>
               </section>
 
               <section class="br-control-section">
