@@ -34,3 +34,4 @@ class ProcessingReport(BaseModel):
     processing_ms: int
     warnings: list[str]
     source_alpha_preserved: bool = False
+    effective_mode: RemovalMode = RemovalMode.auto
