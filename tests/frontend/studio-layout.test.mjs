@@ -54,6 +54,14 @@ test("canvas exposes a direct move control", () => {
   assert.match(css, /\.br-canvas-pan:hover,\.br-canvas-pan\.active/);
 });
 
+test("desktop canvas keeps a stable geometry between images", () => {
+  assert.match(css, /grid-template-rows:minmax\(0,1fr\) 84px/);
+  assert.match(css, /height:84px/);
+  assert.match(css, /min-height:84px/);
+  assert.match(css, /max-height:84px/);
+  assert.match(css, /Keep the central studio geometrically stable/);
+});
+
 test("mobile layout returns to one column without losing the canvas", () => {
   assert.match(css, /@media\(max-width:1100px\)/);
   assert.match(css, /grid-template-columns:1fr/);
