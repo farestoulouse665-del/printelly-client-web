@@ -6,6 +6,7 @@ import vm from "node:vm";
 const html = await readFile(new URL("../../index.html", import.meta.url), "utf8");
 const css = await readFile(new URL("../../background-remover.css", import.meta.url), "utf8");
 const editor = await readFile(new URL("../../background-remover.js", import.meta.url), "utf8");
+const appSource = await readFile(new URL("../../app.js", import.meta.url), "utf8");
 
 test("professional studio exposes left, canvas and right work areas", () => {
   assert.match(html, /id="brLeftControls"/);
@@ -60,6 +61,15 @@ test("desktop canvas keeps a stable geometry between images", () => {
   assert.match(css, /min-height:84px/);
   assert.match(css, /max-height:84px/);
   assert.match(css, /Keep the central studio geometrically stable/);
+});
+
+test("background editor enters and exits dedicated fullscreen mode", () => {
+  assert.match(appSource, /classList\.toggle\("br-studio-active",name==="background-remover"\)/);
+  assert.match(html, /id="brExitStudio"/);
+  assert.match(html, /id="brExitStudio"[^>]+data-view="dashboard"/);
+  assert.match(css, /body\.br-studio-active \.app-sidebar/);
+  assert.match(css, /body\.br-studio-active \.app-content/);
+  assert.match(css, /height:100dvh/);
 });
 
 test("mobile layout returns to one column without losing the canvas", () => {
