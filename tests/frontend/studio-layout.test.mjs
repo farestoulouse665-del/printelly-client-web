@@ -72,6 +72,26 @@ test("background editor enters and exits dedicated fullscreen mode", () => {
   assert.match(css, /height:100dvh/);
 });
 
+test("layers and visual snapshots are functional and non destructive", () => {
+  assert.match(html, /id="brLayersMenu"/);
+  assert.match(html, /id="brSnapshotsMenu"/);
+  assert.match(html, /id="brCreateSnapshot"/);
+  assert.match(editor, /function createSnapshot/);
+  assert.match(editor, /function restoreSnapshot/);
+  assert.match(editor, /actions: remover\.actions\.map\(cloneStudioAction\)/);
+  assert.match(editor, /remover\.actions = snapshot\.actions\.map\(cloneStudioAction\)/);
+  assert.match(editor, /remover\.snapshots\.length > 10/);
+});
+
+test("professional keyboard shortcuts ignore editable fields", () => {
+  assert.match(editor, /target\.matches\("input,textarea,select"\)/);
+  assert.match(editor, /key === "b"/);
+  assert.match(editor, /key === "e"/);
+  assert.match(editor, /key === "h"/);
+  assert.match(editor, /event\.code === "Space"/);
+  assert.doesNotThrow(() => new vm.Script(editor));
+});
+
 test("mobile layout returns to one column without losing the canvas", () => {
   assert.match(css, /@media\(max-width:1100px\)/);
   assert.match(css, /grid-template-columns:1fr/);
