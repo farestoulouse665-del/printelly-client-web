@@ -13,7 +13,12 @@ from starlette.datastructures import FormData, UploadFile
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.config import settings
-from app.models.schemas import BackgroundCleanup, HealthResponse, RemovalMode
+from app.models.schemas import (
+    BackgroundCleanup,
+    BlackBackgroundMode,
+    HealthResponse,
+    RemovalMode,
+)
 from app.services.image_validation import validate_upload
 from app.services.mask_refinement import RefinementOptions
 
@@ -118,6 +123,11 @@ async def remove_background(request: Request) -> Response:
 
         mode_value = _text_field(form, "mode", RemovalMode.auto.value)
         cleanup_value = _text_field(form, "background_cleanup", BackgroundCleanup.normal.value)
+        black_background_value = _text_field(
+            form,
+            "black_background_mode",
+            BlackBackgroundMode.off.value,
+        )
         try:
             mode = RemovalMode(mode_value)
         except ValueError as exc:
@@ -126,6 +136,13 @@ async def remove_background(request: Request) -> Response:
             background_cleanup = BackgroundCleanup(cleanup_value)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail="Le nettoyage du fond est invalide.") from exc
+        try:
+            black_background_mode = BlackBackgroundMode(black_background_value)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail="Le mode de fond noir est invalide.",
+            ) from exc
 
         refine = _bool_field(form, "refine", True)
         feather = _float_field(form, "feather", 1.0)
@@ -153,6 +170,7 @@ async def remove_background(request: Request) -> Response:
             protect_details=protect_details,
             remove_haze=remove_haze,
             background_color=background_color,
+            black_background_mode=black_background_mode,
         )
         try:
             async with request.app.state.processing_slots:
@@ -188,12 +206,18 @@ async def remove_background(request: Request) -> Response:
             "X-Residual-Haze": f"{report.residual_haze_ratio:.6f}",
             "X-Source-Alpha-Preserved": "true" if report.source_alpha_preserved else "false",
             "X-Effective-Mode": report.effective_mode.value,
+            "X-Black-Background-Mode": report.black_background_mode.value,
+            "X-Black-Background-Confidence": (
+                f"{report.black_background_confidence:.6f}"
+            ),
             "X-Model-Name": provider.name,
             "X-Warnings": json.dumps(report.warnings, ensure_ascii=True, separators=(",", ":")),
             "Access-Control-Expose-Headers": (
                 "Content-Disposition,X-Image-Width,X-Image-Height,"
                 "X-Processing-Ms,X-Foreground-Ratio,X-Residual-Haze,"
-                "X-Source-Alpha-Preserved,X-Effective-Mode,X-Model-Name,X-Warnings"
+                "X-Source-Alpha-Preserved,X-Effective-Mode,"
+                "X-Black-Background-Mode,X-Black-Background-Confidence,"
+                "X-Model-Name,X-Warnings"
             ),
         }
         return Response(content=result.png, media_type="image/png", headers=headers)
