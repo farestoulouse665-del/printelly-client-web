@@ -47,6 +47,13 @@ test("all existing professional tools are retained", () => {
   assert.doesNotThrow(() => new vm.Script(editor));
 });
 
+test("canvas exposes a direct move control", () => {
+  assert.match(html, /id="brCanvasPan"/);
+  assert.match(html, /id="brCanvasPan"[^>]+data-br-tool="pan"/);
+  assert.match(css, /\.br-canvas-pan\{/);
+  assert.match(css, /\.br-canvas-pan:hover,\.br-canvas-pan\.active/);
+});
+
 test("mobile layout returns to one column without losing the canvas", () => {
   assert.match(css, /@media\(max-width:1100px\)/);
   assert.match(css, /grid-template-columns:1fr/);
