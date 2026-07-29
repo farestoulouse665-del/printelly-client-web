@@ -145,3 +145,16 @@ test("print studio exposes physical size, DPI and real PNG export", () => {
   assert.match(editor, /40 mégapixels/);
   assert.doesNotThrow(() => new vm.Script(editor));
 });
+
+
+test("exterior magic eraser is explicit, protected and undoable", () => {
+  assert.match(html, /data-br-tool="magic-exterior"/);
+  assert.match(html, /id="brMagicTolerance"/);
+  assert.match(html, /zones intérieures fermées? ne (sera|seront) jamais supprimée/);
+  assert.match(editor, /function eraseMagicExterior/);
+  assert.match(editor, /PrintellyColorSelection\.magicExterior/);
+  assert.match(editor, /source: "magic-exterior"/);
+  assert.match(editor, /remover\.actions\.push/);
+  assert.match(css, /data-tool="magic-exterior"/);
+  assert.doesNotThrow(() => new vm.Script(editor));
+});
