@@ -19,16 +19,26 @@ jobs:
   deploy:
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url }}transferlab/
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout TransferLab
+      - name: Checkout client site from main
         uses: actions/checkout@v4
+        with:
+          ref: main
+          path: client-site
 
-      - name: Prepare standalone site
+      - name: Checkout TransferLab branch
+        uses: actions/checkout@v4
+        with:
+          ref: transferlab-autonome
+          path: transferlab-source
+
+      - name: Prepare combined Pages artifact
         run: |
-          mkdir -p _site
-          cp index.html _site/index.html
+          mkdir -p _site/transferlab
+          rsync -a --exclude='.git' --exclude='.github' client-site/ _site/
+          cp transferlab-source/index.html _site/transferlab/index.html
           touch _site/.nojekyll
 
       - name: Configure GitHub Pages
@@ -47,7 +57,7 @@ jobs:
 
       - name: Verify published TransferLab site
         env:
-          SITE_URL: ${{ steps.deployment.outputs.page_url }}
+          SITE_URL: ${{ steps.deployment.outputs.page_url }}transferlab/
         run: |
           for attempt in 1 2 3 4 5 6; do
             if curl --fail --silent --show-error --location "$SITE_URL" | grep --quiet "TransferLab"; then
@@ -56,5 +66,5 @@ jobs:
             fi
             sleep 5
           done
-          echo "The deployed page did not expose the expected TransferLab content."
+          echo "TransferLab was not found at $SITE_URL"
           exit 1
