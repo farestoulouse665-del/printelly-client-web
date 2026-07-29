@@ -73,7 +73,8 @@ class LocalOnnxProvider:
                 candidates.append(array)
         if not candidates:
             raise RuntimeError("Le modèle ONNX n'a retourné aucun masque exploitable.")
-        # BiRefNet exports the final high-resolution prediction as output 0.\n        mask = candidates[0]
+        # BiRefNet exports the final high-resolution prediction as output 0.
+        mask = candidates[0]
         while mask.ndim > 2:
             mask = mask[0]
         return mask.astype(np.float32)
