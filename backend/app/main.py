@@ -42,7 +42,10 @@ async def lifespan(app: FastAPI):
     try:
         await asyncio.to_thread(provider.load)
         app.state.provider = provider
-        app.state.pipeline = BackgroundRemovalPipeline(provider)
+        app.state.pipeline = BackgroundRemovalPipeline(
+            provider,
+            background_pipeline_v2_enabled=settings.background_pipeline_v2_enabled,
+        )
     except Exception as exc:
         # Health stays available and reports the actionable startup problem.
         app.state.model_error = str(exc)
