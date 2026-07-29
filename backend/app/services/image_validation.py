@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import secrets
+import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -42,6 +43,7 @@ def _safe_unlink(path: Path) -> None:
 
 def safe_output_name(filename: str | None) -> str:
     stem = Path(filename or "image").stem
+    stem = unicodedata.normalize("NFKD", stem).encode("ascii", "ignore").decode("ascii")
     stem = re.sub(r"[^a-zA-Z0-9._-]+", "-", stem).strip("._-")[:80] or "image"
     return f"{stem}-sans-fond.png"
 
@@ -93,25 +95,34 @@ async def validate_upload(upload: UploadFile, config: Settings) -> ValidatedImag
                 detail="La signature du fichier ne correspond pas à une image autorisée.",
             )
 
+        previous_pixel_limit = Image.MAX_IMAGE_PIXELS
         Image.MAX_IMAGE_PIXELS = config.max_image_pixels
         try:
-            with Image.open(temp_path) as probe:
-                if probe.format != detected:
-                    raise HTTPException(
-                        status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                        detail="Le contenu du fichier ne correspond pas à son format.",
-                    )
-                probe.verify()
-            with Image.open(temp_path) as source:
-                source.load()
-                image = ImageOps.exif_transpose(source).copy()
-        except HTTPException:
-            raise
-        except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as exc:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Image corrompue, illisible ou dangereusement grande.",
-            ) from exc
+            try:
+                with Image.open(temp_path) as probe:
+                    if probe.format != detected:
+                        raise HTTPException(
+                            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                            detail="Le contenu du fichier ne correspond pas à son format.",
+                        )
+                    probe.verify()
+                with Image.open(temp_path) as source:
+                    source.load()
+                    image = ImageOps.exif_transpose(source).copy()
+            except HTTPException:
+                raise
+            except (
+                UnidentifiedImageError,
+                OSError,
+                ValueError,
+                Image.DecompressionBombError,
+            ) as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Image corrompue, illisible ou dangereusement grande.",
+                ) from exc
+        finally:
+            Image.MAX_IMAGE_PIXELS = previous_pixel_limit
 
         width, height = image.size
         if width < 2 or height < 2 or width * height > config.max_image_pixels:
