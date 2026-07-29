@@ -69,6 +69,24 @@ def test_design_mode_keeps_multiple_foreground_colours():
     assert alpha[35, 45] > 0.95
 
 
+
+def test_small_background_variations_connected_to_the_edge_are_removed():
+    image = Image.new("RGB", (90, 70), "black")
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((0, 26, 34, 42), fill=(14, 14, 14))
+    draw.rectangle((38, 18, 72, 52), fill="white")
+    semantic = np.zeros((70, 90), dtype=np.float32)
+
+    alpha = refine_mask(
+        image=image,
+        raw_mask=semantic,
+        mode=RemovalMode.design,
+        options=_options(),
+    )
+
+    assert alpha[34, 10] < 0.01
+    assert alpha[35, 55] > 0.99
+
 def test_original_transparency_and_design_mask_remain_separate_concerns():
     image = Image.new("RGBA", (40, 30), (0, 0, 0, 255))
     draw = ImageDraw.Draw(image)
