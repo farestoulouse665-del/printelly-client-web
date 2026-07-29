@@ -20,7 +20,7 @@ from app.schemas.api import (
     UploadInitOut,
 )
 from app.services.assets import asset_service
-from app.services.image_validation import validate_upload
+from app.services.document_conversion import validate_or_convert_upload
 from app.storage.local import sanitize_filename, storage
 
 
@@ -34,7 +34,7 @@ async def upload_asset(
     database: Session = Depends(get_db),
 ) -> AssetOut:
     declared_mime = image.content_type
-    validated = await validate_upload(image, settings)
+    validated = await validate_or_convert_upload(image, settings)
     try:
         asset = asset_service.create_from_validated(
             database,
@@ -46,6 +46,8 @@ async def upload_asset(
     finally:
         validated.image.close()
         validated.temp_path.unlink(missing_ok=True)
+        if validated.source_temp_path:
+            validated.source_temp_path.unlink(missing_ok=True)
 
 
 @router.post("/upload/init", response_model=UploadInitOut, status_code=201)
@@ -157,7 +159,7 @@ async def complete_chunked_upload(
         filename=upload.filename,
         headers=Headers({"content-type": upload.mime_type}),
     )
-    validated = await validate_upload(staged, settings)
+    validated = await validate_or_convert_upload(staged, settings)
     try:
         asset = asset_service.create_from_validated(
             database,
@@ -171,6 +173,8 @@ async def complete_chunked_upload(
     finally:
         validated.image.close()
         validated.temp_path.unlink(missing_ok=True)
+        if validated.source_temp_path:
+            validated.source_temp_path.unlink(missing_ok=True)
         storage.delete(upload.storage_key)
 
 
