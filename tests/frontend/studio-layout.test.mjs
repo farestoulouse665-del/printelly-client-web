@@ -75,15 +75,20 @@ test("expanded canvas mode keeps editor side panels and is user controlled", () 
   assert.doesNotMatch(css, /body\.br-studio-active \.br-right-controls[^}]*display:none/);
 });
 
-test("layers and visual snapshots are functional and non destructive", () => {
-  assert.match(html, /id="brLayersMenu"/);
-  assert.match(html, /id="brSnapshotsMenu"/);
-  assert.match(html, /id="brCreateSnapshot"/);
-  assert.match(editor, /function createSnapshot/);
-  assert.match(editor, /function restoreSnapshot/);
-  assert.match(editor, /actions: remover\.actions\.map\(cloneStudioAction\)/);
-  assert.match(editor, /remover\.actions = snapshot\.actions\.map\(cloneStudioAction\)/);
-  assert.match(editor, /remover\.snapshots\.length > 10/);
+test("difficult-background assistant replaces layers and snapshots", () => {
+  assert.doesNotMatch(html, /id="brLayersMenu"/);
+  assert.doesNotMatch(html, /id="brSnapshotsMenu"/);
+  assert.doesNotMatch(html, /id="brCreateSnapshot"/);
+  assert.match(html, /id="brDifficultBackgroundMenu"/);
+  assert.match(html, /id="brScanResidues"/);
+  assert.match(html, /id="brForgottenClick"/);
+  assert.match(html, /id="brMultiPoint"/);
+  assert.match(html, /id="brAssistantStatus"/);
+  assert.match(editor, /multiPointMode: false/);
+  assert.match(editor, /method === "manual" \|\| remover\.multiPointMode/);
+  assert.match(editor, /runQualityInspection\(false\)/);
+  assert.match(editor, /ui\.forgottenClick\.addEventListener/);
+  assert.match(editor, /ui\.multiPoint\.addEventListener/);
 });
 
 test("professional keyboard shortcuts ignore editable fields", () => {
