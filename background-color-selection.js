@@ -22,7 +22,7 @@
   }
 
   function thresholdFor(tolerance) {
-    return 5 + Math.max(0, Math.min(100, Number(tolerance) || 0)) * 3;
+    return 5 + Math.max(0, Math.min(100, Number(tolerance) || 0)) * 5;
   }
 
   function colorAt(imageData, width, height, seedX, seedY) {
