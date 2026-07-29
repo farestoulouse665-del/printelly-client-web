@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import re
 import secrets
+import shlex
 import subprocess
 from pathlib import Path
 from xml.etree import ElementTree
@@ -23,7 +23,17 @@ _DOCUMENT_MIMES = {
     "application/x-photoshop": "PSD",
 }
 _DOCUMENT_SUFFIXES = {".pdf", ".svg", ".psd", ".ai"}
-_FORBIDDEN_SVG_TAGS = {"script", "foreignObject", "iframe", "object", "embed", "audio", "video"}
+_FORBIDDEN_SVG_TAGS = {
+    "script",
+    "style",
+    "foreignObject",
+    "iframe",
+    "object",
+    "embed",
+    "audio",
+    "video",
+    "use",
+}
 _URL_ATTRS = {"href", "{http://www.w3.org/1999/xlink}href", "src"}
 
 
@@ -82,9 +92,15 @@ def _sanitize_svg(source: Path, target: Path) -> None:
         for attribute in list(parent.attrib):
             local_attr = attribute.rsplit("}", 1)[-1].lower()
             value = parent.attrib.get(attribute, "").strip().lower()
-            if local_attr.startswith("on") or attribute in _URL_ATTRS and (
-                value.startswith(("http:", "https:", "javascript:", "data:text/html"))
-            ):
+            unsafe_style = local_attr == "style" and (
+                "url(" in value or "@import" in value or "javascript:" in value
+            )
+            unsafe_url = attribute in _URL_ATTRS and (
+                value.startswith(
+                    ("http:", "https:", "//", "javascript:", "data:text/html")
+                )
+            )
+            if local_attr.startswith("on") or unsafe_style or unsafe_url:
                 del parent.attrib[attribute]
     ElementTree.ElementTree(root).write(target, encoding="utf-8", xml_declaration=True)
 
@@ -99,13 +115,56 @@ def _run(command: list[str], timeout: int) -> None:
             check=False,
             timeout=timeout,
             shell=False,
-            env={"PATH": "/usr/local/bin:/usr/bin:/bin", "HOME": "/tmp"},
+            env={
+                "PATH": "/usr/local/bin:/usr/bin:/bin",
+                "TMPDIR": "/tmp",
+                "LANG": "C.UTF-8",
+            },
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise HTTPException(status_code=422, detail="La conversion locale a échoué ou dépassé le délai.") from exc
     if result.returncode != 0:
         error = result.stderr.decode("utf-8", "replace")[:300]
         raise HTTPException(status_code=422, detail=f"Conversion locale refusée: {error or 'erreur inconnue'}")
+
+
+def _scan_source(path: Path, config: Settings) -> None:
+    if not config.antivirus_command:
+        return
+    try:
+        command = shlex.split(config.antivirus_command, posix=True)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Configuration antivirus invalide.",
+        ) from exc
+    if not command:
+        return
+    try:
+        result = subprocess.run(
+            [*command, str(path)],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=90,
+            shell=False,
+            env={
+                "PATH": "/usr/local/bin:/usr/bin:/bin",
+                "TMPDIR": "/tmp",
+                "LANG": "C.UTF-8",
+            },
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Le scanner antivirus local est indisponible.",
+        ) from exc
+    if result.returncode != 0:
+        raise HTTPException(
+            status_code=422,
+            detail="Le fichier a été refusé par le scanner antivirus local.",
+        )
 
 
 def _convert_document(source: Path, kind: str, config: Settings) -> Path:
@@ -155,6 +214,7 @@ async def validate_or_convert_upload(upload: UploadFile, config: Settings) -> Va
         )
     original_name = upload.filename or f"design{suffix}"
     source = await _save_source(upload, config)
+    _scan_source(source, config)
     converted: Path | None = None
     try:
         with source.open("rb") as input_file:
