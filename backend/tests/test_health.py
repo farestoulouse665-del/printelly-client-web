@@ -35,7 +35,7 @@ def test_unhandled_errors_return_a_safe_traceable_response():
         response = client.get("/__test/crash")
     assert response.status_code == 500
     body = response.json()
-    assert body["detail"] == "Erreur interne du serveur."
+    assert body["detail"] == "Erreur interne du moteur d’image."
     assert body["request_id"] == response.headers["x-request-id"]
     assert "private diagnostic details" not in response.text
     assert_request_id(body["request_id"])
