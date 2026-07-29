@@ -82,7 +82,11 @@ class PricingService:
             line_base = base_unit * line.quantity * line.variants
             line_fees = 0.0
             if line.individual_cut:
-                line_fees += self._amount(rules, "individual_cut_each", 25) * line.quantity
+                line_fees += (
+                    self._amount(rules, "individual_cut_each", 25)
+                    * line.quantity
+                    * line.variants
+                )
             if line.human_review:
                 line_fees += self._amount(rules, "human_review", 350)
             if line.cleanup_required:
@@ -101,6 +105,7 @@ class PricingService:
             lines.append(
                 {
                     "asset_id": line.asset_id,
+                    "request": line.model_dump(mode="json"),
                     "surface_cm2": round(surface, 2),
                     "quantity": line.quantity,
                     "variants": line.variants,
