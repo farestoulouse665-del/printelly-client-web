@@ -7,6 +7,7 @@ from redis import Redis
 from sqlalchemy import text
 
 from app.api.v1 import (
+    accounts,
     admin,
     assets,
     commerce,
@@ -84,6 +85,7 @@ def health(request: Request) -> HealthOut:
 
 
 router.include_router(sessions.router)
+router.include_router(accounts.router)
 router.include_router(assets.router)
 router.include_router(jobs.router)
 router.include_router(masks.router)
