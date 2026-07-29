@@ -117,6 +117,25 @@
     return { mask: selected, count: tail, color: color };
   }
 
+
+  function guidedSelection(imageData, width, height, guide, color, tolerance) {
+    validate(imageData, width, height);
+    if (!guide || guide.length !== width * height) {
+      throw new Error("La zone dessinée n’a pas les mêmes dimensions que l’image.");
+    }
+    var threshold = thresholdFor(tolerance);
+    var selected = new Uint8Array(width * height);
+    var count = 0;
+    for (var index = 0; index < selected.length; index += 1) {
+      if (!guide[index]) continue;
+      if (weightedDistance(imageData.data, index * 4, color.red, color.green, color.blue) <= threshold) {
+        selected[index] = 1;
+        count += 1;
+      }
+    }
+    return { mask: selected, count: count, color: color };
+  }
+
   function eraseMask(alphaMask, selection) {
     if (!alphaMask || !selection || alphaMask.length !== selection.length) {
       throw new Error("Le masque et la sélection n’ont pas les mêmes dimensions.");
@@ -131,6 +150,7 @@
     matchingColor: matchingColor,
     connectedRegion: connectedRegion,
     exteriorColor: exteriorColor,
+    guidedSelection: guidedSelection,
     eraseMask: eraseMask
   };
 })();
