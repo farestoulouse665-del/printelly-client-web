@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import json
 import re
-import uuid
 from io import BytesIO
 from pathlib import Path
 
@@ -47,6 +47,30 @@ class ExportService:
             image = image.resize((width_pixels, height_pixels), Image.Resampling.LANCZOS)
 
         output = BytesIO()
+        if request.format == "dtf_report_json":
+            width_cm = request.width_cm or image.width / request.dpi * 2.54
+            report = preflight_analyzer.analyze(
+                source_png,
+                width=width_cm,
+                height=None,
+                unit="cm",
+                target_dpi=request.dpi,
+            )
+            document = {
+                "status": report.status,
+                "score": report.score,
+                "width_cm": report.width_cm,
+                "height_cm": report.height_cm,
+                "dpi": report.dpi,
+                "issues": [issue.as_dict() for issue in report.issues],
+                "metrics": report.metrics,
+                "notice": "Rapport informatif; le design n’a pas été modifié.",
+            }
+            return (
+                json.dumps(document, ensure_ascii=False, indent=2).encode("utf-8"),
+                "application/json",
+                ".dtf-report.json",
+            )
         if request.format == "alpha_png":
             image.getchannel("A").save(output, format="PNG", optimize=True)
             return output.getvalue(), "image/png", ".alpha.png"
@@ -61,6 +85,11 @@ class ExportService:
                 "image/jpeg",
                 ".underbase.jpg",
             )
+        if request.format == "pdf_preview":
+            background = Image.new("RGB", image.size, (255, 255, 255))
+            background.paste(image, mask=image.getchannel("A"))
+            background.save(output, format="PDF", resolution=request.dpi)
+            return output.getvalue(), "application/pdf", ".preview.pdf"
 
         image.save(output, format="PNG", optimize=True, dpi=(request.dpi, request.dpi))
         return output.getvalue(), "image/png", ".png"
