@@ -1,4 +1,4 @@
-"""Initial PRINTELLY Background Studio schema.
+"""Initial TransferLab schema.
 
 Revision ID: 0001_background_studio
 Revises:
