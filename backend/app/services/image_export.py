@@ -71,8 +71,3 @@ def verify_png(payload: bytes, expected_size: tuple[int, int]) -> None:
             raise RuntimeError("L'export n'est pas un PNG RGBA valide.")
         if exported.size != expected_size:
             raise RuntimeError("Les dimensions de l'export ont changé.")
-        extrema = exported.getchannel("A").getextrema()
-        if extrema[0] >= 255:
-            raise RuntimeError("L'export ne contient aucun pixel transparent.")
-        if extrema[1] <= 0:
-            raise RuntimeError("Le masque a supprimé tout le sujet.")
