@@ -210,6 +210,24 @@ export function FinalizeStage() {
           </div>
         </div>
       )}
+      {asset?.final_download_url && (
+        <div
+          className={"garment-preview " + options.garmentPreview}
+          aria-label={
+            options.garmentPreview === "light"
+              ? "Aperçu du design sur tee-shirt clair"
+              : "Aperçu du design sur tee-shirt foncé"
+          }
+        >
+          <div className="garment-shirt">
+            <span className="garment-neck" />
+            <img src={asset.final_download_url} alt="" />
+          </div>
+          <small>
+            Aperçu informatif sur textile {options.garmentPreview === "light" ? "clair" : "foncé"}
+          </small>
+        </div>
+      )}
       {message && <p className="action-message" aria-live="polite"><Sparkles size={17} /> {message}</p>}
       <div className="final-actions">
         <button type="button" className="secondary-button" disabled={!canFinalize || busy !== null} onClick={() => void download()}>
