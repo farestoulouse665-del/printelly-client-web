@@ -18,6 +18,12 @@ class BackgroundCleanup(str, Enum):
     strong = "strong"
 
 
+class BlackBackgroundMode(str, Enum):
+    off = "off"
+    exterior = "exterior"
+    smart = "smart"
+
+
 class HealthResponse(BaseModel):
     status: str
     model_loaded: bool
@@ -35,3 +41,5 @@ class ProcessingReport(BaseModel):
     warnings: list[str]
     source_alpha_preserved: bool = False
     effective_mode: RemovalMode = RemovalMode.auto
+    black_background_mode: BlackBackgroundMode = BlackBackgroundMode.off
+    black_background_confidence: float = Field(default=0, ge=0, le=1)
