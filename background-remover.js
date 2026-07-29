@@ -91,7 +91,6 @@
     pendingSelection: null,
     pendingSelectionCount: 0,
     manualGuide: null,
-    manualGuideColor: null,
     drawing: false,
     panning: false,
     activeStroke: null,
@@ -625,16 +624,17 @@
     remover.pendingSelection = null;
     remover.pendingSelectionCount = 0;
     remover.manualGuide = null;
-    remover.manualGuideColor = null;
     if (ui.applyRemoval) ui.applyRemoval.disabled = true;
     if (ui.cancelRemoval) ui.cancelRemoval.disabled = true;
     if (render !== false && remover.sourceImage) renderPreview();
   }
 
-  function setPendingSelection(result, merge) {
+  function setPendingSelection(result, merge, emptyMessage) {
     if (!result || !result.mask || !result.count) {
-      clearPendingSelection(true);
-      setMessage("Aucune zone de fond ne correspond à ce réglage.", "warning");
+      remover.manualGuide = null;
+      if (!merge || !remover.pendingSelection) clearPendingSelection(false);
+      setMessage(emptyMessage || "Aucune zone de fond ne correspond à ce réglage.", "warning");
+      renderPreview();
       return;
     }
     if (merge && remover.pendingSelection && remover.pendingSelection.length === result.mask.length) {
@@ -651,7 +651,10 @@
     ui.applyRemoval.disabled = false;
     ui.cancelRemoval.disabled = false;
     var percent = remover.pendingSelectionCount * 100 / Math.max(1, remover.previewWidth * remover.previewHeight);
-    setMessage("Prévisualisation : " + percent.toFixed(1).replace(".", ",") + " % de l’image sera rendue transparente.", "warning");
+    var message = percent >= 75
+      ? "Sélection très importante : " + percent.toFixed(1).replace(".", ",") + " % de l’image. Vérifiez attentivement avant de confirmer."
+      : "Prévisualisation : " + percent.toFixed(1).replace(".", ",") + " % de l’image sera rendue transparente.";
+    setMessage(message, "warning");
     renderPreview();
   }
 
@@ -683,7 +686,11 @@
       return;
     }
     try {
-      setPendingSelection(selectionForMethod(method, point), method === "manual");
+      var result = selectionForMethod(method, point);
+      var emptyMessage = method === "exterior"
+        ? "Aucune zone de cette couleur n’est connectée aux bords. Utilisez la sélection manuelle ou Toute une couleur."
+        : "Aucune zone de fond ne correspond à cette couleur et cette tolérance.";
+      setPendingSelection(result, method === "manual", emptyMessage);
     } catch (error) {
       setMessage(error.message, "warning");
     }
@@ -724,13 +731,6 @@
   function beginManualGuide(point) {
     if (!window.PrintellyColorSelection) throw new Error("Moteur de sélection couleur non chargé.");
     remover.manualGuide = new Uint8Array(remover.previewWidth * remover.previewHeight);
-    remover.manualGuideColor = window.PrintellyColorSelection.colorAt(
-      remover.originalPixels,
-      remover.previewWidth,
-      remover.previewHeight,
-      point.x * (remover.previewWidth - 1),
-      point.y * (remover.previewHeight - 1)
-    );
     remover.drawing = true;
     remover.activeStroke = { tool: "manual-guide", points: [point] };
     paintManualGuidePoint(point);
@@ -766,23 +766,28 @@
   }
 
   function finishManualGuide() {
-    if (!remover.manualGuide || !remover.manualGuideColor || !window.PrintellyColorSelection) return;
+    if (!remover.manualGuide || !window.PrintellyColorSelection) return;
     try {
+      var dominantColor = window.PrintellyColorSelection.dominantGuideColor(
+        remover.originalPixels,
+        remover.previewWidth,
+        remover.previewHeight,
+        remover.manualGuide
+      );
       var result = window.PrintellyColorSelection.guidedSelection(
         remover.originalPixels,
         remover.previewWidth,
         remover.previewHeight,
         remover.manualGuide,
-        remover.manualGuideColor,
+        dominantColor,
         Number(ui.colorTolerance.value)
       );
+      ui.targetColor.value = colorHex(dominantColor);
       remover.manualGuide = null;
-      remover.manualGuideColor = null;
-      setPendingSelection(result, true);
+      setPendingSelection(result, true, "Aucun pixel de fond compatible n’a été trouvé dans la zone dessinée.");
       if (result.count) setMessage("Zone affinée en rose. Dessinez ailleurs pour l’agrandir ou cliquez sur Rendre transparent.", "success");
     } catch (error) {
       remover.manualGuide = null;
-      remover.manualGuideColor = null;
       setMessage(error.message, "warning");
       renderPreview();
     }
