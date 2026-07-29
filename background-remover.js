@@ -599,14 +599,20 @@
       var ratio = apiResult.metadata.foregroundRatio;
       var model = apiResult.metadata.modelName;
       var residualHaze = Number(apiResult.metadata.residualHazeRatio || 0);
+      var sourceAlphaPreserved = apiResult.metadata.sourceAlphaPreserved === true;
       var warnings = Array.isArray(apiResult.metadata.warnings)
         ? apiResult.metadata.warnings
         : [];
       updateQuality(model, processingMs, ratio, residualHaze, warnings);
-      ui.resultInfo.textContent = "PNG RGBA • " + remover.sourceImage.naturalWidth + " × " + remover.sourceImage.naturalHeight + " px";
+      ui.resultInfo.textContent = (sourceAlphaPreserved ? "Alpha original protégé • " : "PNG RGBA • ") + remover.sourceImage.naturalWidth + " × " + remover.sourceImage.naturalHeight + " px";
       ui.download.disabled = false;
       ui.add.disabled = false;
-      setMessage(warnings.length ? "Résultat créé avec " + warnings.length + " zone à vérifier." : "Fond supprimé. Vérifiez les contours avant l’export.", warnings.length ? "warning" : "success");
+      setMessage(
+        sourceAlphaPreserved
+          ? "Cette image était déjà transparente : son canal alpha original a été conservé sans redécoupe."
+          : (warnings.length ? "Résultat créé avec " + warnings.length + " zone à vérifier." : "Fond supprimé. Vérifiez les contours avant l’export."),
+        sourceAlphaPreserved ? "success" : (warnings.length ? "warning" : "success")
+      );
       renderPreview();
     } catch (error) {
       if (error.name === "AbortError") {
@@ -1141,7 +1147,7 @@
       auto: "Relance l’analyse sémantique complète du sujet.",
       global: "Supprime la couleur choisie partout, même dans les zones intérieures séparées.",
       exterior: "Supprime uniquement la couleur connectée aux bords. Les zones intérieures restent protégées.",
-      manual: "Dessinez sur le fond oublié. Seuls les pixels de fond situés dans la zone peinte seront sélectionnés."
+      manual: "Dessinez dans le fond oublié. Le moteur étend prudemment la sélection aux pixels reliés et similaires autour du trait."
     };
     ui.removalHint.textContent = descriptions[method];
     ui.removalHint.classList.toggle("warning", method === "global");
@@ -1199,7 +1205,8 @@
         remover.previewHeight,
         remover.manualGuide
       );
-      var result = window.PrintellyColorSelection.guidedSelection(
+      var guidedEngine = window.PrintellyColorSelection.guidedRegion || window.PrintellyColorSelection.guidedSelection;
+      var result = guidedEngine(
         remover.originalPixels,
         remover.previewWidth,
         remover.previewHeight,
@@ -1210,7 +1217,7 @@
       ui.targetColor.value = colorHex(dominantColor);
       remover.manualGuide = null;
       setPendingSelection(result, true, "Aucun pixel de fond compatible n’a été trouvé dans la zone dessinée.");
-      if (result.count) setMessage("Zone affinée en rose. Dessinez ailleurs pour l’agrandir ou cliquez sur Rendre transparent.", "success");
+      if (result.count) setMessage("Fond relié détecté en rose autour de votre dessin. Vérifiez puis cliquez sur Rendre transparent.", "success");
     } catch (error) {
       remover.manualGuide = null;
       setMessage(error.message, "warning");
@@ -1598,7 +1605,7 @@
   ui.previewRemoval.addEventListener("click", function () {
     if (ui.removalMethod.value === "manual") {
       setTool("manual-background");
-      setMessage("Maintenez le clic et dessinez sur le fond oublié. La sélection restera limitée à la zone peinte.", "success");
+      setMessage("Dessinez dans le fond oublié. Le moteur suivra sa couleur et ses petites variations sans quitter la zone proche.", "success");
     } else previewRemoval();
   });
   ui.applyRemoval.addEventListener("click", applyPendingSelection);
@@ -1610,12 +1617,32 @@
   });
   ui.deleteSelectedColor.addEventListener("click", deleteSelectedPaletteColor);
   if (ui.scanResidues) ui.scanResidues.addEventListener("click", function () {
-    if (!remover.currentMask) { setMessage("Lancez d’abord l’analyse du sujet.", "warning"); return; }
-    runQualityInspection(false);
-    setView("ambiguous");
-    var issues = remover.qualityReport && remover.qualityReport.issues ? remover.qualityReport.issues.length : 0;
-    ui.assistantStatus.textContent = issues ? issues + " zone(s) suspecte(s) affichée(s). Utilisez Erreur suivante pour les examiner." : "Aucun résidu important détecté.";
-    setMessage(ui.assistantStatus.textContent, issues ? "warning" : "success");
+    if (!remover.currentMask || !remover.originalPixels) { setMessage("Lancez d’abord l’analyse du sujet.", "warning"); return; }
+    if (!window.PrintellyColorSelection || !window.PrintellyColorSelection.scanResidualBackground) {
+      setMessage("Le scanner professionnel n’est pas chargé. Rechargez la page avec Ctrl+F5.", "error");
+      return;
+    }
+    try {
+      runQualityInspection(true);
+      var result = window.PrintellyColorSelection.scanResidualBackground(
+        remover.originalPixels,
+        remover.currentMask,
+        remover.previewWidth,
+        remover.previewHeight,
+        Number(ui.colorTolerance.value)
+      );
+      ui.targetColor.value = colorHex(result.color);
+      setPendingSelection(result, false, "Aucun reste de fond suffisamment sûr n’a été détecté.");
+      if (result.count) {
+        ui.assistantStatus.textContent = result.count + " pixel(s) suspects prévisualisés : voile, bord relié ou petit fragment.";
+        setMessage(ui.assistantStatus.textContent + " Vérifiez le rose avant de rendre transparent.", "warning");
+      } else {
+        ui.assistantStatus.textContent = "Aucun résidu de fond suffisamment sûr n’a été détecté.";
+        setMessage(ui.assistantStatus.textContent, "success");
+      }
+    } catch (error) {
+      setMessage(error.message || "Le scanner de résidus a échoué.", "error");
+    }
   });
   if (ui.forgottenClick) ui.forgottenClick.addEventListener("click", function () {
     if (!remover.currentMask) { setMessage("Lancez d’abord l’analyse du sujet.", "warning"); return; }
