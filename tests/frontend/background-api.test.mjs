@@ -25,6 +25,7 @@ test("typed client sends semantic mode and refinement options", async () => {
           "x-residual-haze": "0.012",
           "x-source-alpha-preserved": "true",
           "x-effective-mode": "design",
+          "x-request-id": "abcdef1234567890",
           "x-model-name": "test",
           "x-warnings": "[]"
         }
@@ -58,13 +59,37 @@ test("typed client sends semantic mode and refinement options", async () => {
   assert.equal(result.metadata.residualHazeRatio, 0.012);
   assert.equal(result.metadata.sourceAlphaPreserved, true);
   assert.equal(result.metadata.effectiveMode, "design");
+  assert.equal(result.metadata.requestId, "abcdef1234567890");
   assert.equal(result.blob.type, "image/png");
+});
+
+test("typed client surfaces the safe server request reference", async () => {
+  const context = {
+    window: {},
+    FormData,
+    Blob,
+    fetch: async () => new Response(
+      JSON.stringify({ detail: "Erreur interne du serveur.", request_id: "abcdef1234567890" }),
+      {
+        status: 500,
+        headers: {
+          "content-type": "application/json",
+          "x-request-id": "abcdef1234567890"
+        }
+      }
+    )
+  };
+  vm.runInNewContext(source, context);
+  await assert.rejects(
+    () => context.window.PrintellyBackgroundApi.health("http://localhost:8000"),
+    /Erreur interne du serveur\. Référence: abcdef123456\./
+  );
 });
 
 test("service worker excludes private API responses from cache", async () => {
   const worker = await readFile(new URL("../../sw.js", import.meta.url), "utf8");
   assert.match(worker, /pathname\.startsWith\("\/api\/"\)/);
-  assert.match(worker, /printelly-client-v39/);
+  assert.match(worker, /printelly-client-v40/);
 });
 
 
