@@ -214,9 +214,9 @@ async def validate_or_convert_upload(upload: UploadFile, config: Settings) -> Va
         )
     original_name = upload.filename or f"design{suffix}"
     source = await _save_source(upload, config)
-    _scan_source(source, config)
     converted: Path | None = None
     try:
+        _scan_source(source, config)
         with source.open("rb") as input_file:
             header = input_file.read(4096)
         detected = _document_type(header, suffix)
