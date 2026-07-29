@@ -244,6 +244,30 @@ export function analyzePreflight(
   });
 }
 
+export function previewQuote(
+  assetId: string,
+  sizes: SizeLine[],
+  options: StudioOptions,
+): Promise<Quote> {
+  return apiFetch("/quotes/preview", {
+    method: "POST",
+    body: JSON.stringify({
+      lines: sizes.map((size) => ({
+        asset_id: assetId,
+        width_cm: size.widthCm,
+        height_cm: size.heightCm,
+        quantity: size.quantity,
+        variants: size.variants,
+        individual_cut: options.individualCut,
+        resolution_enhancement: options.resolutionEnhancement,
+        human_review: options.humanReview,
+        cleanup_required: options.residueCleanup || options.haloRemoval,
+      })),
+      professional: false,
+    }),
+  });
+}
+
 export function createQuote(
   assetId: string,
   sizes: SizeLine[],
