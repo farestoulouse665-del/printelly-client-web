@@ -108,7 +108,7 @@ def export_png(
     rgba = np.dstack((rgb, alpha_u8))
 
     metadata = PngImagePlugin.PngInfo()
-    metadata.add_text("Software", "PRINTELLY Local Background Removal")
+    metadata.add_text("Software", "TransferLab Local Background Removal")
     metadata.add_text("Privacy", "Processed locally; no third-party image API")
     save_options: dict[str, object] = {"compress_level": 6, "pnginfo": metadata}
     dpi = image.info.get("dpi")
