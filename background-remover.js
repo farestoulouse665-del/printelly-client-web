@@ -2,6 +2,11 @@
   "use strict";
 
   var ui = {
+    workspace: document.querySelector(".br-workspace"),
+    leftControls: document.getElementById("brLeftControls"),
+    rightControls: document.getElementById("brRightControls"),
+    toggleLeft: document.getElementById("brToggleLeft"),
+    toggleRight: document.getElementById("brToggleRight"),
     apiUrl: document.getElementById("brApiUrl"),
     apiStatus: document.getElementById("brApiStatus"),
     testApi: document.getElementById("brTestApi"),
@@ -80,6 +85,65 @@
   };
 
   if (!ui.canvas) return;
+
+  function setupProfessionalStudio() {
+    if (!ui.workspace || !ui.leftControls || !ui.rightControls) return;
+
+    var correctionSection = ui.removalMenu ? ui.removalMenu.closest(".br-control-section") : null;
+    var exportPanel = document.querySelector(".br-export-panel");
+    [correctionSection, ui.qualityPanel, exportPanel].forEach(function (panel) {
+      if (panel) ui.rightControls.appendChild(panel);
+    });
+
+    function setPanel(name, visible, persist) {
+      var isLeft = name === "left";
+      var panel = isLeft ? ui.leftControls : ui.rightControls;
+      var button = isLeft ? ui.toggleLeft : ui.toggleRight;
+      if (!panel || !button) return;
+      ui.workspace.classList.toggle("br-" + name + "-collapsed", !visible);
+      panel.setAttribute("aria-hidden", visible ? "false" : "true");
+      button.setAttribute("aria-pressed", visible ? "true" : "false");
+      button.classList.toggle("active", visible);
+      if (persist !== false) {
+        try { localStorage.setItem("printellyStudio" + (isLeft ? "Left" : "Right"), visible ? "1" : "0"); } catch (_) {}
+      }
+      window.requestAnimationFrame(function () {
+        window.dispatchEvent(new Event("resize"));
+      });
+    }
+
+    function savedPanel(name) {
+      try {
+        var value = localStorage.getItem("printellyStudio" + (name === "left" ? "Left" : "Right"));
+        return value === null ? true : value === "1";
+      } catch (_) {
+        return true;
+      }
+    }
+
+    setPanel("left", savedPanel("left"), false);
+    setPanel("right", savedPanel("right"), false);
+
+    ui.toggleLeft.addEventListener("click", function () {
+      setPanel("left", ui.workspace.classList.contains("br-left-collapsed"));
+    });
+    ui.toggleRight.addEventListener("click", function () {
+      setPanel("right", ui.workspace.classList.contains("br-right-collapsed"));
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (!event.altKey || event.ctrlKey || event.metaKey) return;
+      if (event.key === "[") {
+        event.preventDefault();
+        ui.toggleLeft.click();
+      } else if (event.key === "]") {
+        event.preventDefault();
+        ui.toggleRight.click();
+      }
+    });
+  }
+
+  setupProfessionalStudio();
 
   var remover = {
     file: null,
