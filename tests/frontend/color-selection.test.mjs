@@ -4,6 +4,8 @@ import test from "node:test";
 import vm from "node:vm";
 
 const source = await readFile(new URL("../../background-color-selection.js", import.meta.url), "utf8");
+const editorSource = await readFile(new URL("../../background-remover.js", import.meta.url), "utf8");
+const htmlSource = await readFile(new URL("../../index.html", import.meta.url), "utf8");
 
 function loadEngine() {
   const context = { window: {}, Uint8Array, Uint8ClampedArray, Int32Array, Error, Math, Number };
@@ -65,4 +67,15 @@ test("tolerance includes nearby JPEG shades and eraseMask only changes alpha", (
   engine.eraseMask(alpha, result.mask);
   assert.deepEqual(Array.from(result.mask), [1, 1, 0]);
   assert.deepEqual(Array.from(alpha), [0, 0, 0.8999999761581421]);
+});
+
+
+test("editor exposes every removal method and remains valid JavaScript", () => {
+  assert.doesNotThrow(() => new vm.Script(editorSource));
+  assert.match(htmlSource, /value="global"/);
+  assert.match(htmlSource, /value="exterior"/);
+  assert.match(htmlSource, /value="manual"/);
+  assert.match(htmlSource, /background-color-selection\.js/);
+  assert.match(editorSource, /paintSelectionAction/);
+  assert.match(editorSource, /pendingSelection/);
 });
