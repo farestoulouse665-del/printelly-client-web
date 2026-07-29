@@ -45,6 +45,15 @@
 .br-removal-actions button{min-height:35px;padding:7px 6px;font-size:6.5px}
 .br-removal-actions button:last-child{grid-column:1/-1}
 .br-selection-preview{position:absolute;inset:0;z-index:3;pointer-events:none}
+.br-palette-list{display:grid;gap:6px;max-height:280px;overflow:auto}
+.br-palette-list>p{margin:0;padding:10px;border:1px dashed var(--line);border-radius:9px;color:var(--muted);font-size:7px;line-height:1.5}
+.br-palette-item{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:7px;align-items:center;padding:7px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.br-palette-item.selected{border-color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}
+.br-palette-item.hidden-color{opacity:.58;background:#f5f5f6}
+.br-palette-swatch{width:29px;height:29px;border:2px solid #fff;border-radius:8px;box-shadow:0 0 0 1px #cfd3d9}
+.br-palette-meta{min-width:0}.br-palette-meta strong,.br-palette-meta small{display:block}.br-palette-meta strong{font-size:8px}.br-palette-meta small{margin-top:3px;color:var(--muted);font-size:6.5px}
+.br-palette-buttons{display:flex;gap:3px}.br-palette-buttons button{min-width:27px;height:27px;padding:0 5px;border:1px solid var(--line);border-radius:7px;background:#fff;color:#5f6670;font-size:7px;font-weight:900}.br-palette-buttons button:hover{border-color:var(--red);color:var(--red)}
+.br-palette-actions button:last-child{grid-column:1/-1}
 .br-help{margin:0;color:var(--muted);font-size:8px;line-height:1.5}
 .br-preview-column{display:grid;gap:14px;min-width:0}
 .br-preview-panel{overflow:hidden}
