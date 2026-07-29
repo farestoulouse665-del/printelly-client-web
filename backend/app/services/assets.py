@@ -9,7 +9,7 @@ from PIL import Image
 from sqlalchemy import Select, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.models.entities import Asset, GuestSession
+from app.models.entities import Asset, GuestSession, MaskVersion
 from app.schemas.api import AssetListOut, AssetOut
 from app.services.image_validation import ValidatedImage
 from app.storage.local import sanitize_filename, storage
@@ -201,6 +201,79 @@ class AssetService:
         if search_text:
             statement = statement.where(Asset.name.ilike(f"%{search_text[:80]}%"))
         return statement.order_by(Asset.created_at.desc())
+
+    def duplicate(
+        self,
+        database: Session,
+        source: Asset,
+        guest_session_id: str,
+    ) -> Asset:
+        owner_session = self._session(database, guest_session_id)
+        duplicate_id = str(uuid.uuid4())
+
+        def copy_object(key: str | None, category: str) -> str | None:
+            if not key:
+                return None
+            suffix = storage.internal_path(key).suffix
+            target = f"assets/{duplicate_id}/{category}/{uuid.uuid4().hex}{suffix}"
+            storage.put_file(target, storage.internal_path(key))
+            return target
+
+        original_key = copy_object(source.original_key, "original")
+        if original_key is None:
+            raise RuntimeError("L’original du design est introuvable.")
+        source_key = copy_object(source.source_key, "source")
+        preview_key = copy_object(source.preview_key, "previews")
+        final_key = copy_object(source.final_key, "results")
+        warnings = list(source.warnings or [])
+        warnings.append(
+            {
+                "code": "duplicated_design",
+                "message": "Cette copie est indépendante du design source.",
+            }
+        )
+        duplicated = Asset(
+            id=duplicate_id,
+            user_id=owner_session.user_id,
+            guest_session_id=guest_session_id,
+            name=f"{source.name}-copie"[:180],
+            original_filename=source.original_filename,
+            mime_type=source.mime_type,
+            byte_size=source.byte_size,
+            checksum_sha256=source.checksum_sha256,
+            width=source.width,
+            height=source.height,
+            dpi_x=source.dpi_x,
+            dpi_y=source.dpi_y,
+            color_profile=source.color_profile,
+            has_transparency=source.has_transparency,
+            original_key=original_key,
+            source_key=source_key,
+            preview_key=preview_key,
+            final_key=final_key,
+            status=source.status,
+            quality_score=source.quality_score,
+            warnings=warnings,
+            archived=False,
+            pipeline_version=source.pipeline_version,
+            model_version=source.model_version,
+        )
+        database.add(duplicated)
+        database.flush()
+        if final_key:
+            version = MaskVersion(
+                asset_id=duplicated.id,
+                storage_key=final_key,
+                source="duplicate",
+                operation_count=0,
+                is_current=True,
+            )
+            database.add(version)
+            database.flush()
+            duplicated.current_mask_version_id = version.id
+        database.commit()
+        database.refresh(duplicated)
+        return duplicated
 
     @staticmethod
     def serialize(asset: Asset) -> AssetOut:
