@@ -33,3 +33,4 @@ class ProcessingReport(BaseModel):
     residual_haze_ratio: float = Field(default=0, ge=0, le=1)
     processing_ms: int
     warnings: list[str]
+    source_alpha_preserved: bool = False
