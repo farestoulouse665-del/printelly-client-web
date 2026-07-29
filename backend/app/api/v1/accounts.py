@@ -130,7 +130,7 @@ def me(
     database: Session = Depends(get_db),
 ) -> AccountOut:
     if not guest.user_id:
-        raise HTTPException(status_code=401, detail="La session est encore invitée.")
+        raise HTTPException(status_code=404, detail="La session est encore invitée.")
     user = database.get(User, guest.user_id)
     if user is None or not user.is_active:
         raise HTTPException(status_code=401, detail="Compte indisponible.")
