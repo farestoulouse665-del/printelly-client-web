@@ -100,20 +100,44 @@ class LocalObjectStorage:
                 digest.update(chunk)
         return digest.hexdigest()
 
-    def signed_download_path(self, key: str, ttl_seconds: int | None = None) -> str:
+    @staticmethod
+    def _signature_message(key: str, expires: int, filename: str | None) -> bytes:
+        return f"{key}:{expires}:{filename or ''}".encode()
+
+    def signed_download_path(
+        self,
+        key: str,
+        ttl_seconds: int | None = None,
+        *,
+        filename: str | None = None,
+    ) -> str:
         expires = int(time.time()) + (ttl_seconds or settings.signed_url_ttl_seconds)
-        encoded = quote(key, safe="")
-        message = f"{key}:{expires}".encode()
-        signature = hmac.new(settings.signing_secret.encode(), message, hashlib.sha256).hexdigest()
-        return f"/api/v1/files/{encoded}?expires={expires}&signature={signature}"
+        encoded_key = quote(key, safe="")
+        safe_filename = sanitize_filename(filename) if filename else None
+        signature = hmac.new(
+            settings.signing_secret.encode(),
+            self._signature_message(key, expires, safe_filename),
+            hashlib.sha256,
+        ).hexdigest()
+        query = f"expires={expires}&signature={signature}"
+        if safe_filename:
+            query += f"&filename={quote(safe_filename, safe='')}"
+        return f"/api/v1/files/{encoded_key}?{query}"
 
     @staticmethod
-    def verify_signature(key: str, expires: int, signature: str) -> bool:
+    def verify_signature(
+        key: str,
+        expires: int,
+        signature: str,
+        filename: str | None = None,
+    ) -> bool:
         if expires < int(time.time()):
             return False
-        message = f"{key}:{expires}".encode()
+        safe_filename = sanitize_filename(filename) if filename else None
         expected = hmac.new(
-            settings.signing_secret.encode(), message, hashlib.sha256
+            settings.signing_secret.encode(),
+            LocalObjectStorage._signature_message(key, expires, safe_filename),
+            hashlib.sha256,
         ).hexdigest()
         return hmac.compare_digest(expected, signature)
 
