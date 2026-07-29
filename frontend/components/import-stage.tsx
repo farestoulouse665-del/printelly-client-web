@@ -38,7 +38,11 @@ const modes: Array<{ value: RemovalMode; label: string; detail: string }> = [
   { value: "product", label: "Objet ou produit", detail: "Volumes et ombres maîtrisées" },
   { value: "white_background", label: "Fond blanc", detail: "Réduction des halos clairs" },
   { value: "black_background", label: "Fond noir", detail: "Détails sombres protégés" },
+  { value: "gray_background", label: "Fond gris", detail: "Contours et gris internes préservés" },
   { value: "colored_background", label: "Fond coloré", detail: "Connectivité et couleur dominante" },
+  { value: "clean_transparent", label: "Déjà transparent", detail: "Nettoyage sans détériorer l’alpha existant" },
+  { value: "preserve_shadows", label: "Préserver les ombres", detail: "Transparence douce et ombres utiles" },
+  { value: "remove_shadows", label: "Supprimer les ombres", detail: "Sujet net sans ombre extérieure" },
   { value: "dtf_high_precision", label: "DTF haute précision", detail: "Préservation maximale du design" },
 ];
 
