@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from dataclasses import replace
 from io import BytesIO
 
@@ -159,3 +160,38 @@ def test_upload_validation_checks_signature_and_mime(tmp_path):
         assert getattr(exc, "status_code", None) == 415
     else:
         raise AssertionError("Un MIME incohérent doit être refusé.")
+
+
+def test_pdf_preview_and_dtf_report_are_explicit_validation_outputs():
+    source = Image.new("RGBA", (300, 200), (0, 0, 0, 0))
+    for y in range(30, 170):
+        for x in range(40, 260):
+            source.putpixel((x, y), (30, 80, 210, 255))
+    service = ExportService()
+    pdf, pdf_media, pdf_suffix = service.render(
+        _png(source),
+        ExportCreateIn(
+            asset_id="asset",
+            format="pdf_preview",
+            width_cm=10,
+            dpi=300,
+        ),
+    )
+    assert pdf.startswith(b"%PDF")
+    assert pdf_media == "application/pdf"
+    assert pdf_suffix == ".preview.pdf"
+
+    report_payload, report_media, report_suffix = service.render(
+        _png(source),
+        ExportCreateIn(
+            asset_id="asset",
+            format="dtf_report_json",
+            width_cm=10,
+            dpi=300,
+        ),
+    )
+    report = json.loads(report_payload)
+    assert report["metrics"]["true_alpha"] is True
+    assert "design n’a pas été modifié" in report["notice"]
+    assert report_media == "application/json"
+    assert report_suffix == ".dtf-report.json"
