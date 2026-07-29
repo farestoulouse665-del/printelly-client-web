@@ -46,7 +46,7 @@ def health(request: Request) -> HealthOut:
             socket_connect_timeout=1,
         )
         redis.ping()
-        encoded_runtime = redis.get("printelly:worker:model-runtime")
+        encoded_runtime = redis.get("transferlab:worker:model-runtime")
         if encoded_runtime:
             runtime = json.loads(encoded_runtime)
     except Exception:
