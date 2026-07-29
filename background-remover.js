@@ -221,6 +221,7 @@
     remover.resultUrl = "";
     remover.resultBlob = null;
     remover.resultImage = null;
+    remover.serverPixels = null;
     remover.baseMask = null;
     remover.currentMask = null;
     remover.actions = [];
