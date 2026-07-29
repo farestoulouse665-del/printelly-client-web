@@ -133,8 +133,6 @@ class PricingService:
                     0.8,
                     discount_rate + max(0.0, float(promo.amount_dzd) / 100.0),
                 )
-            elif request.promo_code.strip().upper() == "PRINTELLY5":
-                discount_rate = min(0.30, discount_rate + 0.05)
 
         discount = subtotal * discount_rate
         delivery = (
