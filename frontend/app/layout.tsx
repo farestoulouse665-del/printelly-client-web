@@ -5,12 +5,12 @@ import "@/app/globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "PRINTELLY Background Studio",
-    template: "%s · PRINTELLY",
+    default: "TransferLab",
+    template: "%s · TransferLab",
   },
   description:
     "Supprimez le fond localement, préservez votre design et préparez un véritable PNG transparent pour l’impression DTF.",
-  applicationName: "PRINTELLY Background Studio",
+  applicationName: "TransferLab",
   manifest: "/manifest.webmanifest",
   robots: { index: false, follow: false },
 };
