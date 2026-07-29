@@ -11,6 +11,7 @@ from starlette.datastructures import Headers, UploadFile
 
 from app.core.config import settings
 from app.models.schemas import RemovalMode
+from app.providers.local_onnx_provider import LocalOnnxProvider
 from app.providers.tiled_inference import TiledInferenceEngine, _tile_starts
 from app.schemas.api import ExportCreateIn, MaskOperationIn, NormalizedPoint
 from app.services.dtf_preflight import DTFPreflightAnalyzer
@@ -195,3 +196,20 @@ def test_pdf_preview_and_dtf_report_are_explicit_validation_outputs():
     assert "design n’a pas été modifié" in report["notice"]
     assert report_media == "application/json"
     assert report_suffix == ".dtf-report.json"
+
+
+def test_onnx_provider_priority_is_cuda_then_directml_then_cpu():
+    providers, device = LocalOnnxProvider.choose_providers(
+        "auto",
+        [
+            "CPUExecutionProvider",
+            "DmlExecutionProvider",
+            "CUDAExecutionProvider",
+        ],
+    )
+    assert providers == [
+        "CUDAExecutionProvider",
+        "DmlExecutionProvider",
+        "CPUExecutionProvider",
+    ]
+    assert device == "cuda"
