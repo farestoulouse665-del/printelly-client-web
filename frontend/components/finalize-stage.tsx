@@ -128,7 +128,7 @@ export function FinalizeStage() {
         }),
       });
       setOptions({ humanReview: true });
-      setMessage("Le fichier a été placé dans la file de vérification PRINTELLY.");
+      setMessage("Le fichier a été placé dans la file de vérification TransferLab.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Demande impossible.");
     } finally {
@@ -142,7 +142,7 @@ export function FinalizeStage() {
     setMessage("");
     try {
       const quote = await createQuote(asset.id, sizes, options);
-      sessionStorage.setItem("printelly-current-quote", JSON.stringify(quote));
+      sessionStorage.setItem("transferlab-current-quote", JSON.stringify(quote));
       router.push(`/orders?quote=${encodeURIComponent(quote.id)}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Devis impossible.");
@@ -163,7 +163,7 @@ export function FinalizeStage() {
           <div>
             <h3>Options de préparation</h3>
             <div className="options-grid">
-              <Option checked={options.humanReview} onChange={(value) => setOptions({ humanReview: value })} title="Vérification humaine" detail="Un graphiste PRINTELLY contrôle la version du masque." />
+              <Option checked={options.humanReview} onChange={(value) => setOptions({ humanReview: value })} title="Vérification humaine" detail="Un graphiste TransferLab contrôle la version du masque." />
               <Option checked={options.individualCut} onChange={(value) => setOptions({ individualCut: value })} title="Découpe individuelle" detail="Chaque transfert est préparé séparément." />
               <Option checked={options.autoCenter} onChange={(value) => setOptions({ autoCenter: value })} title="Centrage automatique" detail="Le contenu est centré sans changer ses proportions." />
               <Option checked={options.transparentMargin} onChange={(value) => setOptions({ transparentMargin: value })} title="Marge transparente" detail="Ajoute une zone vide autour du contenu." />
@@ -181,7 +181,7 @@ export function FinalizeStage() {
               </select>
             </label>
             <label className="notes-field">
-              <span>Notes pour l’équipe PRINTELLY</span>
+              <span>Notes pour l’équipe TransferLab</span>
               <textarea value={options.notes} maxLength={2000} rows={4} onChange={(event) => setOptions({ notes: event.target.value })} placeholder="Précisez les détails à protéger ou les consignes de production…" />
             </label>
           </div>
