@@ -62,6 +62,7 @@ def upgrade() -> None:
         sa.Column("color_profile", sa.String(80), nullable=False),
         sa.Column("has_transparency", sa.Boolean(), nullable=False),
         sa.Column("original_key", sa.String(512), nullable=False),
+        sa.Column("source_key", sa.String(512)),
         sa.Column("preview_key", sa.String(512)),
         sa.Column("final_key", sa.String(512)),
         sa.Column("status", sa.String(32), nullable=False),
