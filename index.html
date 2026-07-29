@@ -340,10 +340,13 @@
 
                 <div class="br-tools" role="group" aria-label="Outils de retouche">
                   <button class="active" type="button" data-br-tool="pan" aria-pressed="true">DÉPLACER</button>
+                  <button type="button" data-br-tool="magic-exterior" aria-pressed="false">✦ GOMME MAGIQUE EXT.</button>
                   <button type="button" data-br-tool="protect" aria-pressed="false">RESTAURER</button>
                   <button type="button" data-br-tool="erase" aria-pressed="false">EFFACER</button>
                   <button type="button" data-br-tool="manual-background" aria-pressed="false">FOND OUBLIÉ</button>
                 </div>
+                <div class="br-magic-help"><strong>Gomme magique extérieure</strong><span>Cliquez sur le fond autour du dessin. Une zone intérieure fermée ne sera jamais supprimée automatiquement.</span></div>
+                <label class="br-range br-magic-tolerance"><span>Tolérance magique <output id="brMagicToleranceValue">18</output></span><input id="brMagicTolerance" type="range" min="0" max="60" value="18"><small>Augmentez légèrement si le fond contient des nuances ou des défauts JPEG.</small></label>
                 <label class="br-range"><span>Taille <output id="brBrushValue">36 px</output></span><input id="brBrush" type="range" min="5" max="180" value="36"></label>
                 <label class="br-range"><span>Dureté <output id="brHardnessValue">80 %</output></span><input id="brHardness" type="range" min="0" max="100" value="80"></label>
                 <label class="br-range"><span>Opacité <output id="brOpacityValue">100 %</output></span><input id="brOpacity" type="range" min="5" max="100" value="100"></label>
