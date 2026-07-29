@@ -53,6 +53,7 @@
     redo: document.getElementById("brRedo"),
     canvas: document.getElementById("brCanvas"),
     shell: document.getElementById("brCanvasShell"),
+    canvasFullscreen: document.getElementById("brCanvasFullscreen"),
     empty: document.getElementById("brPreviewEmpty"),
     cursor: document.getElementById("brBrushCursor"),
     zoomOut: document.getElementById("brZoomOut"),
@@ -147,6 +148,28 @@
   }
 
   setupProfessionalStudio();
+
+  function setExpandedWorkspace(expanded) {
+    document.body.classList.toggle("br-studio-active", expanded);
+    if (ui.canvasFullscreen) {
+      ui.canvasFullscreen.classList.toggle("active", expanded);
+      ui.canvasFullscreen.setAttribute("aria-pressed", expanded ? "true" : "false");
+      ui.canvasFullscreen.innerHTML = expanded
+        ? '<span aria-hidden="true">↙</span> RÉDUIRE'
+        : '<span aria-hidden="true">⛶</span> PLEIN ÉCRAN';
+    }
+    window.requestAnimationFrame(function () {
+      window.requestAnimationFrame(function () {
+        if (typeof fitPreview === "function") fitPreview();
+      });
+    });
+  }
+
+  if (ui.canvasFullscreen) {
+    ui.canvasFullscreen.addEventListener("click", function () {
+      setExpandedWorkspace(!document.body.classList.contains("br-studio-active"));
+    });
+  }
 
   var remover = {
     file: null,
@@ -1698,6 +1721,11 @@
     var target = event.target;
     if (target && (target.matches("input,textarea,select") || target.isContentEditable)) return;
     var key = event.key.toLowerCase();
+    if (key === "escape" && document.body.classList.contains("br-studio-active")) {
+      event.preventDefault();
+      setExpandedWorkspace(false);
+      return;
+    }
     if ((event.ctrlKey || event.metaKey) && key === "z") {
       event.preventDefault();
       if (event.shiftKey) ui.redo.click(); else ui.undo.click();
