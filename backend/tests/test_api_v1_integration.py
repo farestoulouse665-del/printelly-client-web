@@ -78,6 +78,35 @@ def test_guest_upload_library_queue_and_cancellation_are_connected():
         assert persistent_library.status_code == 200
         assert persistent_library.json()["total"] == 1
 
+        rule_response = client.post(
+            "/api/v1/admin/price-rules",
+            headers={"X-Admin-Token": "ci-admin-token-not-for-production"},
+            json={
+                "code": "surface_cm2",
+                "label_fr": "Tarif surface test",
+                "kind": "base_price",
+                "amount_dzd": 1.0,
+            },
+        )
+        assert rule_response.status_code == 201, rule_response.text
+        quote_response = client.post(
+            "/api/v1/quotes/preview",
+            headers=headers,
+            json={
+                "lines": [
+                    {
+                        "asset_id": asset["id"],
+                        "width_cm": 30,
+                        "height_cm": 30,
+                        "quantity": 1,
+                    }
+                ]
+            },
+        )
+        assert quote_response.status_code == 200, quote_response.text
+        assert quote_response.json()["breakdown"]["price_per_square_cm_dzd"] == 1.0
+        assert quote_response.json()["subtotal_dzd"] == 900.0
+
         job_response = client.post(
             "/api/v1/background-removal/jobs",
             headers=headers,
