@@ -477,3 +477,13 @@ body.br-studio-active .br-workspace{
   .br-studio-mode button{flex:1}
   .br-print-grid{grid-template-columns:1fr 1fr}
 }
+
+
+/* Exterior-only Magic Eraser */
+.br-tools button[data-br-tool="magic-exterior"]{grid-column:1/-1;min-height:39px;border-color:#d7aaa8;background:linear-gradient(135deg,#fff8f7,#fff);color:#a82520}
+.br-tools button[data-br-tool="magic-exterior"].active{border-color:var(--red);background:linear-gradient(135deg,var(--red),#a91f1b);color:#fff;box-shadow:0 6px 16px rgba(214,49,43,.22)}
+.br-magic-help{display:grid;gap:3px;padding:9px 10px;border:1px solid #eadad8;border-radius:10px;background:#fffaf9}
+.br-magic-help strong{color:#9f2924;font-size:8px}
+.br-magic-help span{color:#727985;font-size:7px;line-height:1.45}
+.br-canvas-shell[data-tool="magic-exterior"] canvas{cursor:crosshair}
+.br-magic-tolerance{padding:8px 9px;border:1px solid #e5e7eb;border-radius:10px;background:#fafbfc}
