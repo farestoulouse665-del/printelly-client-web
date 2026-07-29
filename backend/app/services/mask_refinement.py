@@ -60,6 +60,20 @@ def _border_pixels(image: np.ndarray) -> np.ndarray:
     )
 
 
+def _edge_connected_mask(binary: np.ndarray) -> np.ndarray:
+    """Return components connected to the image border."""
+    count, labels = cv2.connectedComponents(binary.astype(np.uint8), connectivity=8)
+    if count <= 1:
+        return np.zeros_like(binary, dtype=bool)
+    border_labels = np.unique(
+        np.concatenate((labels[0], labels[-1], labels[:, 0], labels[:, -1]))
+    )
+    lookup = np.zeros(count, dtype=bool)
+    lookup[border_labels] = True
+    lookup[0] = False
+    return lookup[labels]
+
+
 def _parse_background_color(value: str | None) -> tuple[int, int, int] | None:
     if not value:
         return None
@@ -126,7 +140,10 @@ def _connected_uniform_background(
     tolerance = float(
         np.clip((np.percentile(border_distance, 90) * 1.65 + 5.0) * level_scale, 8.0, 42.0)
     )
-    candidate = ((distance <= tolerance) & (semantic_mask < 0.34)).astype(np.uint8)
+    semantic_foreground = semantic_mask >= 0.34
+    semantic_edge_false_positive = _edge_connected_mask(semantic_foreground)
+    semantic_protected = semantic_foreground & ~semantic_edge_false_positive
+    candidate = ((distance <= tolerance) & ~semantic_protected).astype(np.uint8)
     count, labels = cv2.connectedComponents(candidate, connectivity=8)
     if count <= 1:
         return None
@@ -146,8 +163,11 @@ def _connected_uniform_background(
     }[options.background_cleanup]
     relaxed_tolerance = float(np.clip(tolerance * relaxed_factor + 3.0, 11.0, 60.0))
     semantic_ceiling = 0.20 if options.protect_details else 0.30
+    relaxed_semantic_protected = (
+        (semantic_mask >= semantic_ceiling) & ~semantic_edge_false_positive
+    )
     relaxed_candidate = (
-        (distance <= relaxed_tolerance) & (semantic_mask < semantic_ceiling)
+        (distance <= relaxed_tolerance) & ~relaxed_semantic_protected
     ).astype(np.uint8)
     relaxed_count, relaxed_labels = cv2.connectedComponents(
         relaxed_candidate,
@@ -166,7 +186,7 @@ def _connected_uniform_background(
         ).astype(bool)
         background |= grown | (closed & relaxed_candidate.astype(bool))
 
-    background &= semantic_mask < 0.52
+    background &= ~semantic_protected
     return BackgroundEstimate(background, background_rgb, confidence)
 
 
@@ -187,7 +207,7 @@ def _recover_background_alpha(
 
     protection_threshold = 0.42 if options.protect_details else 0.68
     semantic_protection = np.where(
-        semantic_mask >= protection_threshold,
+        (semantic_mask >= protection_threshold) & ~estimate.mask,
         semantic_mask,
         0.0,
     )
