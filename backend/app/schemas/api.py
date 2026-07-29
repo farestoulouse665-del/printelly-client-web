@@ -309,6 +309,37 @@ class HumanReviewDecisionIn(BaseModel):
     operator_notes: str = Field(default="", max_length=4000)
 
 
+class AccountRegisterIn(BaseModel):
+    email: str = Field(
+        min_length=5,
+        max_length=320,
+        pattern=r"^[^\s@]+@[^\s@]+\.[^\s@]+$",
+    )
+    display_name: str = Field(min_length=2, max_length=120)
+    password: str = Field(min_length=12, max_length=128)
+    locale: Literal["fr", "ar"] = "fr"
+
+
+class AccountLoginIn(BaseModel):
+    email: str = Field(min_length=5, max_length=320)
+    password: str = Field(min_length=1, max_length=128)
+
+
+class AccountOut(BaseModel):
+    id: str
+    email: str
+    display_name: str
+    locale: str
+    is_admin: bool
+
+
+class AccountSessionOut(BaseModel):
+    token: str
+    expires_at: datetime
+    retention_days: int
+    user: AccountOut
+
+
 class HealthOut(BaseModel):
     status: str
     version: str
