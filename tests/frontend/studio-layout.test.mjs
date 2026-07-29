@@ -3,10 +3,27 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import vm from "node:vm";
 
-const html = await readFile(new URL("../../index.html", import.meta.url), "utf8");
+const clientHtml = await readFile(new URL("../../index.html", import.meta.url), "utf8");
+const html = await readFile(new URL("../../background-studio/index.html", import.meta.url), "utf8");
+const dockerfile = await readFile(new URL("../../Dockerfile.frontend", import.meta.url), "utf8");
 const css = await readFile(new URL("../../background-remover.css", import.meta.url), "utf8");
 const editor = await readFile(new URL("../../background-remover.js", import.meta.url), "utf8");
 const appSource = await readFile(new URL("../../app.js", import.meta.url), "utf8");
+
+
+test("background studio is public and separated from the authenticated client", () => {
+  assert.doesNotMatch(clientHtml, /data-view="background-remover"/);
+  assert.doesNotMatch(clientHtml, /id="bgRemoverView"/);
+  assert.doesNotMatch(clientHtml, /background-remover\.js/);
+  assert.doesNotMatch(clientHtml, /background-remover\.css/);
+  assert.match(html, /ACCÈS DIRECT • SANS INSCRIPTION/);
+  assert.doesNotMatch(html, /id="authView"/);
+  assert.doesNotMatch(html, /id="loginForm"/);
+  assert.doesNotMatch(html, /id="signupForm"/);
+  assert.doesNotMatch(html, /src="\.\.\/app\.js"/);
+  assert.match(html, /id="brAddToOrder"[^>]*hidden/);
+  assert.match(dockerfile, /COPY background-studio \/usr\/share\/nginx\/html\/background-studio/);
+});
 
 test("professional studio exposes left, canvas and right work areas", () => {
   assert.match(html, /id="brLeftControls"/);
