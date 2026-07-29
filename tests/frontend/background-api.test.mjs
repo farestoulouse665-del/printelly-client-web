@@ -24,6 +24,7 @@ test("typed client sends semantic mode and refinement options", async () => {
           "x-foreground-ratio": "0.5",
           "x-residual-haze": "0.012",
           "x-source-alpha-preserved": "true",
+          "x-effective-mode": "design",
           "x-model-name": "test",
           "x-warnings": "[]"
         }
@@ -56,6 +57,7 @@ test("typed client sends semantic mode and refinement options", async () => {
   assert.equal(result.metadata.width, 10);
   assert.equal(result.metadata.residualHazeRatio, 0.012);
   assert.equal(result.metadata.sourceAlphaPreserved, true);
+  assert.equal(result.metadata.effectiveMode, "design");
   assert.equal(result.blob.type, "image/png");
 });
 
