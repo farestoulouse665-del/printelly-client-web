@@ -34,6 +34,7 @@ class ValidatedImage:
     temp_path: Path
     detected_format: str = ""
     declared_mime: str = ""
+    source_temp_path: Path | None = None
 
 
 def _detect_format(header: bytes) -> str | None:
