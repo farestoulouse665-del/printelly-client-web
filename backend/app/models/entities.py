@@ -273,3 +273,20 @@ class AuditLog(Base):
     request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     details: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ExportRecord(Base):
+    __tablename__ = "exports"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    asset_id: Mapped[str] = mapped_column(ForeignKey("assets.id"), index=True)
+    guest_session_id: Mapped[str | None] = mapped_column(
+        ForeignKey("guest_sessions.id"), nullable=True, index=True
+    )
+    format: Mapped[str] = mapped_column(String(24), default="png")
+    status: Mapped[str] = mapped_column(String(24), default="completed", index=True)
+    storage_key: Mapped[str] = mapped_column(String(512))
+    filename: Mapped[str] = mapped_column(String(255))
+    options: Mapped[dict] = mapped_column(JSON, default=dict)
+    byte_size: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
