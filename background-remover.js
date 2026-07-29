@@ -66,7 +66,17 @@
     download: document.getElementById("brDownload"),
     add: document.getElementById("brAddToOrder"),
     progress: document.getElementById("brProgress"),
-    message: document.getElementById("brMessage")
+    message: document.getElementById("brMessage"),
+    qualityPanel: document.getElementById("brQualityPanel"),
+    qualityScore: document.getElementById("brQualityScore"),
+    printWidth: document.getElementById("brPrintWidth"),
+    microLimit: document.getElementById("brMicroLimit"),
+    runQuality: document.getElementById("brRunQuality"),
+    nextIssue: document.getElementById("brNextIssue"),
+    cleanMicro: document.getElementById("brCleanMicro"),
+    qualitySummary: document.getElementById("brQualitySummary"),
+    qualityIssues: document.getElementById("brQualityIssues"),
+    qualityCertificate: document.getElementById("brQualityCertificate")
   };
 
   if (!ui.canvas) return;
@@ -102,6 +112,8 @@
     paletteAssignments: null,
     paletteHidden: {},
     paletteSelectedIndex: -1,
+    qualityReport: null,
+    qualityIssueIndex: -1,
     drawing: false,
     panning: false,
     activeStroke: null,
@@ -245,6 +257,147 @@
     return (bytes / (1024 * 1024)).toFixed(1).replace(".", ",") + " Mo";
   }
 
+
+  function clearQuality(render) {
+    remover.qualityReport = null;
+    remover.qualityIssueIndex = -1;
+    if (ui.qualityScore) {
+      ui.qualityScore.dataset.state = "waiting";
+      ui.qualityScore.querySelector("strong").textContent = "—";
+    }
+    if (ui.qualitySummary) ui.qualitySummary.innerHTML = "<p>Lancez l’analyse du sujet pour obtenir le contrôle DTF.</p>";
+    if (ui.qualityIssues) ui.qualityIssues.innerHTML = "";
+    if (ui.qualityCertificate) {
+      ui.qualityCertificate.textContent = "";
+      ui.qualityCertificate.classList.add("hidden");
+    }
+    if (ui.runQuality) ui.runQuality.disabled = true;
+    if (ui.nextIssue) ui.nextIssue.disabled = true;
+    if (ui.cleanMicro) ui.cleanMicro.disabled = true;
+    if (render !== false && remover.sourceImage) renderPreview();
+  }
+
+  function effectiveQualityMask() {
+    if (!remover.currentMask) return null;
+    var mask = new Float32Array(remover.currentMask);
+    if (remover.paletteAssignments) {
+      for (var index = 0; index < mask.length; index += 1) {
+        var paletteIndex = remover.paletteAssignments[index];
+        if (paletteIndex >= 0 && remover.paletteHidden[paletteIndex]) mask[index] = 0;
+      }
+    }
+    return mask;
+  }
+
+  function runQualityInspection(silent) {
+    if (!remover.currentMask || !remover.originalPixels) {
+      if (!silent) setMessage("Lancez d’abord l’analyse du sujet.", "warning");
+      return null;
+    }
+    if (!window.PrintellyQualityInspector) {
+      if (!silent) setMessage("Le moteur de contrôle qualité n’est pas chargé.", "error");
+      return null;
+    }
+    remover.qualityReport = window.PrintellyQualityInspector.inspect(
+      remover.originalPixels,
+      effectiveQualityMask(),
+      remover.previewWidth,
+      remover.previewHeight,
+      {
+        printWidthCm: Number(ui.printWidth.value),
+        sourceWidth: remover.sourceImage.naturalWidth,
+        microPixelLimit: Number(ui.microLimit.value)
+      }
+    );
+    remover.qualityIssueIndex = -1;
+    renderQualityReport();
+    if (!silent) setMessage("Contrôle DTF terminé : " + remover.qualityReport.score + " / 100.", remover.qualityReport.score >= 75 ? "success" : "warning");
+    return remover.qualityReport;
+  }
+
+  function renderQualityReport() {
+    var report = remover.qualityReport;
+    if (!report) return;
+    ui.qualityScore.dataset.state = report.status;
+    ui.qualityScore.querySelector("strong").textContent = report.score;
+    var dpiText = report.dpi ? Math.round(report.dpi) + " DPI" : "taille d’impression non définie";
+    ui.qualitySummary.innerHTML = "<p><strong>" + (report.issues.length ? report.issues.length + " point(s) à vérifier" : "Aucun défaut critique détecté") + "</strong><br>" +
+      dpiText + " • " + (report.transparentRatio * 100).toFixed(1).replace(".", ",") + " % transparent • " +
+      (report.semiTransparentRatio * 100).toFixed(1).replace(".", ",") + " % semi-transparent.</p>";
+    ui.qualityIssues.innerHTML = "";
+    report.issues.forEach(function (issue, index) {
+      var item = document.createElement("div");
+      item.className = "br-quality-issue " + issue.severity;
+      var indicator = document.createElement("i");
+      var content = document.createElement("div");
+      var title = document.createElement("strong");
+      title.textContent = issue.title;
+      var message = document.createElement("span");
+      message.textContent = issue.message;
+      content.appendChild(title);
+      content.appendChild(message);
+      var locate = document.createElement("button");
+      locate.type = "button";
+      locate.className = "secondary";
+      locate.textContent = issue.bbox ? "VOIR" : "INFO";
+      locate.disabled = !issue.bbox;
+      locate.addEventListener("click", function () { focusQualityIssue(index); });
+      item.appendChild(indicator);
+      item.appendChild(content);
+      item.appendChild(locate);
+      ui.qualityIssues.appendChild(item);
+    });
+    if (!report.issues.length) ui.qualityIssues.innerHTML = '<div class="br-quality-issue"><i style="background:#23956b"></i><div><strong>Design prêt</strong><span>Aucun défaut critique n’a été détecté automatiquement.</span></div></div>';
+    ui.nextIssue.disabled = !report.issues.some(function (issue) { return issue.bbox; });
+    ui.cleanMicro.disabled = !report.microCount;
+    ui.runQuality.disabled = false;
+    ui.qualityCertificate.classList.remove("hidden");
+    ui.qualityCertificate.textContent =
+      "PRINTELLY — CONTRÔLE DTF\n" +
+      (report.transparentRatio > 0 ? "✓ Transparence réelle\n" : "✗ Aucune transparence\n") +
+      "✓ Dimensions originales conservées\n" +
+      (report.dpi >= 250 ? "✓ Résolution adaptée : " : report.dpi ? "⚠ Résolution à vérifier : " : "• Résolution : ") + (report.dpi ? Math.round(report.dpi) + " DPI\n" : "taille non définie\n") +
+      (report.microCount ? "⚠ " + report.microCount + " micro-pixel(s) isolé(s)\n" : "✓ Aucun micro-fragment important\n") +
+      (report.holes.length ? "⚠ " + report.holes.length + " trou(s) intérieur(s) à vérifier\n" : "✓ Aucun petit trou suspect\n") +
+      "SCORE FINAL : " + report.score + " / 100";
+  }
+
+  function focusQualityIssue(index) {
+    var report = remover.qualityReport;
+    if (!report || !report.issues[index] || !report.issues[index].bbox) return;
+    remover.qualityIssueIndex = index;
+    var bbox = report.issues[index].bbox;
+    var centerX = bbox.x + bbox.width / 2;
+    var centerY = bbox.y + bbox.height / 2;
+    remover.zoom = 4;
+    var displayWidth = parseFloat(ui.canvas.style.width) || remover.previewWidth;
+    var displayHeight = parseFloat(ui.canvas.style.height) || remover.previewHeight;
+    remover.panX = (0.5 - centerX) * displayWidth * remover.zoom;
+    remover.panY = (0.5 - centerY) * displayHeight * remover.zoom;
+    setView("result");
+    applyTransform();
+    setMessage(report.issues[index].title + " : " + report.issues[index].message, "warning");
+  }
+
+  function focusNextQualityIssue() {
+    if (!remover.qualityReport) return;
+    var located = [];
+    remover.qualityReport.issues.forEach(function (issue, index) { if (issue.bbox) located.push(index); });
+    if (!located.length) return;
+    var currentPosition = located.indexOf(remover.qualityIssueIndex);
+    focusQualityIssue(located[(currentPosition + 1) % located.length]);
+  }
+
+  function previewMicroCleanup() {
+    var report = remover.qualityReport || runQualityInspection(true);
+    if (!report || !report.microCount) {
+      setMessage("Aucun micro-pixel isolé à nettoyer.", "success");
+      return;
+    }
+    setPendingSelection({ mask: report.microMask, count: report.microCount }, false);
+    setMessage(report.microCount + " micro-pixel(s) apparaissent en rose. Confirmez avec Rendre transparent.", "warning");
+  }
+
   function clearResult(render) {
     if (remover.resultUrl) URL.revokeObjectURL(remover.resultUrl);
     remover.resultUrl = "";
@@ -257,7 +410,7 @@
     remover.redo = [];
     clearPendingSelection(false);
     clearPalette(false);
-    clearPalette(false);
+    clearQuality(false);
     ui.download.disabled = true;
     ui.add.disabled = true;
     updateHistory();
@@ -401,6 +554,8 @@
     }
     rebuildMask();
     analyzeColors(true);
+    ui.runQuality.disabled = false;
+    runQualityInspection(true);
   }
 
   function rebuildMask() {
@@ -1262,6 +1417,8 @@
     remover.actions = [];
     remover.redo = [];
     clearPendingSelection(false);
+    clearPalette(false);
+    clearQuality(false);
     ui.file.value = "";
     ui.canvas.width = ui.canvas.height = 1;
     ui.empty.classList.remove("hidden");
