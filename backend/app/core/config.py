@@ -39,6 +39,10 @@ class Settings:
     )
     enable_docs: bool = _bool("ENABLE_API_DOCS", False)
     trust_proxy_headers: bool = _bool("TRUST_PROXY_HEADERS", False)
+    background_pipeline_v2_enabled: bool = _bool(
+        "BACKGROUND_PIPELINE_V2_ENABLED",
+        False,
+    )
 
     @property
     def max_upload_bytes(self) -> int:
