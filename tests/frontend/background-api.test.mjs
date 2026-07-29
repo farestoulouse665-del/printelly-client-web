@@ -62,7 +62,7 @@ test("typed client sends semantic mode and refinement options", async () => {
 test("service worker excludes private API responses from cache", async () => {
   const worker = await readFile(new URL("../../sw.js", import.meta.url), "utf8");
   assert.match(worker, /pathname\.startsWith\("\/api\/"\)/);
-  assert.match(worker, /printelly-client-v37/);
+  assert.match(worker, /printelly-client-v38/);
 });
 
 
