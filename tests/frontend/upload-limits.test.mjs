@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const editor = await readFile(new URL("../../background-remover.js", import.meta.url), "utf8");
-const html = await readFile(new URL("../../index.html", import.meta.url), "utf8");
+const html = await readFile(new URL("../../background-studio/index.html", import.meta.url), "utf8");
 const compose = await readFile(new URL("../../docker-compose.yml", import.meta.url), "utf8");
 const nginx = await readFile(new URL("../../docker/nginx.conf", import.meta.url), "utf8");
 const config = await readFile(new URL("../../backend/app/core/config.py", import.meta.url), "utf8");
