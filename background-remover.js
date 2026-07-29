@@ -226,8 +226,13 @@
 
   function initialApiUrl() {
     var saved = localStorage.getItem("printellyBackgroundApi");
-    if (saved !== null) return saved;
-    return "http://localhost:8000";
+    var isLocalPage = /^(localhost|127\\.0\\.0\\.1)$/.test(window.location.hostname);
+    if (saved !== null) {
+      var savedIsLocal = /^http:\/\/(localhost|127\\.0\\.0\\.1):8000$/.test(saved);
+      if (!isLocalPage && savedIsLocal) return window.location.origin;
+      return saved;
+    }
+    return window.location.origin || "http://localhost:8000";
   }
 
   function setMessage(text, type) {
