@@ -222,10 +222,10 @@
             <span><strong>Traitement privé sur votre serveur.</strong> Vos images ne sont envoyées à aucune API externe. Le modèle open source fonctionne sur CPU et le fichier temporaire est supprimé après le traitement.</span>
           </div>
 
-          <div class="br-workspace">
+          <div class="br-workspace" data-studio-mode="simple">
             <aside id="brLeftControls" class="panel br-controls" aria-label="Préparation et analyse IA">
               <div class="br-side-title"><span>OUTILS IA</span><strong>Préparation du détourage</strong><small>Importation, sujet et réglages du moteur</small></div>
-              <section class="br-control-section">
+              <section id="brEngineSection" class="br-control-section" data-br-pro-only>
                 <div class="br-section-head"><span>01</span><div><h3>Moteur local</h3><p>Connexion sécurisée au serveur de détourage</p></div></div>
                 <label class="br-api-field"><span>Adresse du serveur</span><input id="brApiUrl" type="url" spellcheck="false" placeholder="http://localhost:8000"></label>
                 <div class="br-api-row"><span id="brApiStatus" class="br-status" data-state="checking">Vérification…</span><button id="brTestApi" class="secondary" type="button">TESTER</button></div>
@@ -261,7 +261,7 @@
                 </ol>
               </section>
 
-              <section class="br-control-section">
+              <section id="brAdvancedSection" class="br-control-section" data-br-pro-only>
                 <div class="br-section-head"><span>04</span><div><h3>Récupération du fond</h3><p>Élimine les restes et protège les détails du design</p></div></div>
                 <label class="br-api-field"><span>Fond noir intelligent</span>
                   <select id="brBlackBackgroundMode">
@@ -357,6 +357,10 @@
             <div class="br-preview-column">
               <article class="panel br-preview-panel">
                 <div class="br-preview-toolbar">
+                  <div class="br-studio-mode" role="group" aria-label="Niveau de l’interface">
+                    <button class="active" type="button" data-br-studio-mode="simple" aria-pressed="true">MODE SIMPLE</button>
+                    <button type="button" data-br-studio-mode="pro" aria-pressed="false">MODE PRO</button>
+                  </div>
                   <div class="br-panel-toggles" role="group" aria-label="Afficher ou masquer les panneaux latéraux">
                     <button id="brToggleLeft" type="button" aria-pressed="true" title="Afficher ou masquer les outils IA"><span>☰</span> OUTILS IA</button>
                     <button id="brToggleRight" type="button" aria-pressed="true" title="Afficher ou masquer les retouches">FINITION <span>☰</span></button>
@@ -423,8 +427,27 @@
                   <div><p class="eyebrow">CONTRÔLE AVANT IMPRESSION</p><h3>Inspecteur Qualité DTF</h3><p>Analyse locale du canal alpha, des résidus, des micro-pixels, des trous et de la résolution.</p></div>
                   <div id="brQualityScore" class="br-quality-score" data-state="waiting"><strong>—</strong><span>/ 100</span></div>
                 </div>
+                <section id="brPrintPanel" class="br-print-panel">
+                  <div class="br-print-title">
+                    <div><span>TAILLE D’IMPRESSION ET DPI</span><strong>Préparer le PNG pour le DTF</strong></div>
+                    <b id="brPrintBadge" data-state="waiting">EN ATTENTE</b>
+                  </div>
+                  <div class="br-print-grid">
+                    <label class="br-api-field"><span>Largeur</span><input id="brPrintWidth" type="number" min="0.1" max="500" step="0.1" value="25"></label>
+                    <label class="br-api-field"><span>Hauteur</span><input id="brPrintHeight" type="number" min="0.1" max="500" step="0.1" value="25" readonly></label>
+                    <label class="br-api-field"><span>Unité</span><select id="brPrintUnit"><option value="cm" selected>Centimètres</option><option value="in">Pouces</option></select></label>
+                    <label class="br-api-field"><span>DPI d’export</span><select id="brExportDpi"><option value="72">72 DPI</option><option value="150">150 DPI</option><option value="300" selected>300 DPI — DTF</option><option value="600">600 DPI</option><option value="custom">Personnalisé</option></select></label>
+                    <label id="brCustomDpiField" class="br-api-field hidden"><span>DPI personnalisé</span><input id="brCustomDpi" type="number" min="36" max="1200" step="1" value="300"></label>
+                    <label class="br-api-field"><span>Méthode</span><select id="brDpiMode"><option value="metadata" selected>Métadonnées — pixels intacts</option><option value="resample">Redimensionnement haute qualité</option></select></label>
+                  </div>
+                  <label class="br-check br-print-lock"><input id="brLockPrintRatio" type="checkbox" checked><span><strong>Conserver les proportions</strong><small>Évite toute déformation du dessin pendant l’export.</small></span></label>
+                  <div id="brPrintSummary" class="br-print-summary" data-state="waiting">
+                    <strong id="brPrintQuality">Chargez une image</strong>
+                    <span id="brPrintPixels">Pixels de sortie : —</span>
+                    <span id="brEffectiveDpi">DPI réel : —</span>
+                  </div>
+                </section>
                 <div class="br-quality-settings">
-                  <label class="br-api-field"><span>Largeur d’impression</span><div class="br-unit-field"><input id="brPrintWidth" type="number" min="1" max="200" step="0.1" value="25"><b>cm</b></div></label>
                   <label class="br-api-field"><span>Nettoyage des fragments</span><select id="brMicroLimit"><option value="4">1–4 pixels</option><option value="8">1–8 pixels</option><option value="12" selected>1–12 pixels</option><option value="24">1–24 pixels</option></select></label>
                 </div>
                 <div class="br-quality-actions">
@@ -526,6 +549,7 @@
   <script src="./background-removal-api.js" defer></script>
   <script src="./background-color-selection.js" defer></script>
   <script src="./background-quality.js" defer></script>
+  <script src="./background-print-export.js" defer></script>
   <script src="./background-remover.js" defer></script>
 </body>
 </html>
