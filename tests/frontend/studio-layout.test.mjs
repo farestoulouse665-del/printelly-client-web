@@ -37,6 +37,7 @@ test("side panels are independently scrollable and collapsible", () => {
 test("all existing professional tools are retained", () => {
   [
     "brRemovalMenu",
+    "brBlackBackgroundMode",
     "brPaletteMenu",
     "brBrush",
     "brUndo",
@@ -46,6 +47,13 @@ test("all existing professional tools are retained", () => {
     "brAddToOrder"
   ].forEach((id) => assert.match(html, new RegExp('id="' + id + '"')));
   assert.doesNotThrow(() => new vm.Script(editor));
+});
+
+test("black background modes protect subject structure", () => {
+  assert.match(html, /value="exterior">Noir extérieur seulement/);
+  assert.match(html, /value="smart">Tous les fonds noirs intelligents/);
+  assert.match(editor, /blackBackgroundMode:/);
+  assert.match(editor, /blackBackgroundConfidence/);
 });
 
 test("canvas exposes a direct move control", () => {
