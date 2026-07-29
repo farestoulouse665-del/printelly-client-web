@@ -31,6 +31,13 @@
     previewRemoval: document.getElementById("brPreviewRemoval"),
     applyRemoval: document.getElementById("brApplyRemoval"),
     cancelRemoval: document.getElementById("brCancelRemoval"),
+    paletteMenu: document.getElementById("brPaletteMenu"),
+    paletteCount: document.getElementById("brPaletteCount"),
+    analyzeColors: document.getElementById("brAnalyzeColors"),
+    paletteList: document.getElementById("brPaletteList"),
+    showAllColors: document.getElementById("brShowAllColors"),
+    previewColorRemoval: document.getElementById("brPreviewColorRemoval"),
+    deleteSelectedColor: document.getElementById("brDeleteSelectedColor"),
     brush: document.getElementById("brBrush"),
     brushValue: document.getElementById("brBrushValue"),
     hardness: document.getElementById("brHardness"),
@@ -91,6 +98,10 @@
     pendingSelection: null,
     pendingSelectionCount: 0,
     manualGuide: null,
+    paletteColors: [],
+    paletteAssignments: null,
+    paletteHidden: {},
+    paletteSelectedIndex: -1,
     drawing: false,
     panning: false,
     activeStroke: null,
@@ -245,6 +256,8 @@
     remover.actions = [];
     remover.redo = [];
     clearPendingSelection(false);
+    clearPalette(false);
+    clearPalette(false);
     ui.download.disabled = true;
     ui.add.disabled = true;
     updateHistory();
@@ -387,6 +400,7 @@
       remover.baseMask[index] = data[pixel + 3] / 255;
     }
     rebuildMask();
+    analyzeColors(true);
   }
 
   function rebuildMask() {
@@ -462,7 +476,10 @@
         output.data[pixel + 1] = remover.originalPixels.data[pixel + 1];
         output.data[pixel + 2] = remover.originalPixels.data[pixel + 2];
       }
-      output.data[pixel + 3] = Math.round(remover.currentMask[index] * 255);
+      var alpha = remover.currentMask[index];
+      var paletteIndex = remover.paletteAssignments ? remover.paletteAssignments[index] : -1;
+      if (paletteIndex >= 0 && remover.paletteHidden[paletteIndex]) alpha = 0;
+      output.data[pixel + 3] = Math.round(alpha * 255);
     }
     return output;
   }
@@ -694,6 +711,161 @@
     } catch (error) {
       setMessage(error.message, "warning");
     }
+  }
+
+
+  function clearPalette(render) {
+    remover.paletteColors = [];
+    remover.paletteAssignments = null;
+    remover.paletteHidden = {};
+    remover.paletteSelectedIndex = -1;
+    if (ui.paletteCount) ui.paletteCount.textContent = "Non analysées";
+    if (ui.paletteList) ui.paletteList.innerHTML = "<p>Analysez d’abord le sujet, puis détectez les couleurs du design.</p>";
+    if (ui.showAllColors) ui.showAllColors.disabled = true;
+    if (ui.previewColorRemoval) ui.previewColorRemoval.disabled = true;
+    if (ui.deleteSelectedColor) ui.deleteSelectedColor.disabled = true;
+    if (render !== false && remover.sourceImage) renderPreview();
+  }
+
+  function paletteMask(paletteIndex) {
+    if (!remover.paletteAssignments || paletteIndex < 0) return { mask: null, count: 0 };
+    var mask = new Uint8Array(remover.paletteAssignments.length);
+    var count = 0;
+    for (var index = 0; index < mask.length; index += 1) {
+      if (remover.paletteAssignments[index] === paletteIndex && (!remover.currentMask || remover.currentMask[index] > 0.05)) {
+        mask[index] = 1;
+        count += 1;
+      }
+    }
+    return { mask: mask, count: count };
+  }
+
+  function hasHiddenPaletteColors() {
+    return Object.keys(remover.paletteHidden).some(function (key) { return remover.paletteHidden[key]; });
+  }
+
+  function renderPalette() {
+    if (!ui.paletteList) return;
+    ui.paletteList.innerHTML = "";
+    if (!remover.paletteColors.length) {
+      ui.paletteList.innerHTML = "<p>Aucune couleur dominante détectée dans le sujet visible.</p>";
+      return;
+    }
+    remover.paletteColors.forEach(function (color, index) {
+      var item = document.createElement("div");
+      item.className = "br-palette-item";
+      if (index === remover.paletteSelectedIndex) item.classList.add("selected");
+      if (remover.paletteHidden[index]) item.classList.add("hidden-color");
+
+      var swatch = document.createElement("span");
+      swatch.className = "br-palette-swatch";
+      swatch.style.backgroundColor = colorHex(color);
+
+      var meta = document.createElement("div");
+      meta.className = "br-palette-meta";
+      var title = document.createElement("strong");
+      title.textContent = "Couleur " + (index + 1) + " • " + colorHex(color).toUpperCase();
+      var detail = document.createElement("small");
+      detail.textContent = (color.ratio * 100).toFixed(1).replace(".", ",") + " % du sujet";
+      meta.appendChild(title);
+      meta.appendChild(detail);
+
+      var buttons = document.createElement("div");
+      buttons.className = "br-palette-buttons";
+      var eye = document.createElement("button");
+      eye.type = "button";
+      eye.textContent = remover.paletteHidden[index] ? "○" : "●";
+      eye.title = remover.paletteHidden[index] ? "Afficher cette couleur" : "Masquer temporairement cette couleur";
+      eye.addEventListener("click", function () {
+        remover.paletteHidden[index] = !remover.paletteHidden[index];
+        renderPalette();
+        renderPreview();
+      });
+      var isolate = document.createElement("button");
+      isolate.type = "button";
+      isolate.textContent = "ISO";
+      isolate.title = "Isoler cette couleur";
+      isolate.addEventListener("click", function () {
+        remover.paletteColors.forEach(function (_, colorIndex) { remover.paletteHidden[colorIndex] = colorIndex !== index; });
+        remover.paletteSelectedIndex = index;
+        renderPalette();
+        renderPreview();
+        setMessage("Couleur isolée. Les autres couleurs sont seulement masquées, pas supprimées.", "success");
+      });
+      var choose = document.createElement("button");
+      choose.type = "button";
+      choose.textContent = "✓";
+      choose.title = "Sélectionner cette couleur";
+      choose.addEventListener("click", function () { selectPaletteColor(index); });
+      buttons.appendChild(eye);
+      buttons.appendChild(isolate);
+      buttons.appendChild(choose);
+
+      item.appendChild(swatch);
+      item.appendChild(meta);
+      item.appendChild(buttons);
+      ui.paletteList.appendChild(item);
+    });
+    ui.paletteCount.textContent = remover.paletteColors.length + " couleur" + (remover.paletteColors.length > 1 ? "s" : "");
+    ui.showAllColors.disabled = false;
+    ui.previewColorRemoval.disabled = remover.paletteSelectedIndex < 0;
+    ui.deleteSelectedColor.disabled = remover.paletteSelectedIndex < 0;
+  }
+
+  function analyzeColors(silent) {
+    if (!remover.currentMask || !remover.originalPixels) {
+      if (!silent) setMessage("Lancez d’abord l’analyse du sujet.", "warning");
+      return;
+    }
+    if (!window.PrintellyColorSelection || !window.PrintellyColorSelection.extractPalette) {
+      if (!silent) setMessage("Le moteur d’analyse des couleurs n’est pas chargé.", "error");
+      return;
+    }
+    var result = window.PrintellyColorSelection.extractPalette(
+      remover.originalPixels,
+      remover.previewWidth,
+      remover.previewHeight,
+      remover.currentMask,
+      8
+    );
+    remover.paletteColors = result.colors;
+    remover.paletteAssignments = result.assignments;
+    remover.paletteHidden = {};
+    remover.paletteSelectedIndex = -1;
+    renderPalette();
+    if (!silent) {
+      ui.paletteMenu.open = true;
+      setMessage(remover.paletteColors.length + " couleur(s) dominante(s) détectée(s) dans le sujet.", "success");
+    }
+    renderPreview();
+  }
+
+  function selectPaletteColor(index) {
+    if (!remover.paletteColors[index]) return;
+    remover.paletteSelectedIndex = index;
+    var color = remover.paletteColors[index];
+    ui.targetColor.value = colorHex(color);
+    var selection = paletteMask(index);
+    setPendingSelection(selection, false, "Cette couleur ne contient plus aucun pixel visible.");
+    renderPalette();
+  }
+
+  function showAllPaletteColors() {
+    remover.paletteHidden = {};
+    renderPalette();
+    renderPreview();
+    setMessage("Toutes les couleurs sont de nouveau visibles.", "success");
+  }
+
+  function deleteSelectedPaletteColor() {
+    var index = remover.paletteSelectedIndex;
+    if (index < 0) return;
+    selectPaletteColor(index);
+    if (!remover.pendingSelectionCount) return;
+    delete remover.paletteHidden[index];
+    applyPendingSelection();
+    renderPalette();
+    setMessage("La couleur sélectionnée est devenue transparente. Utilisez Annuler pour la restaurer.", "success");
   }
 
   function applyPendingSelection() {
@@ -983,8 +1155,11 @@
     var minimum = 1;
     var maximum = 0;
     for (var index = 0; index < remover.currentMask.length; index += 1) {
-      minimum = Math.min(minimum, remover.currentMask[index]);
-      maximum = Math.max(maximum, remover.currentMask[index]);
+      var alpha = remover.currentMask[index];
+      var paletteIndex = remover.paletteAssignments ? remover.paletteAssignments[index] : -1;
+      if (paletteIndex >= 0 && remover.paletteHidden[paletteIndex]) alpha = 0;
+      minimum = Math.min(minimum, alpha);
+      maximum = Math.max(maximum, alpha);
     }
     if (minimum >= 0.999) throw new Error("Aucun pixel transparent n’est présent. Effacez le fond ou relancez l’analyse.");
     if (maximum <= 0.001) throw new Error("Le sujet est entièrement transparent. Restaurez-le avant le téléchargement.");
@@ -993,7 +1168,7 @@
   async function buildFinalBlob() {
     if (!remover.resultBlob || !remover.resultImage) throw new Error("Aucun résultat à exporter.");
     validateMaskForExport();
-    if (!remover.actions.length) return remover.resultBlob;
+    if (!remover.actions.length && !hasHiddenPaletteColors()) return remover.resultBlob;
 
     var width = remover.sourceImage.naturalWidth;
     var height = remover.sourceImage.naturalHeight;
@@ -1009,6 +1184,17 @@
     maskContext.fillRect(0, 0, width, height);
     maskContext.globalCompositeOperation = "source-over";
     remover.actions.forEach(function (action) { paintMaskAction(maskContext, action, width, height); });
+    Object.keys(remover.paletteHidden).forEach(function (key) {
+      if (!remover.paletteHidden[key]) return;
+      var hiddenSelection = paletteMask(Number(key));
+      if (hiddenSelection.mask && hiddenSelection.count) {
+        paintSelectionAction(maskContext, {
+          selection: hiddenSelection.mask,
+          width: remover.previewWidth,
+          height: remover.previewHeight
+        }, width, height);
+      }
+    });
 
     var outputContext = outputCanvas.getContext("2d");
     outputContext.drawImage(remover.sourceImage, 0, 0, width, height);
@@ -1162,6 +1348,12 @@
   });
   ui.applyRemoval.addEventListener("click", applyPendingSelection);
   ui.cancelRemoval.addEventListener("click", function () { clearPendingSelection(true); setMessage("Prévisualisation annulée.", ""); });
+  ui.analyzeColors.addEventListener("click", function () { analyzeColors(false); });
+  ui.showAllColors.addEventListener("click", showAllPaletteColors);
+  ui.previewColorRemoval.addEventListener("click", function () {
+    if (remover.paletteSelectedIndex >= 0) selectPaletteColor(remover.paletteSelectedIndex);
+  });
+  ui.deleteSelectedColor.addEventListener("click", deleteSelectedPaletteColor);
   ui.feather.addEventListener("input", function () { ui.featherValue.textContent = Number(ui.feather.value).toFixed(1).replace(".", ",") + " px"; });
   ui.edge.addEventListener("input", function () { ui.edgeValue.textContent = ui.edge.value + " px"; });
   ui.brush.addEventListener("input", function () { ui.brushValue.textContent = ui.brush.value + " px"; });
