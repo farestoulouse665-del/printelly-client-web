@@ -72,7 +72,7 @@ class LocalOnnxProvider:
         path = Path(self.config.model_path)
         if not path.is_file():
             raise FileNotFoundError(
-                f"Modèle ONNX absent: {path}. Consultez backend/scripts/install_model.py."
+                f"Modèle ONNX absent: {path}. Consultez la section Modèle BiRefNet ONNX du README."
             )
         verify_model_checksum(path, self.config.model_sha256)
 
