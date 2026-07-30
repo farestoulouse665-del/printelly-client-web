@@ -26,21 +26,22 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test("the studio exposes the complete three-step path", async ({ page }) => {
+test("the standalone studio exposes one complete background-removal facade", async ({ page }) => {
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: /Un fond parfaitement supprimé/i }),
+    page.getByRole("heading", { name: /Votre design mérite/i }),
   ).toBeVisible();
-  await expect(page.getByText("Importer et nettoyer", { exact: true })).toBeVisible();
-  await expect(page.getByText("Dimensions", { exact: true })).toBeVisible();
-  await expect(page.getByText("Finaliser", { exact: true })).toBeVisible();
+  await expect(page.getByText("TOUT DANS UNE SEULE FAÇADE", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /Parcourir/i })).toBeVisible();
-  await expect(page.getByText(/Traitement 100 % local/i)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Images de cette session" })).toBeVisible();
+  await expect(page.getByText(/Aucune inscription nécessaire/i)).toBeVisible();
+  await expect(page.getByRole("link", { name: /Se connecter/i })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /Administration/i })).toHaveCount(0);
 });
 
-test("the premium layout keeps readable visual invariants", async ({ page }, testInfo) => {
+test("the legendary layout keeps readable desktop and mobile invariants", async ({ page }, testInfo) => {
   await page.goto("/");
-  const hero = page.getByRole("heading", { name: /Un fond parfaitement supprimé/i });
+  const hero = page.getByRole("heading", { name: /Votre design mérite/i });
   const box = await hero.boundingBox();
   const style = await hero.evaluate((element) => {
     const computed = getComputedStyle(element);
@@ -52,10 +53,10 @@ test("the premium layout keeps readable visual invariants", async ({ page }, tes
   });
   expect(box).not.toBeNull();
   expect(box!.width).toBeGreaterThan(250);
-  expect(style.fontSize).toBeGreaterThan(testInfo.project.name.startsWith("mobile") ? 34 : 48);
-  expect(style.lineHeight).toBeGreaterThan(style.fontSize);
+  expect(style.fontSize).toBeGreaterThan(testInfo.project.name.startsWith("mobile") ? 42 : 54);
+  expect(style.lineHeight).toBeGreaterThan(style.fontSize * 0.85);
   expect(style.color).not.toBe("rgba(0, 0, 0, 0)");
-  await testInfo.attach("studio-layout", {
+  await testInfo.attach("transferlab-one-page", {
     body: await page.screenshot({ fullPage: true }),
     contentType: "image/png",
   });
