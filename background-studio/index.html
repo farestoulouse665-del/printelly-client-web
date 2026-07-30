@@ -74,7 +74,24 @@
                 </div>
               </section>
 
-              <section class="br-control-section">
+              <section id="brStudioAccess" class="br-control-section br-studio-access" data-state="checking">
+                <div class="br-entitlement-head">
+                  <div><span>ACCÈS STUDIO AI</span><strong id="brEntitlementTitle">Vérification de votre accès…</strong></div>
+                  <b id="brEntitlementBadge">SYNCHRONISATION</b>
+                </div>
+                <p id="brEntitlementText" class="br-entitlement-text" aria-live="polite">Votre essai gratuit ou votre pack actif est vérifié directement sur le serveur.</p>
+                <div class="br-entitlement-meter" aria-hidden="true"><i id="brEntitlementMeter"></i></div>
+                <button id="brAnalyze" class="primary br-analyze" type="button" disabled>SUPPRIMER LE FOND</button>
+                <button id="brCancel" class="secondary br-cancel hidden" type="button">ANNULER LE TRAITEMENT</button>
+                <ol id="brStages" class="br-stages" aria-label="Progression réelle">
+                  <li data-stage="upload">Analyse de l’image</li>
+                  <li data-stage="segment">Détection du sujet</li>
+                  <li data-stage="refine">Récupération du matte et des contours</li>
+                  <li data-stage="verify">Vérification finale</li>
+                </ol>
+              </section>
+
+              <section class="br-control-section" data-br-pro-only>
                 <div class="br-section-head"><span>03</span><div><h3>Type de sujet</h3><p>Le mode adapte la segmentation, jamais les couleurs</p></div></div>
                 <div class="br-mode-grid" role="group" aria-label="Type de sujet">
                   <button class="active" type="button" data-br-mode="auto"><strong>Auto intelligent</strong><small>Analyse générale</small></button>
@@ -82,14 +99,6 @@
                   <button type="button" data-br-mode="design"><strong>Logo / design DTF</strong><small>Protection maximale</small></button>
                   <button type="button" data-br-mode="product"><strong>Produit / objet</strong><small>Contours et ombres</small></button>
                 </div>
-                <button id="brAnalyze" class="primary br-analyze" type="button" disabled>ANALYSER LE SUJET</button>
-                <button id="brCancel" class="secondary br-cancel hidden" type="button">ANNULER LE TRAITEMENT</button>
-                <ol id="brStages" class="br-stages" aria-label="Progression">
-                  <li data-stage="upload">Analyse de l’image</li>
-                  <li data-stage="segment">Détection du sujet</li>
-                  <li data-stage="refine">Récupération du matte et des contours</li>
-                  <li data-stage="verify">Vérification finale</li>
-                </ol>
               </section>
 
               <section id="brAdvancedSection" class="br-control-section" data-br-pro-only>
@@ -117,40 +126,37 @@
               <section class="br-control-section">
                 <div class="br-section-head"><span>05</span><div><h3>Corrections du masque</h3><p>Non destructives : seule la transparence change</p></div></div>
 
-                <details id="brDifficultBackgroundMenu" class="br-removal-menu br-assistant-menu" open>
-                  <summary><span>ASSISTANT FOND DIFFICILE</span><small>3 outils intelligents</small></summary>
+                <details id="brRemovalMenu" class="br-removal-menu br-removal-professional" open>
+                  <summary><span>SUPPRIMER LE FOND</span><small>Contrôle connecté et non destructif</small></summary>
                   <div class="br-removal-panel">
-                    <p class="br-removal-hint">Localisez et retirez les morceaux de fond oubliés sans modifier les couleurs du design.</p>
-                    <div class="br-assistant-actions">
-                      <button id="brScanResidues" class="secondary" type="button">SCANNER LES RESTES DU FOND</button>
-                      <button id="brForgottenClick" class="secondary" type="button">FOND OUBLIÉ PAR CLIC</button>
-                      <button id="brMultiPoint" class="secondary" type="button" aria-pressed="false">SÉLECTION MULTIPOINTS</button>
+                    <div class="br-removal-diagnostics" aria-live="polite">
+                      <span><b id="brRemovalConnectivity">BORDS</b><small>Connectivité extérieure</small></span>
+                      <span><b id="brRemovalSafety">PROTÉGÉ</b><small>Couleurs internes</small></span>
+                      <span><b id="brRemovalSelectionCount">0 px</b><small>Sélection actuelle</small></span>
                     </div>
-                    <p id="brAssistantStatus" class="br-removal-hint">Lancez d’abord l’analyse du sujet.</p>
-                  </div>
-                </details>
-
-                <details id="brRemovalMenu" class="br-removal-menu">
-                  <summary><span>SUPPRIMER LE FOND</span><small>Choisir une méthode</small></summary>
-                  <div class="br-removal-panel">
-                    <label class="br-api-field"><span>Méthode de suppression</span>
+                    <label class="br-api-field"><span>Stratégie de détourage</span>
                       <select id="brRemovalMethod">
-                        <option value="auto">Automatique intelligent</option>
-                        <option value="global">Toute une couleur dans l’image</option>
-                        <option value="exterior" selected>Fond extérieur uniquement</option>
-                        <option value="manual">Sélection manuelle du fond oublié</option>
+                        <option value="auto">Automatique — recommande la méthode sûre</option>
+                        <option value="exterior" selected>Fond extérieur connecté — recommandé</option>
+                        <option value="global">Couleur globale — contrôle obligatoire</option>
+                        <option value="manual">Fond oublié — sélection locale</option>
                       </select>
+                      <small>Le mode extérieur conserve les blancs, noirs et couleurs identiques enfermés dans le design.</small>
                     </label>
                     <div class="br-target-color">
-                      <label><span>Couleur ciblée</span><input id="brTargetColor" type="color" value="#ffffff"></label>
+                      <label><span>Couleur de référence</span><input id="brTargetColor" type="color" value="#ffffff"></label>
                       <button id="brPickColor" class="secondary" type="button">PIPETTE SUR L’IMAGE</button>
                     </div>
-                    <label class="br-range"><span>Tolérance couleur <output id="brColorToleranceValue">18</output></span><input id="brColorTolerance" type="range" min="0" max="100" value="18"><small>Faible : couleur exacte. Forte : inclut les nuances, ombres et défauts JPEG.</small></label>
-                    <p id="brRemovalHint" class="br-removal-hint">Supprime uniquement la couleur connectée aux bords. Les zones intérieures séparées restent protégées.</p>
+                    <label class="br-range"><span>Tolérance Delta couleur <output id="brColorToleranceValue">18</output></span><input id="brColorTolerance" type="range" min="0" max="100" value="18"><small>Commencez bas. Une forte tolérance peut inclure des ombres ou des détails proches de la couleur du fond.</small></label>
+                    <p id="brRemovalHint" class="br-removal-hint">Suppression limitée aux régions connectées aux bords. Les zones internes séparées restent protégées.</p>
+                    <div class="br-removal-safety">
+                      <strong>PRÉVISUALISATION OBLIGATOIRE</strong>
+                      <span>Le rose indique précisément les pixels qui deviendront transparents. Aucune couleur RGB du sujet n’est recolorée.</span>
+                    </div>
                     <div class="br-removal-actions">
-                      <button id="brPreviewRemoval" class="secondary" type="button">PRÉVISUALISER</button>
-                      <button id="brApplyRemoval" class="primary" type="button" disabled>RENDRE TRANSPARENT</button>
-                      <button id="brCancelRemoval" class="secondary" type="button" disabled>ANNULER</button>
+                      <button id="brPreviewRemoval" class="secondary" type="button">CALCULER L’APERÇU</button>
+                      <button id="brApplyRemoval" class="primary" type="button" disabled>VALIDER LA TRANSPARENCE</button>
+                      <button id="brCancelRemoval" class="secondary" type="button" disabled>ANNULER L’APERÇU</button>
                     </div>
                   </div>
                 </details>
@@ -158,14 +164,21 @@
                 <details id="brPaletteMenu" class="br-removal-menu br-palette-menu">
                   <summary><span>COULEURS DU DESIGN</span><small id="brPaletteCount">Non analysées</small></summary>
                   <div class="br-removal-panel">
-                    <p class="br-removal-hint">Détectez les couleurs dominantes, masquez-les temporairement, isolez-les ou transformez une couleur précise en transparence.</p>
-                    <button id="brAnalyzeColors" class="secondary" type="button">ANALYSER LES COULEURS</button>
+                    <p class="br-removal-hint">Cartographie colorimétrique du sujet visible : dominante, couverture, luminance et risque DTF. L’analyse ne modifie jamais le fichier.</p>
+                    <div id="brPaletteMetrics" class="br-palette-metrics">
+                      <span><b>—</b><small>Couleurs</small></span>
+                      <span><b>—</b><small>Dominante</small></span>
+                      <span><b>—</b><small>Contraste</small></span>
+                    </div>
+                    <div id="brPaletteWarnings" class="br-palette-warnings">Analysez le résultat pour détecter les blancs, noirs et tons proches du fond à protéger.</div>
+                    <button id="brAnalyzeColors" class="secondary" type="button">CARTOGRAPHIER LES COULEURS</button>
                     <div id="brPaletteList" class="br-palette-list"><p>Analysez d’abord le sujet, puis détectez les couleurs du design.</p></div>
                     <div class="br-removal-actions br-palette-actions">
-                      <button id="brShowAllColors" class="secondary" type="button" disabled>TOUT AFFICHER</button>
-                      <button id="brPreviewColorRemoval" class="secondary" type="button" disabled>APERÇU ROSE</button>
-                      <button id="brDeleteSelectedColor" class="primary" type="button" disabled>SUPPRIMER LA COULEUR</button>
+                      <button id="brShowAllColors" class="secondary" type="button" disabled>TOUT RÉAFFICHER</button>
+                      <button id="brPreviewColorRemoval" class="secondary" type="button" disabled>CONTRÔLER EN ROSE</button>
+                      <button id="brDeleteSelectedColor" class="primary" type="button" disabled>RENDRE LA COULEUR TRANSPARENTE</button>
                     </div>
+                    <p class="br-removal-hint warning">Une couleur interne ne doit être supprimée qu’après contrôle visuel. Utilisez le fond extérieur pour préserver les trous des lettres et les détails blancs/noirs.</p>
                   </div>
                 </details>
 
@@ -281,6 +294,15 @@
                     <span id="brEffectiveDpi">DPI réel : —</span>
                   </div>
                 </section>
+                <div id="brQualityVerdict" class="br-quality-verdict" data-state="waiting">
+                  <span>VERDICT DTF</span><strong>En attente d’un résultat transparent</strong><small>Le contrôle mesure le fichier, il ne modifie jamais le design sans action explicite.</small>
+                </div>
+                <div id="brQualityMetrics" class="br-quality-metrics">
+                  <span><b>—</b><small>Alpha réel</small></span>
+                  <span><b>—</b><small>DPI effectif</small></span>
+                  <span><b>—</b><small>Contour</small></span>
+                  <span><b>—</b><small>Résidus</small></span>
+                </div>
                 <div class="br-quality-settings">
                   <label class="br-api-field"><span>Nettoyage des fragments</span><select id="brMicroLimit"><option value="4">1–4 pixels</option><option value="8">1–8 pixels</option><option value="12" selected>1–12 pixels</option><option value="24">1–24 pixels</option></select></label>
                 </div>
@@ -288,6 +310,7 @@
                   <button id="brRunQuality" class="primary" type="button" disabled>ANALYSER LA QUALITÉ</button>
                   <button id="brNextIssue" class="secondary" type="button" disabled>ERREUR SUIVANTE</button>
                   <button id="brCleanMicro" class="secondary" type="button" disabled>SUPPRIMER LES MICRO-PIXELS</button>
+                  <button id="brDownloadQualityReport" class="secondary" type="button" disabled>TÉLÉCHARGER LE RAPPORT DTF</button>
                 </div>
                 <div id="brQualitySummary" class="br-quality-summary"><p>Lancez l’analyse du sujet pour obtenir le contrôle DTF.</p></div>
                 <div id="brQualityIssues" class="br-quality-issues"></div>
@@ -317,7 +340,21 @@
         </section>
   </main>
 
+  <dialog id="brPackDialog" class="br-pack-dialog" aria-labelledby="brPackDialogTitle">
+    <div class="br-pack-dialog-head">
+      <div><span>STUDIO AI</span><h2 id="brPackDialogTitle">Votre essai gratuit est terminé</h2></div>
+      <button id="brClosePackDialog" type="button" aria-label="Fermer">×</button>
+    </div>
+    <p id="brPackDialogText">Choisissez un pack actif. Dès que l’administrateur valide votre paiement, ce Studio se déverrouille automatiquement.</p>
+    <div id="brPackList" class="br-pack-list" aria-live="polite"><p>Chargement des packs disponibles…</p></div>
+    <div class="br-pack-dialog-actions">
+      <a class="primary" href="../studio-packs/">VOIR TOUS LES PACKS</a>
+      <button id="brRefreshEntitlement" class="secondary" type="button">J’AI DÉJÀ UN PACK — ACTUALISER</button>
+    </div>
+  </dialog>
+
   <script src="../background-removal-api.js" defer></script>
+  <script src="../studio-billing-api.js" defer></script>
   <script src="../studio-credit-badge.js" defer></script>
   <script src="../background-color-selection.js" defer></script>
   <script src="../background-quality.js" defer></script>
