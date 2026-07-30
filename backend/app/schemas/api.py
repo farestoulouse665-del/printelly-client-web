@@ -90,6 +90,7 @@ class AssetOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     original_download_url: str | None = None
+    preview_download_url: str | None = None
     final_download_url: str | None = None
 
 
