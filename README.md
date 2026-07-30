@@ -351,6 +351,49 @@ La clé PhotoRoom reste exclusivement dans les services backend. TransferLab
 conserve les pixels RGB originaux et applique localement le canal alpha renvoyé
 par PhotoRoom.
 
+### Upscale PhotoRoom ×4 facultatif
+
+L’upscale est une seconde opération explicite, séparée du détourage. Il est
+désactivé par défaut dans l’interface pour éviter toute consommation involontaire.
+Il nécessite l’accès **PhotoRoom Image Editing API Plus** et utilise uniquement
+l’endpoint officiel v2 :
+
+```dotenv
+PHOTOROOM_EDIT_API_URL=https://image-api.photoroom.com/v2/edit
+PHOTOROOM_UPSCALE_ENABLED=true
+PHOTOROOM_UPSCALE_DEFAULT_MODE=ai.fast
+PHOTOROOM_EDIT_TIMEOUT_SECONDS=240
+NEXT_PUBLIC_PHOTOROOM_UPSCALE_ENABLED=true
+```
+
+Deux modes sont proposés :
+
+- `ai.fast` : entrée maximale de 1000 × 1000 px, sortie exacte ×4 ;
+- `ai.slow` : entrée maximale de 512 × 512 px, sortie exacte ×4.
+
+TransferLab refuse un fichier trop grand avant l’appel payant. Le RGB amélioré
+vient de PhotoRoom, mais l’alpha raffiné par TransferLab est redimensionné et
+réappliqué localement : l’upscale ne peut donc pas restaurer l’ancien fond. Le
+PNG détouré et le PNG ×4 sont conservés comme deux versions distinctes. Chaque
+upscale sélectionné peut consommer une opération ou un crédit PhotoRoom selon
+le contrat du compte.
+
+Après une mise à jour de cette fonctionnalité :
+
+```powershell
+Set-Location -LiteralPath "C:\Users\PROTECH_WD\Documents\printelly-background-studio"
+git pull origin transferlab-background-studio
+docker compose build --no-cache frontend api worker
+docker compose up -d --force-recreate frontend api worker proxy
+```
+
+Tests ciblés prévus par le dépôt :
+
+```powershell
+docker compose exec api pytest -q backend/tests/test_photoroom_provider.py backend/tests/test_api_v1_integration.py
+docker compose exec frontend npm run test -- --run
+```
+
 ## Parcours autonome sur une seule façade
 
 La page `http://localhost:8080/` ne présente ni inscription, ni panier, ni administration. Le parcours principal est volontairement direct :
