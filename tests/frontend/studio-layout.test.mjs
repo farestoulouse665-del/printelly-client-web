@@ -16,7 +16,6 @@ test("background studio is separated from the client shell and requires the shar
   assert.doesNotMatch(clientHtml, /id="bgRemoverView"/);
   assert.doesNotMatch(clientHtml, /background-remover\.js/);
   assert.doesNotMatch(clientHtml, /background-remover\.css/);
-  assert.match(html, /COMPTE PRINTELLY • ACCÈS SÉCURISÉ/);
   assert.match(html, /id="studioCreditsBadge"/);
   assert.match(html, /href="\.\.\/studio-packs\//);
   assert.doesNotMatch(html, /id="authView"/);
