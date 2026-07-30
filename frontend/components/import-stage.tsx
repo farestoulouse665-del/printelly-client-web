@@ -12,6 +12,7 @@ import {
   FolderSearch,
   LoaderCircle,
   LockKeyhole,
+  Maximize2,
   Search,
   Sparkles,
   UploadCloud,
@@ -38,6 +39,19 @@ const backgroundProvider =
 const externalRemovalProvider = backgroundProvider !== "local";
 const externalProviderLabel =
   backgroundProvider === "photoroom" ? "PhotoRoom API" : "remove.bg API";
+const photoRoomUpscaleEnabled =
+  (process.env.NEXT_PUBLIC_PHOTOROOM_UPSCALE_ENABLED ?? "true") !== "false";
+
+type UpscaleMode = "off" | "ai.fast" | "ai.slow";
+const UPSCALE_OPTIONS: Array<{
+  value: UpscaleMode;
+  label: string;
+  description: string;
+}> = [
+  { value: "off", label: "Désactivé", description: "Conserver la résolution détourée" },
+  { value: "ai.fast", label: "×4 rapide", description: "PhotoRoom Plus · maximum 1000 px" },
+  { value: "ai.slow", label: "×4 qualité", description: "PhotoRoom Plus · maximum 512 px" },
+];
 
 const MaskEditor = dynamic(
   () => import("@/components/mask-editor").then((module) => module.MaskEditor),
@@ -421,11 +435,28 @@ function ProcessingPanel({
   const applyJobEvent = useStudio((state) => state.applyJobEvent);
   const patchAsset = useStudio((state) => state.patchAsset);
   const [error, setError] = useState("");
+  const [upscaleMode, setUpscaleMode] = useState<UpscaleMode>("off");
   const streamController = useRef<AbortController | null>(null);
   const job = useMemo(
-    () => Object.values(jobs).find((item) => item.asset_id === asset.id && !["failed", "cancelled"].includes(item.state)),
+    () =>
+      Object.values(jobs)
+        .filter(
+          (item) =>
+            item.asset_id === asset.id &&
+            !["failed", "cancelled"].includes(item.state),
+        )
+        .sort((left, right) => right.updated_at.localeCompare(left.updated_at))[0],
     [asset.id, jobs],
   );
+  const upscaleLimit =
+    upscaleMode === "ai.fast" ? 1000 : upscaleMode === "ai.slow" ? 512 : null;
+  const upscaleTooLarge =
+    upscaleLimit !== null &&
+    (asset.width > upscaleLimit || asset.height > upscaleLimit);
+  const upscaleReport =
+    job?.report && typeof job.report.upscale === "object"
+      ? (job.report.upscale as Record<string, unknown>)
+      : null;
 
   useEffect(() => {
     return () => streamController.current?.abort();
@@ -433,11 +464,24 @@ function ProcessingPanel({
 
   async function start() {
     setError("");
+    if (upscaleMode !== "off" && !photoRoomUpscaleEnabled) {
+      setError("L’upscale PhotoRoom est désactivé dans la configuration du serveur.");
+      return;
+    }
+    if (upscaleTooLarge && upscaleLimit) {
+      setError(
+        `Le mode ${upscaleMode} accepte au maximum ${upscaleLimit} × ${upscaleLimit} pixels.`,
+      );
+      return;
+    }
     try {
       const created = await createBackgroundJob(
         asset.id,
         mode,
-        parametersForRemovalMode(mode),
+        {
+          ...parametersForRemovalMode(mode),
+          upscale_mode: backgroundProvider === "photoroom" ? upscaleMode : "off",
+        },
       );
       setJob(created);
       const controller = new AbortController();
@@ -524,6 +568,43 @@ function ProcessingPanel({
           </button>
         ))}
       </div>
+      {backgroundProvider === "photoroom" && (
+        <div className="upscale-control">
+          <div className="upscale-heading">
+            <span><Maximize2 size={17} /> Améliorer la résolution</span>
+            <small>Option PhotoRoom Image Editing Plus</small>
+          </div>
+          <div className="upscale-options" role="radiogroup" aria-label="Mode d’amélioration">
+            {UPSCALE_OPTIONS.map((option) => {
+              const limit = option.value === "ai.fast" ? 1000 : option.value === "ai.slow" ? 512 : null;
+              const unavailable =
+                !photoRoomUpscaleEnabled ||
+                (limit !== null && (asset.width > limit || asset.height > limit));
+              return (
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={upscaleMode === option.value}
+                  key={option.value}
+                  className={upscaleMode === option.value ? "active" : ""}
+                  disabled={option.value !== "off" && unavailable}
+                  onClick={() => setUpscaleMode(option.value)}
+                >
+                  <strong>{option.label}</strong>
+                  <small>{option.description}</small>
+                </button>
+              );
+            })}
+          </div>
+          {upscaleMode !== "off" && (
+            <p className={upscaleTooLarge ? "upscale-alert error" : "upscale-alert"}>
+              {upscaleTooLarge
+                ? `Image trop grande : ${asset.width} × ${asset.height} px. Choisissez Désactivé.`
+                : "L’amélioration IA peut légèrement modifier les micro-détails. Vérifiez les textes, logos et visages avant impression."}
+            </p>
+          )}
+        </div>
+      )}
       {job && !["completed", "failed", "cancelled"].includes(job.state) ? (
         <div className="job-progress" aria-live="polite">
           <div><strong>{job.stage_message}</strong><span>{job.progress} %</span></div>
@@ -533,7 +614,12 @@ function ProcessingPanel({
           </button>
         </div>
       ) : (
-        <button type="button" className="primary-button full" onClick={() => void start()}>
+        <button
+          type="button"
+          className="primary-button full"
+          disabled={upscaleMode !== "off" && (!photoRoomUpscaleEnabled || upscaleTooLarge)}
+          onClick={() => void start()}
+        >
           <Sparkles size={18} /> Supprimer le fond
         </button>
       )}
@@ -543,6 +629,18 @@ function ProcessingPanel({
             <CheckCircle2 size={17} />
             Résultat prêt : l’aperçu transparent est affiché à gauche.
           </p>
+          {upscaleReport && (
+            <div className="upscale-result" role="status">
+              <Maximize2 size={17} />
+              <span>
+                <strong>Upscale ×4 terminé</strong>
+                <small>
+                  {String(upscaleReport.input_width)} × {String(upscaleReport.input_height)} px →{" "}
+                  {String(upscaleReport.output_width)} × {String(upscaleReport.output_height)} px
+                </small>
+              </span>
+            </div>
+          )}
           <div className="result-actions">
             <button type="button" className="secondary-button full editor-link" onClick={onOpenEditor}>
               <Edit3 size={17} /> Retoucher le résultat ici
@@ -593,33 +691,42 @@ export function ImportStage() {
     },
     [registerResult],
   );
-  const completedResultUrl = useMemo(() => {
-    if (!selected) return null;
-    return (
-      Object.values(jobs)
-        .filter(
-          (job) =>
-            job.asset_id === selected.id &&
-            job.state === "completed" &&
-            Boolean(job.download_url),
-        )
-        .sort((left, right) => right.updated_at.localeCompare(left.updated_at))[0]
-        ?.download_url ?? null
-    );
+  const completedJob = useMemo(() => {
+    if (!selected) return undefined;
+    return Object.values(jobs)
+      .filter(
+        (job) =>
+          job.asset_id === selected.id &&
+          job.state === "completed" &&
+          Boolean(job.download_url),
+      )
+      .sort((left, right) => right.updated_at.localeCompare(left.updated_at))[0];
   }, [jobs, selected]);
+  const completedUpscaleReport =
+    completedJob?.report && typeof completedJob.report.upscale === "object"
+      ? (completedJob.report.upscale as Record<string, unknown>)
+      : null;
+  const resultPixelWidth =
+    typeof completedUpscaleReport?.output_width === "number"
+      ? completedUpscaleReport.output_width
+      : (selected?.width ?? 0);
+  const resultPixelHeight =
+    typeof completedUpscaleReport?.output_height === "number"
+      ? completedUpscaleReport.output_height
+      : (selected?.height ?? 0);
   const selectedResultUrl = selected
     ? (
         liveResultUrls[selected.id] ??
         (selected.status === "processed"
           ? selected.preview_download_url
           : null) ??
-        completedResultUrl ??
+        completedJob?.download_url ??
         selected.final_download_url ??
         null
       )
     : null;
   const printHeightCm = selected
-    ? (printWidthCm * selected.height) / Math.max(1, selected.width)
+    ? (printWidthCm * resultPixelHeight) / Math.max(1, resultPixelWidth)
     : 0;
   const availablePrintDpi = selected
     ? Math.round(
@@ -632,7 +739,7 @@ export function ImportStage() {
       )
     : null;
   const maximumAt300Dpi = selected
-    ? maximumPrintSizeAtDpi(selected.width, selected.height, 300)
+    ? maximumPrintSizeAtDpi(resultPixelWidth, resultPixelHeight, 300)
     : null;
   const dpiTone =
     availablePrintDpi && availablePrintDpi > 0
@@ -672,7 +779,7 @@ export function ImportStage() {
             <div className="asset-meta">
               <div><strong>{selected.name}</strong><span>{formatBytes(selected.byte_size)}</span></div>
               <dl>
-                <div><dt>Pixels</dt><dd>{selected.width} × {selected.height}</dd></div>
+                <div><dt>Pixels</dt><dd>{completedUpscaleReport ? `${selected.width} × ${selected.height} → ${resultPixelWidth} × ${resultPixelHeight}` : `${selected.width} × ${selected.height}`}</dd></div>
                 <div><dt>Format</dt><dd>{selected.mime_type.replace("image/", "").toUpperCase()}</dd></div>
                 <div><dt>Transparence</dt><dd>{selected.has_transparency ? "Présente" : "Absente"}</dd></div>
                 <div><dt>DPI intégré</dt><dd>{embeddedDpi}</dd></div>
@@ -686,7 +793,7 @@ export function ImportStage() {
                     : `300 DPI jusqu’à ${maximumAt300Dpi?.widthCm.toFixed(1)} × ${maximumAt300Dpi?.heightCm.toFixed(1)} cm`}
                 </strong>
                 <small>
-                  Calcul réel à partir des {selected.width} × {selected.height} pixels.
+                  Calcul réel à partir des {resultPixelWidth} × {resultPixelHeight} pixels.
                   {" Ajustez la largeur ci-dessous : le ratio original reste verrouillé."}
                 </small>
               </div>
