@@ -263,14 +263,10 @@
   }
 
   function initialApiUrl() {
-    var saved = localStorage.getItem("printellyBackgroundApi");
-    var isLocalPage = /^(localhost|127\\.0\\.0\\.1)$/.test(window.location.hostname);
-    if (saved !== null) {
-      var savedIsLocal = /^http:\/\/(localhost|127\\.0\\.0\\.1):8000$/.test(saved);
-      if (!isLocalPage && savedIsLocal) return window.location.origin;
-      return saved;
+    if (window.PrintellyBackgroundApi && window.PrintellyBackgroundApi.productionEndpoint) {
+      return window.PrintellyBackgroundApi.productionEndpoint;
     }
-    return window.location.origin || "http://localhost:8000";
+    return "https://jitxplfujyypfepiajgz.supabase.co/functions/v1/printelly-background-removal";
   }
 
   function setMessage(text, type) {
@@ -284,22 +280,28 @@
   }
 
   async function testApi() {
-    var url = apiEndpoint("/api/health");
     setApiState("Vérification…", "checking");
     try {
       if (!window.PrintellyBackgroundApi) throw new Error("Client API non chargé.");
       var data = await window.PrintellyBackgroundApi.health(apiBase());
       if (!data.model_loaded) {
-        setApiState("Modèle non prêt", "error");
-        setMessage(data.status || "Le serveur répond, mais le modèle ONNX n’est pas chargé.", "warning");
+        setApiState("PhotoRoom non prêt", "error");
+        setMessage(data.status || "Le service PhotoRoom n’est pas disponible.", "warning");
         return false;
       }
-      setApiState("Moteur prêt • " + data.device.toUpperCase(), "ready");
-      setMessage("Serveur privé connecté. Aucune API d’image externe n’est utilisée.", "success");
+      var available = Number(data.quota && data.quota.available);
+      var quotaText = Number.isFinite(available)
+        ? " • " + available + " crédit" + (available === 1 ? "" : "s") + " disponible" + (available === 1 ? "" : "s")
+        : "";
+      setApiState("PhotoRoom prêt • Cloud", "ready");
+      setMessage(
+        "Proxy Supabase sécurisé connecté" + quotaText + ". Votre clé PhotoRoom reste invisible dans le navigateur.",
+        "success"
+      );
       return true;
     } catch (error) {
-      setApiState("Serveur inaccessible", "error");
-      setMessage("Impossible de joindre " + (url || "/api/health") + ". Lancez le serveur local ou indiquez son adresse HTTPS.", "error");
+      setApiState("Service inaccessible", "error");
+      setMessage(error && error.message ? error.message : "Impossible de joindre le service PhotoRoom sécurisé.", "error");
       return false;
     }
   }
@@ -424,17 +426,17 @@
       return;
     }
     file = normalized;
-    if (file.size > 50 * 1024 * 1024) {
-      setMessage("Le fichier dépasse la limite de 50 Mo.", "error");
+    if (file.size > 10 * 1024 * 1024) {
+      setMessage("Le fichier dépasse la limite publique de 10 Mo.", "error");
       return;
     }
     clearResult(false);
     if (remover.sourceUrl) URL.revokeObjectURL(remover.sourceUrl);
     try {
       var loaded = await loadImageFromBlob(file);
-      if (loaded.image.naturalWidth * loaded.image.naturalHeight > 40000000) {
+      if (loaded.image.naturalWidth > 6000 || loaded.image.naturalHeight > 6000) {
         URL.revokeObjectURL(loaded.url);
-        setMessage("La résolution dépasse 40 mégapixels.", "error");
+        setMessage("PhotoRoom accepte au maximum 6 000 pixels sur le côté le plus large.", "error");
         return;
       }
       remover.file = file;
@@ -698,7 +700,7 @@
       requestTimedOut = true;
       if (remover.abortController) remover.abortController.abort();
     }, 315000));
-    remover.progressTimers.push(setTimeout(function () { stage("segment", "active"); setMessage("Le modèle local détecte le sujet et ses détails…", ""); }, 350));
+    remover.progressTimers.push(setTimeout(function () { stage("segment", "active"); setMessage("PhotoRoom détecte le sujet, les cheveux et les contours…", ""); }, 350));
     remover.progressTimers.push(setTimeout(function () { stage("refine", "active"); setMessage("Récupération du fond, de l’alpha et des micro-détails…", ""); }, 1800));
 
     try {
@@ -720,7 +722,7 @@
       var loaded = await loadImageFromBlob(blob);
       if (loaded.image.naturalWidth !== remover.sourceImage.naturalWidth || loaded.image.naturalHeight !== remover.sourceImage.naturalHeight) {
         URL.revokeObjectURL(loaded.url);
-        throw new Error("Le serveur a modifié les dimensions de l’image.");
+        throw new Error("Le service a modifié les dimensions de l’image.");
       }
       remover.resultBlob = blob;
       remover.resultImage = loaded.image;
@@ -763,7 +765,7 @@
       if (error.name === "AbortError") {
         setMessage(
           requestTimedOut
-            ? "Le serveur n’a pas terminé dans le délai prévu. L’image originale reste disponible; vérifiez les journaux Docker avant de réessayer."
+            ? "PhotoRoom n’a pas terminé dans le délai prévu. L’image originale reste disponible; réessayez dans quelques instants."
             : "Traitement annulé. L’image originale est toujours disponible.",
           "warning"
         );
