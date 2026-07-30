@@ -27,7 +27,7 @@ import {
   streamJobEvents,
   uploadAsset,
 } from "@/lib/api";
-import type { Asset, ProcessingJob, RemovalMode } from "@/lib/types";
+import type { Asset } from "@/lib/types";
 import { useStudio } from "@/store/studio";
 
 const backgroundProvider =
@@ -35,22 +35,6 @@ const backgroundProvider =
 const externalRemovalProvider = backgroundProvider !== "local";
 const externalProviderLabel =
   backgroundProvider === "photoroom" ? "PhotoRoom API payante" : "remove.bg API payante";
-
-const modes: Array<{ value: RemovalMode; label: string; detail: string }> = [
-  { value: "automatic", label: "Automatique", detail: "Le moteur recommande le meilleur profil" },
-  { value: "person_hair", label: "Personne et cheveux", detail: "Mèches, barbe, visage et vêtements" },
-  { value: "logo_text", label: "Logo et texte", detail: "Blanc interne et typographies protégés" },
-  { value: "complex_illustration", label: "Illustration complexe", detail: "Couleurs et contours fins" },
-  { value: "product", label: "Objet ou produit", detail: "Volumes et ombres maîtrisées" },
-  { value: "white_background", label: "Fond blanc", detail: "Réduction des halos clairs" },
-  { value: "black_background", label: "Fond noir", detail: "Détails sombres protégés" },
-  { value: "gray_background", label: "Fond gris", detail: "Contours et gris internes préservés" },
-  { value: "colored_background", label: "Fond coloré", detail: "Connectivité et couleur dominante" },
-  { value: "clean_transparent", label: "Déjà transparent", detail: "Nettoyage sans détériorer l’alpha existant" },
-  { value: "preserve_shadows", label: "Préserver les ombres", detail: "Transparence douce et ombres utiles" },
-  { value: "remove_shadows", label: "Supprimer les ombres", detail: "Sujet net sans ombre extérieure" },
-  { value: "dtf_high_precision", label: "DTF haute précision", detail: "Préservation maximale du design" },
-];
 
 function waitForNextPoll(signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -75,10 +59,16 @@ function formatBytes(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} Mo`;
 }
 
-function AssetPreview({ asset }: { asset: Asset }) {
-  const [position, setPosition] = useState(asset.final_download_url ? 100 : 0);
+function AssetPreview({
+  asset,
+  resultUrl,
+}: {
+  asset: Asset;
+  resultUrl: string | null;
+}) {
+  const [position, setPosition] = useState(resultUrl ? 100 : 0);
   const original = asset.original_download_url;
-  const result = asset.final_download_url;
+  const result = resultUrl;
 
   useEffect(() => {
     setPosition(result ? 100 : 0);
@@ -292,7 +282,6 @@ function Library() {
 
 function ProcessingPanel({ asset }: { asset: Asset }) {
   const queryClient = useQueryClient();
-  const mode = useStudio((state) => state.mode);
   const setMode = useStudio((state) => state.setMode);
   const jobs = useStudio((state) => state.jobs);
   const setJob = useStudio((state) => state.setJob);
@@ -305,17 +294,20 @@ function ProcessingPanel({ asset }: { asset: Asset }) {
     [asset.id, jobs],
   );
 
-  useEffect(() => () => streamController.current?.abort(), []);
+  useEffect(() => {
+    setMode("automatic");
+    return () => streamController.current?.abort();
+  }, [setMode]);
 
   async function start() {
     setError("");
     try {
-      const created = await createBackgroundJob(asset.id, mode, {
+      const created = await createBackgroundJob(asset.id, "automatic", {
         protect_details: true,
         remove_haze: true,
         decontaminate: true,
         cleanup: "normal",
-        black_background_mode: mode === "black_background" ? "smart" : "off",
+        black_background_mode: "off",
       });
       setJob(created);
       const controller = new AbortController();
@@ -344,6 +336,13 @@ function ProcessingPanel({ asset }: { asset: Asset }) {
       const completed = await getJob(created.id);
       setJob(completed);
       if (completed.state === "completed") {
+        if (completed.download_url) {
+          patchAsset(asset.id, {
+            final_download_url: completed.download_url,
+            status: "processed",
+            updated_at: completed.updated_at,
+          });
+        }
         const refreshed = await apiFetch<Asset>(`/assets/${asset.id}`);
         patchAsset(asset.id, {
           ...refreshed,
@@ -374,12 +373,16 @@ function ProcessingPanel({ asset }: { asset: Asset }) {
           Les couleurs et dimensions originales restent préservées localement.
         </p>
       )}
-      <div className="mode-grid">
-        {modes.map((item) => (
-          <button type="button" key={item.value} className={mode === item.value ? "active" : ""} onClick={() => setMode(item.value)}>
-            <strong>{item.label}</strong><small>{item.detail}</small>
-          </button>
-        ))}
+      <div className="mode-grid automatic-only">
+        <button
+          type="button"
+          className="active"
+          aria-pressed="true"
+          onClick={() => setMode("automatic")}
+        >
+          <strong>Automatique</strong>
+          <small>PhotoRoom détecte automatiquement le sujet et ses contours.</small>
+        </button>
       </div>
       {job && !["completed", "failed", "cancelled"].includes(job.state) ? (
         <div className="job-progress" aria-live="polite">
@@ -415,7 +418,24 @@ export function ImportStage() {
   const setTab = useStudio((state) => state.setTab);
   const assets = useStudio((state) => state.assets);
   const selectedAssetId = useStudio((state) => state.selectedAssetId);
+  const jobs = useStudio((state) => state.jobs);
   const selected = assets.find((asset) => asset.id === selectedAssetId) ?? assets[0];
+  const completedResultUrl = useMemo(() => {
+    if (!selected) return null;
+    return (
+      Object.values(jobs)
+        .filter(
+          (job) =>
+            job.asset_id === selected.id &&
+            job.state === "completed" &&
+            Boolean(job.download_url),
+        )
+        .sort((left, right) => right.updated_at.localeCompare(left.updated_at))[0]
+        ?.download_url ?? null
+    );
+  }, [jobs, selected]);
+  const selectedResultUrl =
+    completedResultUrl ?? selected?.final_download_url ?? null;
   return (
     <section className="stage-card" aria-labelledby="import-title">
       <div className="stage-heading">
@@ -435,8 +455,9 @@ export function ImportStage() {
         <div className="selected-workspace">
           <div className="asset-inspector">
             <AssetPreview
-              key={`${selected.id}:${selected.final_download_url ?? "original"}:${selected.updated_at}`}
+              key={`${selected.id}:${selectedResultUrl ?? "original"}:${selected.updated_at}`}
               asset={selected}
+              resultUrl={selectedResultUrl}
             />
             <div className="asset-meta">
               <div><strong>{selected.name}</strong><span>{formatBytes(selected.byte_size)}</span></div>
