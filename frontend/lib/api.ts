@@ -13,6 +13,24 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api/v1";
 const SESSION_KEY = "transferlab-background-studio-guest";
 let sessionPromise: Promise<string> | null = null;
 
+function networkFailure(cause: unknown): Error {
+  if (cause instanceof Error && cause.name === "AbortError") return cause;
+  return new Error(
+    "Connexion à l’API TransferLab impossible. Vérifiez que les services api, worker et nginx sont actifs.",
+  );
+}
+
+async function fetchWithDiagnostics(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch (cause) {
+    throw networkFailure(cause);
+  }
+}
+
 type GuestSession = {
   id: string;
   token: string;
@@ -29,7 +47,7 @@ export async function ensureGuestToken(): Promise<string> {
   const existing = storage?.getItem(SESSION_KEY);
   if (existing) return existing;
   if (!sessionPromise) {
-    sessionPromise = fetch(`${API_BASE}/sessions/guest`, {
+    sessionPromise = fetchWithDiagnostics(`${API_BASE}/sessions/guest`, {
       method: "POST",
       headers: { Accept: "application/json" },
     })
@@ -65,7 +83,7 @@ export async function apiFetch<T>(
   if (init.body instanceof Blob && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/octet-stream");
   }
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetchWithDiagnostics(`${API_BASE}${path}`, {
     ...init,
     headers,
     cache: "no-store",
@@ -209,7 +227,7 @@ export async function streamJobEvents(
   signal?: AbortSignal,
 ): Promise<void> {
   const token = await ensureGuestToken();
-  const response = await fetch(`${API_BASE}/background-removal/jobs/${jobId}/events`, {
+  const response = await fetchWithDiagnostics(`${API_BASE}/background-removal/jobs/${jobId}/events`, {
     headers: { Accept: "text/event-stream", "X-Guest-Token": token },
     signal,
     cache: "no-store",
