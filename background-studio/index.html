@@ -35,7 +35,8 @@
       <span><strong>PRINTELLY</strong><small>TRANSFERLAB</small></span>
     </a>
     <div class="br-standalone-actions">
-      <span class="connection-badge online">COMPTE PRINTELLY • ACCÈS SÉCURISÉ</span>
+      <a id="studioCreditsBadge" class="connection-badge online" href="../studio-packs/">CRÉDITS • VÉRIFICATION…</a>
+      <a class="secondary" href="../studio-packs/">PACKS</a>
       <a class="secondary" href="../">ESPACE CLIENT</a>
     </div>
   </header>
@@ -59,7 +60,7 @@
                 <div class="br-section-head"><span>01</span><div><h3>PhotoRoom sécurisé</h3><p>Proxy Supabase sans Docker et sans clé dans le navigateur</p></div></div>
                 <input id="brApiUrl" type="hidden" value="https://jitxplfujyypfepiajgz.supabase.co/functions/v1/printelly-background-removal">
                 <div class="br-api-row"><span id="brApiStatus" class="br-status" data-state="checking">Vérification…</span><button id="brTestApi" class="secondary" type="button">TESTER</button></div>
-                <p class="br-help">Le compteur vérifie votre quota PhotoRoom. Seuls les clients PRINTELLY connectés peuvent lancer un traitement.</p>
+                <p class="br-help">Le compteur affiche vos crédits Studio IA. Un crédit est réservé pendant le traitement, consommé uniquement si le PNG est valide et restitué en cas d’échec.</p>
               </section>
 
               <section class="br-control-section">
@@ -317,6 +318,7 @@
   </main>
 
   <script src="../background-removal-api.js" defer></script>
+  <script src="../studio-credit-badge.js" defer></script>
   <script src="../background-color-selection.js" defer></script>
   <script src="../background-quality.js" defer></script>
   <script src="../background-print-export.js" defer></script>
