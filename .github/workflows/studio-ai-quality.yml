@@ -9,6 +9,8 @@ on:
       - "background-*.css"
       - "background-studio/**"
       - "studio-*.js"
+      - "studio-*.css"
+      - "tools/**"
       - "supabase/**"
       - "tests/**"
       - "sw.js"
@@ -20,6 +22,8 @@ on:
       - "background-*.css"
       - "background-studio/**"
       - "studio-*.js"
+      - "studio-*.css"
+      - "tools/**"
       - "supabase/**"
       - "tests/**"
       - "sw.js"
@@ -36,10 +40,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - run: npm install --ignore-scripts --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run test:frontend
       - run: node --test tests/studio-pages-contract.test.mjs
+      - name: Auditer le thème Studio AI
+        run: |
+          python tools/audit_studio_theme.py --json dist/studio-theme-audit.json
+          python tools/check_css_contrast.py --json dist/studio-contrast-report.json
+          python tools/check_studio_layout.py --json dist/studio-layout-report.json
       - name: Publier le résultat de validation
         if: github.event_name == 'push'
         shell: bash
@@ -48,9 +60,9 @@ jobs:
           printf '{\n  "success": true,\n  "commit": "%s",\n  "generated_at": "%s"\n}\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/studio-ai-quality-status.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add dist/studio-ai-quality-status.json
+          git add dist/studio-ai-quality-status.json dist/studio-theme-audit.json dist/studio-contrast-report.json dist/studio-layout-report.json
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "Publie le résultat des tests Studio AI"
+          git commit -m "Publie le rapport qualité du Studio AI"
           git push

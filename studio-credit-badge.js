@@ -13,15 +13,33 @@
   }
 
   if (!document.getElementById("bgRemoverView")) return;
-  var style = document.createElement("link");
-  style.rel = "stylesheet";
-  style.href = "../studio-pro-upgrade.css";
-  style.id = "studioProUpgradeStyles";
-  document.head.appendChild(style);
+  document.documentElement.style.colorScheme = "dark";
+  document.body.classList.add("br-pro-upgraded", "br-legendary-theme");
 
-  var script = document.createElement("script");
-  script.src = "../studio-pro-upgrade.js";
-  script.async = false;
-  script.id = "studioProUpgradeScript";
-  document.head.appendChild(script);
+  function loadStyle(href, id) {
+    if (document.getElementById(id)) return;
+    var style = document.createElement("link");
+    style.rel = "stylesheet";
+    style.href = href;
+    style.id = id;
+    document.head.appendChild(style);
+  }
+
+  function loadScript(src, id, onload) {
+    if (document.getElementById(id)) {
+      if (onload) onload();
+      return;
+    }
+    var script = document.createElement("script");
+    script.src = src;
+    script.async = false;
+    script.id = id;
+    if (onload) script.addEventListener("load", onload, { once: true });
+    document.head.appendChild(script);
+  }
+
+  loadStyle("../studio-pro-upgrade.css", "studioProUpgradeStyles");
+  loadScript("../studio-pro-upgrade.js", "studioProUpgradeScript", function () {
+    loadScript("../studio-legendary-ui.js", "studioLegendaryUiScript");
+  });
 })();
