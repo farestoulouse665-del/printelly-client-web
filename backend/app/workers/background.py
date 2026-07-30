@@ -173,8 +173,9 @@ def process_background_job(job_id: str) -> dict:
                 return {"state": "cancelled"}
 
             provider, pipeline = get_runtime()
-            # A paid remote request is made once per design. Its returned alpha
-            # is resized locally when the provider limits output resolution.
+            # Background removal performs one paid remote request when a remote
+            # provider is selected. PhotoRoom upscale is a separate, explicit
+            # request and is never triggered when upscale_mode is "off".
             use_tiles = (
                 settings.background_provider == "local"
                 and pixels >= settings.large_image_threshold_pixels
