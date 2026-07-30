@@ -1,4 +1,4 @@
-const CACHE="printelly-client-v44";
+const CACHE="printelly-client-v45";
 const ASSETS=["./","./index.html","./styles.css","./background-remover.css","./app.js","./background-removal-api.js","./background-color-selection.js","./background-quality.js","./background-print-export.js","./background-remover.js","./background-studio/","./background-studio/index.html","./background-studio/standalone.css","./manifest.webmanifest"];
 self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS))));
 self.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))));
