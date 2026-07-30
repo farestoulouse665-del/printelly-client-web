@@ -731,8 +731,8 @@ export function ImportStage() {
   const availablePrintDpi = selected
     ? Math.round(
         dpiForPrintSize(
-          selected.width,
-          selected.height,
+          resultPixelWidth,
+          resultPixelHeight,
           printWidthCm,
           printHeightCm,
         ),
