@@ -27,6 +27,7 @@ class Settings:
     app_name: str = "TransferLab"
     api_version: str = "v1"
 
+    background_provider: str = os.getenv("BACKGROUND_PROVIDER", "local").strip().lower()
     model_path: Path = Path(os.getenv("BACKGROUND_MODEL_PATH", "/models/background-removal.onnx"))
     model_sha256: str = os.getenv("BACKGROUND_MODEL_SHA256", "").strip().lower()
     model_name: str = os.getenv("BACKGROUND_MODEL_NAME", "BiRefNet-general")
@@ -34,6 +35,13 @@ class Settings:
     device: str = os.getenv("BACKGROUND_DEVICE", "auto").strip().lower()
     model_input_size: int = _int("BACKGROUND_MODEL_INPUT_SIZE", 1024)
     onnx_intra_op_threads: int = _int("ONNX_INTRA_OP_THREADS", 0)
+    removebg_api_key: str = os.getenv("REMOVEBG_API_KEY", "").strip()
+    removebg_api_url: str = os.getenv(
+        "REMOVEBG_API_URL",
+        "https://api.remove.bg/v1.0/removebg",
+    ).strip()
+    removebg_size: str = os.getenv("REMOVEBG_SIZE", "auto").strip().lower()
+    removebg_timeout_seconds: int = _int("REMOVEBG_TIMEOUT_SECONDS", 180)
     max_concurrent_jobs: int = _int("MAX_CONCURRENT_JOBS", 1)
     tile_size: int = _int("INFERENCE_TILE_SIZE", 2048)
     tile_overlap: int = _int("INFERENCE_TILE_OVERLAP", 192)
@@ -113,6 +121,12 @@ class Settings:
             raise RuntimeError(
                 "SIGNING_SECRET et ADMIN_TOKEN doivent être définis en production."
             )
+        if self.background_provider not in {"local", "removebg"}:
+            raise RuntimeError("BACKGROUND_PROVIDER doit valoir local ou removebg.")
+        if self.background_provider == "removebg":
+            if not self.removebg_api_key:
+                raise RuntimeError("REMOVEBG_API_KEY doit être définie en production.")
+            return
         if (
             len(self.model_sha256) != 64
             or any(character not in "0123456789abcdef" for character in self.model_sha256)
