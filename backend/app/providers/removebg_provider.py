@@ -62,6 +62,7 @@ class RemoveBgProvider:
         self.load()
         source = BytesIO()
         image.convert("RGBA").save(source, format="PNG", optimize=False)
+        source.seek(0)
         try:
             with httpx.Client(
                 timeout=httpx.Timeout(self.config.removebg_timeout_seconds),
@@ -71,7 +72,7 @@ class RemoveBgProvider:
                 response = client.post(
                     self.config.removebg_api_url,
                     headers={"X-Api-Key": self.config.removebg_api_key},
-                    files={"image_file": ("transferlab-source.png", source.getvalue(), "image/png")},
+                    files={"image_file": ("transferlab-source.png", source, "image/png")},
                     data={
                         "size": self.config.removebg_size,
                         "format": "png",
