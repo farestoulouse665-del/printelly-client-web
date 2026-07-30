@@ -120,12 +120,23 @@ class MaskEditor:
     ) -> bytes:
         with Image.open(BytesIO(base_png)) as base_source:
             base_source.load()
-            base_rgba = np.asarray(base_source.convert("RGBA"), dtype=np.uint8).copy()
+            base_image = base_source.convert("RGBA")
+            base_rgba = np.asarray(base_image, dtype=np.uint8).copy()
         with Image.open(BytesIO(original_payload)) as original_source:
             original_source.load()
-            original_rgba = np.asarray(original_source.convert("RGBA"), dtype=np.uint8)
-        if base_rgba.shape != original_rgba.shape:
-            raise ValueError("Le masque et l’original n’ont pas les mêmes dimensions.")
+            original_image = original_source.convert("RGBA")
+            if original_image.size != base_image.size:
+                original_ratio = original_image.width / max(1, original_image.height)
+                base_ratio = base_image.width / max(1, base_image.height)
+                if abs(original_ratio - base_ratio) > 0.001:
+                    raise ValueError(
+                        "Le résultat et l’original n’ont pas les mêmes proportions."
+                    )
+                original_image = original_image.resize(
+                    base_image.size,
+                    Image.Resampling.LANCZOS,
+                )
+            original_rgba = np.asarray(original_image, dtype=np.uint8).copy()
 
         alpha = base_rgba[:, :, 3].astype(np.float32) / 255.0
         original_alpha = original_rgba[:, :, 3].astype(np.float32) / 255.0
