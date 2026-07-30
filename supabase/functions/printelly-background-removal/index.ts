@@ -92,37 +92,28 @@ async function rpc(name: string, body: JsonRecord): Promise<JsonRecord> {
 }
 
 async function account(userId: string): Promise<JsonRecord> {
-  const [walletRows, subscriptionRows] = await Promise.all([
-    service("/rest/v1/studio_credit_wallets?select=available_credits,reserved_credits,consumed_credits,expired_credits&user_id=eq." + userId),
-    service("/rest/v1/studio_subscriptions?select=id,plan_snapshot,status,starts_at,expires_at&user_id=eq." + userId + "&status=in.(active,expiring_soon)&order=activated_at.desc&limit=1"),
-  ]);
-  const wallet = (walletRows as JsonRecord[])?.[0] || {};
-  const subscription = (subscriptionRows as JsonRecord[])?.[0] || null;
-  return {
-    available: Number(wallet.available_credits || 0),
-    reserved: Number(wallet.reserved_credits || 0),
-    consumed: Number(wallet.consumed_credits || 0),
-    subscription,
-  };
+  return await rpc("studio_entitlement_status", { p_user_id: userId });
 }
 
-function mapAccessError(error: unknown): { status: number; detail: string } {
+function mapAccessError(error: unknown): { status: number; detail: string; code: string } {
   const raw = error instanceof Error ? error.message : String(error);
   const entries: Array<[string, number, string]> = [
     ["session_required",401,"Connectez-vous à votre espace PRINTELLY."],
     ["session_invalid",401,"Votre session PRINTELLY a expiré."],
+    ["trial_exhausted",402,"Votre essai gratuit est terminé. Choisissez un pack Studio AI pour continuer."],
+    ["trial_disabled",402,"L’essai gratuit n’est pas disponible. Choisissez un pack Studio AI."],
     ["active_pack_required",402,"Aucun pack Studio IA actif. Choisissez un pack avant de continuer."],
     ["credit_required",402,"Vous n’avez plus de crédits Studio IA."],
     ["credit_batch_required",402,"Aucun crédit valide n’est disponible."],
-    ["file_too_large_for_plan",413,"Cette image dépasse la taille autorisée par votre pack."],
-    ["resolution_too_large_for_plan",413,"Cette image dépasse la résolution autorisée par votre pack."],
+    ["file_too_large_for_plan",413,"Cette image dépasse la taille autorisée par votre accès Studio AI."],
+    ["resolution_too_large_for_plan",413,"Cette image dépasse la résolution autorisée par votre accès Studio AI."],
     ["format_not_allowed",415,"Ce format n’est pas autorisé par Studio IA."],
-    ["batch_not_allowed",403,"Votre pack n’autorise pas le traitement par lots."],
-    ["batch_limit_exceeded",403,"Ce lot dépasse la limite de votre pack."],
-    ["concurrency_limit_reached",429,"La limite de traitements simultanés de votre pack est atteinte."],
+    ["batch_not_allowed",403,"Votre accès n’autorise pas le traitement par lots."],
+    ["batch_limit_exceeded",403,"Ce lot dépasse la limite de votre accès."],
+    ["concurrency_limit_reached",429,"La limite de traitements simultanés est atteinte."],
   ];
-  for (const [key,status,detail] of entries) if (raw.includes(key)) return { status, detail };
-  return { status: 503, detail: "Le contrôle de votre pack Studio IA est momentanément indisponible." };
+  for (const [key,status,detail] of entries) if (raw.includes(key)) return { status, detail, code: key };
+  return { status: 503, detail: "Le contrôle de votre accès Studio IA est momentanément indisponible.", code: "entitlement_unavailable" };
 }
 
 async function sha256(value: string): Promise<string> {
@@ -236,7 +227,7 @@ Deno.serve(async (req: Request) => {
   try { userId = await authenticatedUser(req); }
   catch (error) {
     const mapped = mapAccessError(error);
-    return json(origin, mapped.status, { detail: mapped.detail });
+    return json(origin, mapped.status, { detail: mapped.detail, code: mapped.code });
   }
 
   const apiKey = Deno.env.get("PHOTOROOM_API_KEY");
@@ -246,18 +237,32 @@ Deno.serve(async (req: Request) => {
     try {
       const studio = await account(userId);
       const subscription = studio.subscription as JsonRecord | null;
+      const plan = (studio.plan || {}) as JsonRecord;
       return json(origin, 200, {
-        status: subscription ? "ready" : "pack_required",
+        status: studio.access_allowed ? "ready" : "pack_required",
         model_loaded: true,
         device: "cloud",
         model_name: "PhotoRoom Remove Background API",
         provider: "photoroom",
         privacy: "La clé reste dans Supabase. L’image est transmise à PhotoRoom uniquement pour le détourage.",
+        entitlement: {
+          access_allowed: Boolean(studio.access_allowed),
+          access_reason: String(studio.access_reason || "trial_exhausted"),
+          trial_available: Number(studio.trial_available || 0),
+          trial_consumed: Number(studio.trial_consumed || 0),
+          trial_granted: Boolean(studio.trial_granted),
+          paid_available: Number(studio.paid_available || 0),
+          subscription_active: Boolean(subscription),
+        },
         quota: {
-          available: studio.available,
-          reserved: studio.reserved,
-          plan: subscription ? String((subscription.plan_snapshot as JsonRecord)?.name || "Studio IA") : "Aucun pack actif",
+          available: Number(studio.available || 0),
+          reserved: Number(studio.reserved || 0),
+          plan: String(plan.name || (studio.access_reason === "trial_available" ? "Essai gratuit" : subscription ? "Studio IA" : "Aucun pack actif")),
           expires_at: subscription?.expires_at || null,
+          access_allowed: Boolean(studio.access_allowed),
+          access_reason: String(studio.access_reason || "trial_exhausted"),
+          trial_available: Number(studio.trial_available || 0),
+          paid_available: Number(studio.paid_available || 0),
         },
       });
     } catch {
@@ -300,7 +305,7 @@ Deno.serve(async (req: Request) => {
     });
   } catch (error) {
     const mapped = mapAccessError(error);
-    return json(origin, mapped.status, { detail: mapped.detail, request_id: requestId }, { "x-request-id": requestId });
+    return json(origin, mapped.status, { detail: mapped.detail, code: mapped.code, request_id: requestId }, { "x-request-id": requestId });
   }
 
   const jobId = String(reservation.job_id || "");
