@@ -17,6 +17,7 @@ export type Asset = {
   created_at: string;
   updated_at: string;
   original_download_url: string | null;
+  preview_download_url: string | null;
   final_download_url: string | null;
 };
 
