@@ -372,8 +372,16 @@ function Library() {
             onClick={() => selectAsset(asset.id)}
           >
             <span className="library-thumb checkerboard">
-              {asset.final_download_url || asset.original_download_url ? (
-                <img src={asset.final_download_url ?? asset.original_download_url ?? ""} alt="" />
+              {asset.preview_download_url || asset.final_download_url || asset.original_download_url ? (
+                <img
+                  src={
+                    asset.preview_download_url ??
+                    asset.final_download_url ??
+                    asset.original_download_url ??
+                    ""
+                  }
+                  alt=""
+                />
               ) : <FileImage />}
             </span>
             <span><strong>{asset.name}</strong><small>{asset.width} × {asset.height} px</small></span>
@@ -456,8 +464,10 @@ function ProcessingPanel({
         const refreshed = await apiFetch<Asset>(`/assets/${asset.id}`);
         const finalResultUrl =
           refreshed.final_download_url ?? completed.download_url;
-        if (finalResultUrl) {
-          onResultReady(asset.id, finalResultUrl);
+        const previewResultUrl =
+          refreshed.preview_download_url ?? finalResultUrl;
+        if (previewResultUrl) {
+          onResultReady(asset.id, previewResultUrl);
         }
         patchAsset(asset.id, {
           ...refreshed,
@@ -550,8 +560,10 @@ export function ImportStage() {
       window.setTimeout(() => {
         void apiFetch<Asset>(`/assets/${assetId}`)
           .then((refreshed) => {
-            if (refreshed.final_download_url) {
-              registerResult(assetId, refreshed.final_download_url);
+            const refreshedResultUrl =
+              refreshed.preview_download_url ?? refreshed.final_download_url;
+            if (refreshedResultUrl) {
+              registerResult(assetId, refreshedResultUrl);
             }
           })
           .catch(() => {
@@ -578,6 +590,9 @@ export function ImportStage() {
   const selectedResultUrl = selected
     ? (
         liveResultUrls[selected.id] ??
+        (selected.status === "processed"
+          ? selected.preview_download_url
+          : null) ??
         completedResultUrl ??
         selected.final_download_url ??
         null
