@@ -20,8 +20,17 @@ if ($backgroundProvider -eq "removebg") {
     if (-not $apiKeyLine) {
         throw "REMOVEBG_API_KEY est absente dans .env."
     }
-} elseif (-not (Test-Path -LiteralPath "models/background-removal.onnx")) {
-    throw "Modèle absent: models/background-removal.onnx. Consultez la section Modèle local du README."
+} elseif ($backgroundProvider -eq "photoroom") {
+    $apiKeyLine = Get-Content -LiteralPath ".env" | Where-Object { $_ -match "^\s*PHOTOROOM_API_KEY\s*=\s*\S+" } | Select-Object -Last 1
+    if (-not $apiKeyLine) {
+        throw "PHOTOROOM_API_KEY est absente dans .env."
+    }
+} elseif ($backgroundProvider -eq "local") {
+    if (-not (Test-Path -LiteralPath "models/background-removal.onnx")) {
+        throw "Modèle absent: models/background-removal.onnx. Consultez la section Modèle local du README."
+    }
+} else {
+    throw "BACKGROUND_PROVIDER doit valoir local, removebg ou photoroom."
 }
 
 docker version | Out-Null
