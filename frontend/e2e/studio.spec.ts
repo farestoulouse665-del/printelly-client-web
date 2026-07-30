@@ -33,7 +33,7 @@ test("the standalone studio exposes one complete background-removal facade", asy
   ).toBeVisible();
   await expect(page.getByText("TOUT DANS UNE SEULE FAÇADE", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /Parcourir/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Images de cette session" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Images de cette session" })).toBeVisible();
   await expect(page.getByText(/Aucune inscription nécessaire/i)).toBeVisible();
   await expect(page.getByRole("link", { name: /Se connecter/i })).toHaveCount(0);
   await expect(page.getByRole("link", { name: /Administration/i })).toHaveCount(0);
