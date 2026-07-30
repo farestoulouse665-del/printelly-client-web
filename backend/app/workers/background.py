@@ -127,7 +127,7 @@ def _make_preview(png: bytes, maximum: int = 1400) -> bytes:
 
 
 def process_background_job(job_id: str) -> dict:
-    """Run the local BiRefNet pipeline and persist every observable state."""
+    """Run the configured provider and persist every observable state."""
     image: Image.Image | None = None
     tiled_provider: TiledInferenceEngine | None = None
     with SessionLocal() as database:
@@ -212,14 +212,20 @@ def process_background_job(job_id: str) -> dict:
             if _cancelled(database, job):
                 return {"state": "cancelled"}
 
+            if use_tiles:
+                segmentation_message = "Segmentation BiRefNet ONNX réelle par tuiles…"
+            elif settings.background_provider == "removebg":
+                segmentation_message = "Suppression du fond via l’API remove.bg…"
+            elif settings.background_provider == "photoroom":
+                segmentation_message = "Suppression du fond via l’API PhotoRoom…"
+            else:
+                segmentation_message = "Segmentation BiRefNet ONNX réelle…"
             record_event(
                 database,
                 job,
                 "segmenting",
                 35,
-                "Segmentation BiRefNet ONNX réelle par tuiles…"
-                if use_tiles
-                else "Segmentation BiRefNet ONNX réelle…",
+                segmentation_message,
             )
             result = pipeline.process(
                 image,
