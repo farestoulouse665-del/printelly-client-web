@@ -381,7 +381,7 @@ function ProcessingPanel({ asset }: { asset: Asset }) {
           onClick={() => setMode("automatic")}
         >
           <strong>Automatique</strong>
-          <small>PhotoRoom détecte automatiquement le sujet et ses contours.</small>
+          <small>Le moteur détecte automatiquement le sujet et ses contours.</small>
         </button>
       </div>
       {job && !["completed", "failed", "cancelled"].includes(job.state) ? (
