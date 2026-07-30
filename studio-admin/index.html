@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#10141c">
+  <link rel="stylesheet" href="../studio-packs/styles.css">
+  <link rel="stylesheet" href="./styles.css">
+  <title>PRINTELLY — Administration Studio IA</title>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../"><span class="logo">P</span><span><strong>PRINTELLY Admin</strong><small>STUDIO IA</small></span></a>
+    <nav><button class="nav-tab active" data-tab="payments">Paiements</button><button class="nav-tab" data-tab="plans">Packs</button><button class="nav-tab" data-tab="methods">Coordonnées CCP</button></nav>
+    <button id="refreshBtn" class="ghost">Actualiser</button>
+  </header>
+
+  <main class="admin-main">
+    <section class="admin-hero">
+      <div><p class="eyebrow">CONSOLE SÉCURISÉE</p><h1>Packs et paiements<br><span>Studio IA.</span></h1></div>
+      <div id="adminStats" class="admin-stats"></div>
+    </section>
+
+    <section id="paymentsTab" class="admin-tab">
+      <div class="section-head"><div><p class="eyebrow">FILE DE VÉRIFICATION</p><h2>Paiements manuels à vérifier</h2><p>Un pack reste bloqué tant qu’un administrateur ne confirme pas explicitement le paiement.</p></div></div>
+      <div id="paymentsList" class="admin-list"><div class="loading-card">Chargement sécurisé…</div></div>
+    </section>
+
+    <section id="plansTab" class="admin-tab hidden">
+      <div class="section-head"><div><p class="eyebrow">CATALOGUE DYNAMIQUE</p><h2>Configurer les packs</h2><p>Chaque modification publiée apparaît immédiatement dans l’espace client.</p></div><button id="newPlanBtn" class="primary">Nouveau pack</button></div>
+      <div class="admin-layout"><div id="plansList" class="admin-list"></div>
+        <form id="planForm" class="admin-form hidden">
+          <input name="id" type="hidden">
+          <h3 id="planFormTitle">Nouveau pack</h3>
+          <div class="two"><label>Nom<input name="name" required maxlength="100"></label><label>Identifiant (slug)<input name="slug" required pattern="[a-z0-9-]+"></label></div>
+          <label>Description<textarea name="description" rows="3" maxlength="1500"></textarea></label>
+          <div class="three"><label>Prix DZD<input name="price_dzd" type="number" min="0" step="0.01" required></label><label>Crédits<input name="included_credits" type="number" min="1" required></label><label>Validité (jours)<input name="validity_days" type="number" min="1" required></label></div>
+          <div class="three"><label>Qualité<input name="quality" value="HD"></label><label>Taille max. (Mo)<input name="max_file_mb" type="number" min="1" max="100" value="25"></label><label>Côté max. (px)<input name="max_image_side" type="number" min="256" max="30000" value="12000"></label></div>
+          <div class="three"><label>Simultanés<input name="concurrent_jobs" type="number" min="1" max="20" value="1"></label><label>Lot max.<input name="max_batch_images" type="number" min="1" max="100" value="1"></label><label>Conservation (jours)<input name="retention_days" type="number" min="0" value="7"></label></div>
+          <div class="two"><label>Badge<input name="badge" placeholder="POPULAIRE"></label><label>Ordre<input name="display_order" type="number" value="0"></label></div>
+          <label>Avantages (un par ligne)<textarea name="features_text" rows="4"></textarea></label>
+          <div class="checks"><label><input name="batch_allowed" type="checkbox"> Traitement par lots</label><label><input name="active" type="checkbox" checked> Actif</label><label><input name="available_for_sale" type="checkbox" checked> En vente</label><label><input name="archived" type="checkbox"> Archivé</label></div>
+          <div class="form-actions"><button class="ghost" type="button" data-cancel-form>Annuler</button><button class="primary" type="submit">Enregistrer le pack</button></div>
+          <p id="planMessage" class="form-message"></p>
+        </form>
+      </div>
+    </section>
+
+    <section id="methodsTab" class="admin-tab hidden">
+      <div class="section-head"><div><p class="eyebrow">PAIEMENT MANUEL</p><h2>Coordonnées CCP</h2><p>Ces informations sont lues depuis la base, jamais codées dans le site.</p></div><button id="newMethodBtn" class="primary">Ajouter une méthode</button></div>
+      <div class="admin-layout"><div id="methodsList" class="admin-list"></div>
+        <form id="methodForm" class="admin-form hidden">
+          <input name="id" type="hidden">
+          <h3 id="methodFormTitle">Coordonnées de paiement</h3>
+          <div class="two"><label>Libellé<input name="label" required></label><label>Titulaire<input name="account_holder" required></label></div>
+          <div class="three"><label>Numéro CCP<input name="ccp_number"></label><label>Clé CCP<input name="ccp_key"></label><label>BaridiMob<input name="baridimob_number"></label></div>
+          <label>RIP<input name="rip"></label>
+          <label>Instructions<textarea name="instructions" rows="4"></textarea></label>
+          <div class="three"><label>Délai preuve (h)<input name="proof_deadline_hours" type="number" min="1" value="48"></label><label>Validation moyenne (h)<input name="average_validation_hours" type="number" min="1" value="24"></label><label>Preuve max. (Mo)<input name="max_proof_mb" type="number" min="1" max="50" value="10"></label></div>
+          <div class="checks"><label><input name="active" type="checkbox" checked> Méthode active</label></div>
+          <div class="form-actions"><button class="ghost" type="button" data-cancel-form>Annuler</button><button class="primary" type="submit">Enregistrer</button></div>
+          <p id="methodMessage" class="form-message"></p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="actionDialog">
+    <button class="dialog-close" data-close>×</button>
+    <form id="actionForm">
+      <input name="order_id" type="hidden"><input name="expected_revision" type="hidden"><input name="admin_action" type="hidden">
+      <p class="eyebrow">ACTION ADMINISTRATEUR</p><h2 id="actionTitle">Vérifier le paiement</h2>
+      <div id="actionSummary" class="checkout-summary"></div>
+      <label id="actionReasonLabel">Motif<select name="reason"><option value="">Sélectionner…</option><option>Preuve illisible</option><option>Montant incorrect</option><option>Référence introuvable</option><option>Paiement non reçu</option><option>Preuve déjà utilisée</option><option>Informations incohérentes</option><option>Suspicion de fraude</option><option>Commande expirée</option><option>Autre raison</option></select></label>
+      <label>Note administrateur<textarea name="note" rows="4" maxlength="2000"></textarea></label>
+      <p id="approvalWarning" class="notice hidden"><strong>Confirmation critique :</strong> cette action activera le pack et ajoutera les crédits dans une transaction atomique. Elle ne peut pas être exécutée deux fois.</p>
+      <button id="actionSubmit" class="primary wide" type="submit">Confirmer</button>
+      <p id="actionMessage" class="form-message"></p>
+    </form>
+  </dialog>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="../studio-billing-api.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
