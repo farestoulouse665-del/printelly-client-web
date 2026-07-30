@@ -14,6 +14,7 @@ from app.db.session import SessionLocal
 from app.models.entities import Asset, MaskVersion, ProcessingJob
 from app.models.schemas import BackgroundCleanup, BlackBackgroundMode, RemovalMode
 from app.providers.local_onnx_provider import LocalOnnxProvider
+from app.providers.photoroom_provider import PhotoroomProvider
 from app.providers.removebg_provider import RemoveBgProvider
 from app.providers.tiled_inference import TiledInferenceEngine
 from app.services.background_removal import BackgroundRemovalPipeline
@@ -23,7 +24,7 @@ from app.storage.local import storage
 
 
 logger = logging.getLogger("transferlab.worker")
-RuntimeProvider = LocalOnnxProvider | RemoveBgProvider
+RuntimeProvider = LocalOnnxProvider | RemoveBgProvider | PhotoroomProvider
 
 
 _provider: RuntimeProvider | None = None
@@ -74,10 +75,14 @@ def get_runtime() -> tuple[RuntimeProvider, BackgroundRemovalPipeline]:
     if _provider is None or _pipeline is None:
         if settings.background_provider == "removebg":
             provider: RuntimeProvider = RemoveBgProvider(settings)
+        elif settings.background_provider == "photoroom":
+            provider = PhotoroomProvider(settings)
         elif settings.background_provider == "local":
             provider = LocalOnnxProvider(settings)
         else:
-            raise RuntimeError("BACKGROUND_PROVIDER doit valoir local ou removebg.")
+            raise RuntimeError(
+                "BACKGROUND_PROVIDER doit valoir local, removebg ou photoroom."
+            )
         provider.load()
         _provider = provider
         _pipeline = BackgroundRemovalPipeline(
