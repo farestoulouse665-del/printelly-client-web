@@ -58,3 +58,15 @@ test("credit SQL enforces idempotency and server-only execution", () => {
   assert.match(source, /revoke all on function public\.studio_admin_approve[\s\S]*from public,anon,authenticated/i);
   assert.match(source, /grant execute on function public\.studio_admin_approve[\s\S]*to service_role/i);
 });
+
+
+test("Studio client and admin refresh Supabase automatically", () => {
+  const client = read("studio-packs/app.js");
+  const admin = read("studio-admin/app.js");
+  for (const source of [client, admin]) {
+    assert.match(source, /setInterval/);
+    assert.match(source, /8000/);
+    assert.match(source, /visibilitychange/);
+    assert.match(source, /cache:\s*"no-store"/);
+  }
+});
