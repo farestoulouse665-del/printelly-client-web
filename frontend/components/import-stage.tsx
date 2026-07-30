@@ -46,6 +46,24 @@ const modes: Array<{ value: RemovalMode; label: string; detail: string }> = [
   { value: "dtf_high_precision", label: "DTF haute précision", detail: "Préservation maximale du design" },
 ];
 
+function waitForNextPoll(signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException("Suivi annulé", "AbortError"));
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      signal.removeEventListener("abort", abort);
+      resolve();
+    }, 800);
+    const abort = () => {
+      window.clearTimeout(timeout);
+      reject(new DOMException("Suivi annulé", "AbortError"));
+    };
+    signal.addEventListener("abort", abort, { once: true });
+  });
+}
+
 function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} Ko`;
   return `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} Mo`;
@@ -285,7 +303,27 @@ function ProcessingPanel({ asset }: { asset: Asset }) {
       setJob(created);
       const controller = new AbortController();
       streamController.current = controller;
-      await streamJobEvents(created.id, (event) => applyJobEvent(created.id, event), controller.signal);
+      try {
+        await streamJobEvents(
+          created.id,
+          (event) => applyJobEvent(created.id, event),
+          controller.signal,
+        );
+      } catch (streamError) {
+        if (
+          streamError instanceof Error &&
+          streamError.name === "AbortError"
+        ) {
+          throw streamError;
+        }
+        let snapshot = await getJob(created.id);
+        setJob(snapshot);
+        while (!["completed", "failed", "cancelled"].includes(snapshot.state)) {
+          await waitForNextPoll(controller.signal);
+          snapshot = await getJob(created.id);
+          setJob(snapshot);
+        }
+      }
       const completed = await getJob(created.id);
       setJob(completed);
       if (completed.state === "completed") {
