@@ -427,7 +427,7 @@
     }
     file = normalized;
     if (file.size > 50 * 1024 * 1024) {
-      setMessage("Le fichier dépasse la limite absolue de 50 Mo.", "error");
+      setMessage("Le fichier dépasse la limite de 50 Mo.", "error");
       return;
     }
     clearResult(false);
