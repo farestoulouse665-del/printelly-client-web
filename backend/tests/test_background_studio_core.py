@@ -5,6 +5,7 @@ import json
 from dataclasses import replace
 from io import BytesIO
 
+import httpx
 import numpy as np
 from PIL import Image
 from starlette.datastructures import Headers, UploadFile
@@ -12,6 +13,7 @@ from starlette.datastructures import Headers, UploadFile
 from app.core.config import settings
 from app.models.schemas import RemovalMode
 from app.providers.local_onnx_provider import LocalOnnxProvider
+from app.providers.removebg_provider import RemoveBgProvider
 from app.providers.tiled_inference import TiledInferenceEngine, _tile_starts
 from app.schemas.api import ExportCreateIn, MaskOperationIn, NormalizedPoint
 from app.services.dtf_preflight import DTFPreflightAnalyzer
@@ -262,3 +264,34 @@ def test_resolution_enhancement_is_separate_and_reversible():
         assert original.size == (100, 50)
     with Image.open(BytesIO(doubled_payload)) as doubled:
         assert doubled.size == (200, 100)
+
+
+def test_removebg_provider_uses_remote_alpha_but_preserves_original_dimensions():
+    remote_result = Image.new("RGBA", (2, 2), (220, 10, 90, 0))
+    remote_result.putpixel((1, 1), (220, 10, 90, 255))
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.headers["x-api-key"] == "test-secret"
+        assert request.url == "https://api.remove.bg/v1.0/removebg"
+        return httpx.Response(
+            200,
+            content=_png(remote_result),
+            headers={"content-type": "image/png"},
+        )
+
+    config = replace(
+        settings,
+        background_provider="removebg",
+        removebg_api_key="test-secret",
+        removebg_timeout_seconds=5,
+    )
+    provider = RemoveBgProvider(
+        config,
+        transport=httpx.MockTransport(handler),
+    )
+    source = Image.new("RGB", (12, 8), (12, 80, 180))
+    mask = provider.predict_mask(source, RemovalMode.product)
+    assert mask.shape == (8, 12)
+    assert mask.dtype == np.float32
+    assert float(mask.min()) == 0.0
+    assert float(mask.max()) == 1.0
