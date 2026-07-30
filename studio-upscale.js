@@ -84,7 +84,7 @@
     const maxEdge = Math.max(width, height);
     let scale = 1;
     if (mode === "2x") scale = Math.min(2, MAX_4K_EDGE / maxEdge);
-    else if (mode === "4k") scale = Math.max(1, MAX_4K_EDGE / maxEdge);
+    else if (mode === "4k") scale = MAX_4K_EDGE / maxEdge;
     const outputWidth = Math.max(1, Math.round(width * scale));
     const outputHeight = Math.max(1, Math.round(height * scale));
     return { width: outputWidth, height: outputHeight, scale };
@@ -105,6 +105,19 @@
     ctx.clearRect(0, 0, source.width, source.height);
     ctx.drawImage(bitmap, 0, 0);
     bitmap.close();
+
+    if (source.width > targetWidth || source.height > targetHeight) {
+      const reduced = makeCanvas(targetWidth, targetHeight);
+      ctx = reduced.getContext("2d", { alpha: true });
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.clearRect(0, 0, targetWidth, targetHeight);
+      ctx.drawImage(source, 0, 0, targetWidth, targetHeight);
+      source.width = 1;
+      source.height = 1;
+      await nextFrame();
+      return reduced;
+    }
 
     while (source.width < targetWidth || source.height < targetHeight) {
       const nextWidth = Math.min(targetWidth, Math.max(source.width + 1, Math.round(source.width * 1.75)));
@@ -189,7 +202,7 @@
       state.sourceWidth = output.sourceWidth;
       state.sourceHeight = output.sourceHeight;
       $("studioUpscaleDimensions").textContent = `${output.width} × ${output.height} px`;
-      $("studioUpscaleScale").textContent = output.scale > 1.01 ? `×${output.scale.toFixed(2)}` : "Original optimisé";
+      $("studioUpscaleScale").textContent = output.scale > 1.01 ? `×${output.scale.toFixed(2)}` : output.scale < .99 ? `×${output.scale.toFixed(2)} • limité 4K` : "Original optimisé";
       $("studioUpscaleSize").textContent = formatBytes(output.blob.size);
       setStatus(output.width >= 3840 || output.height >= 3840 ? "4K PRÊT" : "HAUTE QUALITÉ", "good");
       setMessage(`Upscale terminé : ${output.width} × ${output.height} px, alpha PNG conservé.`, "success");
