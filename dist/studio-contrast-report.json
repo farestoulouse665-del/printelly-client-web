@@ -1,0 +1,62 @@
+{
+  "success": true,
+  "checks": [
+    {
+      "label": "Texte principal",
+      "foreground": "#f7fbff",
+      "background": "#070b12",
+      "ratio": 18.95,
+      "minimum": 4.5,
+      "passed": true
+    },
+    {
+      "label": "Texte secondaire",
+      "foreground": "#a9b7c8",
+      "background": "#101824",
+      "ratio": 8.74,
+      "minimum": 4.5,
+      "passed": true
+    },
+    {
+      "label": "Champ de saisie",
+      "foreground": "#f7fbff",
+      "background": "#0b121d",
+      "ratio": 18.06,
+      "minimum": 4.5,
+      "passed": true
+    },
+    {
+      "label": "Bouton principal",
+      "foreground": "#03130d",
+      "background": "#22e0a1",
+      "ratio": 11.1,
+      "minimum": 4.5,
+      "passed": true
+    },
+    {
+      "label": "Avertissement",
+      "foreground": "#211506",
+      "background": "#f7bd59",
+      "ratio": 10.54,
+      "minimum": 4.5,
+      "passed": true
+    },
+    {
+      "label": "Erreur",
+      "foreground": "#20070d",
+      "background": "#ff6f86",
+      "ratio": 7.17,
+      "minimum": 4.5,
+      "passed": true
+    },
+    {
+      "label": "Succès",
+      "foreground": "#03130d",
+      "background": "#22e0a1",
+      "ratio": 11.1,
+      "minimum": 4.5,
+      "passed": true
+    }
+  ],
+  "errors": []
+}

@@ -1,0 +1,17 @@
+{
+  "success": true,
+  "files": [
+    "studio-legendary-theme.css",
+    "background-studio/standalone.css",
+    "studio-legendary-ui.js"
+  ],
+  "variables": 33,
+  "component_hex_colors": 8,
+  "important_count": 7,
+  "duplicate_selector_count": 25,
+  "errors": [],
+  "warnings": [
+    "Sélecteurs dupliqués à surveiller: 25",
+    "Usage élevé de !important: 7"
+  ]
+}
