@@ -10,7 +10,17 @@ if (-not (Test-Path -LiteralPath ".env")) {
     Copy-Item -LiteralPath ".env.example" -Destination ".env"
     Write-Host "Fichier .env créé. Remplacez les secrets et le SHA-256 avant la production."
 }
-if (-not (Test-Path -LiteralPath "models/background-removal.onnx")) {
+$backgroundProvider = "local"
+$providerLine = Get-Content -LiteralPath ".env" | Where-Object { $_ -match "^\s*BACKGROUND_PROVIDER\s*=" } | Select-Object -Last 1
+if ($providerLine) {
+    $backgroundProvider = ($providerLine -split "=", 2)[1].Trim().ToLowerInvariant()
+}
+if ($backgroundProvider -eq "removebg") {
+    $apiKeyLine = Get-Content -LiteralPath ".env" | Where-Object { $_ -match "^\s*REMOVEBG_API_KEY\s*=\s*\S+" } | Select-Object -Last 1
+    if (-not $apiKeyLine) {
+        throw "REMOVEBG_API_KEY est absente dans .env."
+    }
+} elseif (-not (Test-Path -LiteralPath "models/background-removal.onnx")) {
     throw "Modèle absent: models/background-removal.onnx. Consultez la section Modèle local du README."
 }
 
