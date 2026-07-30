@@ -46,3 +46,17 @@ Le commerce Studio IA est isolé dans les tables préfixées `studio_` afin de n
 - Vérification syntaxique JavaScript/TypeScript par la CI.
 - Audit Supabase sécurité et performance après migration.
 - Pull Request séparée, sans fusion automatique.
+
+
+## État d’exécution au 30 juillet 2026
+
+- [x] Branche GitHub séparée créée.
+- [x] Schéma, RLS, bucket privé et expiration planifiée appliqués.
+- [x] Edge Function de facturation déployée avec JWT obligatoire.
+- [x] TransferLab relié à la réservation/consommation/restauration des crédits.
+- [x] Interface client packs, CCP, preuve, statut, renouvellement et reçu.
+- [x] Interface administrateur packs, CCP et décisions de paiement.
+- [x] Navigation, cache PWA, README et validation GitHub Actions mis à jour.
+- [x] Tests transactionnels d’approbation, d’idempotence, de consommation, de remboursement et d’expiration exécutés avec rollback.
+- [ ] Packs commerciaux et coordonnées CCP réelles à saisir par l’administrateur avant ouverture aux clients.
+- [ ] Envoi d’e-mails à connecter à un fournisseur transactionnel si souhaité; les notifications internes sont actives.
