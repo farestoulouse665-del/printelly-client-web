@@ -156,6 +156,18 @@ def test_guest_upload_library_queue_and_cancellation_are_connected():
         assert tampered_order.status_code == 409
         assert "diffèrent du devis" in tampered_order.json()["detail"]
 
+        unsupported_upscale = client.post(
+            "/api/v1/background-removal/jobs",
+            headers=headers,
+            json={
+                "asset_id": asset["id"],
+                "mode": "logo_text",
+                "upscale_mode": "ai.fast",
+            },
+        )
+        assert unsupported_upscale.status_code == 422
+        assert "uniquement avec le fournisseur PhotoRoom" in unsupported_upscale.json()["detail"]
+
         job_response = client.post(
             "/api/v1/background-removal/jobs",
             headers=headers,
