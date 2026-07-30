@@ -296,8 +296,9 @@ button:disabled { cursor: not-allowed; opacity: 0.48; }
 .job-progress > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .job-progress strong { font-size: 11px; }
 .job-progress div span { color: var(--blue); font-size: 11px; font-weight: 900; }
-.inline-error, .action-message { display: flex; align-items: flex-start; gap: 7px; margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; font-size: 11px; line-height: 1.45; }
+.inline-error, .inline-warning, .action-message { display: flex; align-items: flex-start; gap: 7px; margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; font-size: 11px; line-height: 1.45; }
 .inline-error { color: #8f2828; background: rgba(217, 71, 71, 0.08); }
+.inline-warning { color: #75510d; background: rgba(244, 176, 49, 0.12); border: 1px solid rgba(184, 122, 14, 0.2); }
 .action-message { color: #21489c; background: rgba(54, 92, 245, 0.08); }
 
 .search-field { display: flex; height: 46px; align-items: center; gap: 9px; margin-bottom: 16px; padding: 0 13px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
