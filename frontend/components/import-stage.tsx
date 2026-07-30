@@ -30,6 +30,9 @@ import {
 import type { Asset, ProcessingJob, RemovalMode } from "@/lib/types";
 import { useStudio } from "@/store/studio";
 
+const externalRemovalProvider =
+  process.env.NEXT_PUBLIC_BACKGROUND_PROVIDER === "removebg";
+
 const modes: Array<{ value: RemovalMode; label: string; detail: string }> = [
   { value: "automatic", label: "Automatique", detail: "Le moteur recommande le meilleur profil" },
   { value: "person_hair", label: "Personne et cheveux", detail: "Mèches, barbe, visage et vêtements" },
@@ -343,8 +346,16 @@ function ProcessingPanel({ asset }: { asset: Asset }) {
     <div className="processing-panel">
       <div className="mode-header">
         <span><Sparkles size={18} /> Profil de détourage</span>
-        <small>BiRefNet ONNX local</small>
+        <small>
+          {externalRemovalProvider ? "remove.bg API payante" : "BiRefNet ONNX local"}
+        </small>
       </div>
+      {externalRemovalProvider && (
+        <p className="inline-warning">
+          Ce mode transmet l’image à remove.bg et consomme un crédit API.
+          Les couleurs et dimensions originales restent préservées localement.
+        </p>
+      )}
       <div className="mode-grid">
         {modes.map((item) => (
           <button type="button" key={item.value} className={mode === item.value ? "active" : ""} onClick={() => setMode(item.value)}>
