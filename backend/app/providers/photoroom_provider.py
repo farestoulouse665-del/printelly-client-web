@@ -42,8 +42,12 @@ class PhotoroomProvider:
             return "Clé API PhotoRoom invalide ou non autorisée."
         if response.status_code == 402:
             return "Crédits PhotoRoom insuffisants."
+        if response.status_code == 413:
+            return "L’image est trop volumineuse pour PhotoRoom."
         if response.status_code == 429:
             return "Limite PhotoRoom atteinte. Réessayez lorsque le quota est disponible."
+        if response.status_code >= 500:
+            return "PhotoRoom est temporairement indisponible. Réessayez plus tard."
         try:
             payload = response.json()
             detail = payload.get("message") or payload.get("error")
@@ -77,7 +81,11 @@ class PhotoroomProvider:
                             "image/png",
                         )
                     },
-                    data={"format": "png"},
+                    data={
+                        "format": "png",
+                        "channels": "rgba",
+                        "size": "full",
+                    },
                 )
         except httpx.TimeoutException as exc:
             raise RuntimeError("PhotoRoom n’a pas répondu avant le délai configuré.") from exc
@@ -86,6 +94,8 @@ class PhotoroomProvider:
 
         if not response.is_success:
             raise RuntimeError(self._error_message(response))
+        if not response.content:
+            raise RuntimeError("PhotoRoom a retourné une réponse vide.")
         if "image/" not in response.headers.get("content-type", "").lower():
             raise RuntimeError("PhotoRoom n’a pas retourné une image.")
         try:
