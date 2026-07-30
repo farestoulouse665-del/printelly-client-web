@@ -107,13 +107,21 @@ def test_upscale_uses_the_plus_contract_and_preserves_local_alpha():
     assert result.output_height == 8
     assert result.scale_factor == 4
     assert result.alpha_preserved_locally is True
+    with Image.open(BytesIO(source)) as source_image:
+        expected_alpha = np.asarray(
+            source_image.getchannel("A").resize(
+                (8, 8),
+                Image.Resampling.LANCZOS,
+            )
+        )
     with Image.open(BytesIO(result.png)) as image:
         image.load()
         assert image.mode == "RGBA"
         assert image.size == (8, 8)
-        assert image.getpixel((0, 0)) == (0, 0, 0, 0)
-        assert image.getchannel("A").getextrema()[0] == 0
-        assert image.getchannel("A").getextrema()[1] == 255
+        actual = np.asarray(image)
+        assert np.array_equal(actual[:, :, 3], expected_alpha)
+        assert np.all(actual[expected_alpha == 0, :3] == 0)
+        assert image.getchannel("A").getextrema() == (0, 255)
 
 
 @pytest.mark.parametrize(
