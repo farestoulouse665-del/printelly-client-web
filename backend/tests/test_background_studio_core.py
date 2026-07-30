@@ -327,3 +327,23 @@ def test_photoroom_provider_uses_secret_header_and_restores_mask_size():
     assert mask.dtype == np.float32
     assert float(mask.min()) == 0.0
     assert float(mask.max()) == 1.0
+
+
+def test_mask_editor_accepts_an_upscaled_version_with_the_same_ratio():
+    original = Image.new("RGBA", (2, 2), (30, 80, 210, 255))
+    upscaled = Image.new("RGBA", (8, 8), (60, 140, 230, 255))
+    operation = MaskOperationIn(
+        kind="erase_brush",
+        points=[NormalizedPoint(x=0.5, y=0.5)],
+        radius=0.2,
+        hardness=1,
+        opacity=1,
+    )
+
+    result = MaskEditor().apply(_png(upscaled), _png(original), operation)
+
+    with Image.open(BytesIO(result)) as edited:
+        edited.load()
+        assert edited.mode == "RGBA"
+        assert edited.size == (8, 8)
+        assert edited.getpixel((4, 4))[3] == 0
