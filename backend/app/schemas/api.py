@@ -116,6 +116,8 @@ class BackgroundJobCreate(BaseModel):
     edge_shift: int = Field(default=0, ge=-3, le=3)
     background_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
     output_original_size: bool = True
+    high_precision: bool = True
+    upscale_mode: Literal["off", "ai.fast", "ai.slow"] = "off"
 
 
 class JobEventOut(BaseModel):
