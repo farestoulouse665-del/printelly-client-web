@@ -30,8 +30,11 @@ import {
 import type { Asset, ProcessingJob, RemovalMode } from "@/lib/types";
 import { useStudio } from "@/store/studio";
 
-const externalRemovalProvider =
-  process.env.NEXT_PUBLIC_BACKGROUND_PROVIDER === "removebg";
+const backgroundProvider =
+  process.env.NEXT_PUBLIC_BACKGROUND_PROVIDER ?? "local";
+const externalRemovalProvider = backgroundProvider !== "local";
+const externalProviderLabel =
+  backgroundProvider === "photoroom" ? "PhotoRoom API payante" : "remove.bg API payante";
 
 const modes: Array<{ value: RemovalMode; label: string; detail: string }> = [
   { value: "automatic", label: "Automatique", detail: "Le moteur recommande le meilleur profil" },
@@ -347,12 +350,12 @@ function ProcessingPanel({ asset }: { asset: Asset }) {
       <div className="mode-header">
         <span><Sparkles size={18} /> Profil de détourage</span>
         <small>
-          {externalRemovalProvider ? "remove.bg API payante" : "BiRefNet ONNX local"}
+          {externalRemovalProvider ? externalProviderLabel : "BiRefNet ONNX local"}
         </small>
       </div>
       {externalRemovalProvider && (
         <p className="inline-warning">
-          Ce mode transmet l’image à remove.bg et consomme un crédit API.
+          Ce mode transmet l’image au prestataire configuré et consomme un crédit API.
           Les couleurs et dimensions originales restent préservées localement.
         </p>
       )}
