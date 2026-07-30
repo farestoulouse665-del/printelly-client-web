@@ -225,3 +225,46 @@ production.
   Protéger/Effacer ou un futur second modèle interactif;
 - la recette visuelle réelle reste obligatoire pour les vêtements, cheveux, dentelles,
   voiles, verre, ombres et designs propres à PRINTELLY.
+
+## TransferLab sur GitHub Pages sans Docker
+
+La façade publique reste statique sur GitHub Pages. La clé PhotoRoom ne doit
+jamais être placée dans `app.js`, `background-removal-api.js` ou un secret
+GitHub injecté dans le build : tout JavaScript livré au navigateur est public.
+
+L’intégration de production utilise la fonction Supabase :
+
+```text
+https://jitxplfujyypfepiajgz.supabase.co/functions/v1/printelly-background-removal
+```
+
+Parcours :
+
+1. le client se connecte à son espace PRINTELLY ;
+2. le navigateur appelle la fonction avec son JWT Supabase ;
+3. la fonction vérifie l’origine, la session, le débit, le poids et la signature du fichier ;
+4. la clé Live est lue uniquement depuis les secrets Supabase ;
+5. PhotoRoom retourne un PNG RGBA ;
+6. TransferLab affiche le résultat et conserve les outils de correction locale.
+
+Secret obligatoire à créer dans **Supabase → Edge Functions → Secrets** :
+
+```dotenv
+PHOTOROOM_API_KEY=VOTRE_CLE_LIVE
+```
+
+Secret facultatif :
+
+```dotenv
+PHOTOROOM_HOURLY_LIMIT=5
+```
+
+La limite publique actuelle est de 10 Mo et 6 000 pixels sur le côté le plus
+large. Le quota est consulté via l’endpoint de compte PhotoRoom et affiché
+uniquement à un client PRINTELLY authentifié. Les fichiers ne sont pas stockés
+par la fonction. Aucun Docker Desktop n’est nécessaire pour le site public.
+
+La source versionnée du proxy se trouve dans
+`supabase/functions/printelly-background-removal/index.ts`. Aucun fichier
+`.env` ni aucune clé PhotoRoom ne doit être commité.
+

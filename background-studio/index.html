@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#111318">
-  <meta name="description" content="PRINTELLY Background Studio — suppression locale et professionnelle des arrière-plans">
+  <meta name="description" content="PRINTELLY TransferLab — détourage PhotoRoom sécurisé et préparation DTF">
   <link rel="stylesheet" href="../styles.css">
   <link rel="stylesheet" href="../background-remover.css">
   <link rel="stylesheet" href="./standalone.css">
-  <title>PRINTELLY — Background Studio</title>
+  <title>PRINTELLY — TransferLab</title>
 </head>
 <body class="br-standalone">
   <svg class="svg-library" aria-hidden="true">
@@ -30,12 +30,12 @@
   </svg>
 
   <header class="public-topbar br-standalone-header">
-    <a class="brand" href="./" aria-label="PRINTELLY Background Studio">
+    <a class="brand" href="../" aria-label="PRINTELLY TransferLab">
       <span class="brand-mark">P</span>
-      <span><strong>PRINTELLY</strong><small>BACKGROUND STUDIO</small></span>
+      <span><strong>PRINTELLY</strong><small>TRANSFERLAB</small></span>
     </a>
     <div class="br-standalone-actions">
-      <span class="connection-badge online">ACCÈS DIRECT • SANS INSCRIPTION</span>
+      <span class="connection-badge online">COMPTE PRINTELLY • ACCÈS SÉCURISÉ</span>
       <a class="secondary" href="../">ESPACE CLIENT</a>
     </div>
   </header>
@@ -43,27 +43,27 @@
   <main class="br-standalone-main">
 <section id="bgRemoverView" class="br-page">
           <div class="page-head br-page-head">
-            <div><p class="eyebrow">IA LOCALE • OPEN SOURCE • SANS ABONNEMENT</p><h2>Enlever le fond intelligemment</h2><p>Le moteur détecte le sujet, pas une couleur : vêtements, cheveux, objets, textes et détails du design restent protégés.</p></div>
+            <div><p class="eyebrow">PHOTOROOM API • PNG TRANSPARENT • PRÊT DTF</p><h2>Enlever le fond intelligemment</h2><p>PhotoRoom détecte le sujet et TransferLab vous permet ensuite de contrôler les cheveux, objets, textes et détails du design.</p></div>
             <span class="br-pro-badge">DÉTOURAGE SÉMANTIQUE</span>
           </div>
 
           <div class="br-local-note">
             <svg class="icon"><use href="#i-check"/></svg>
-            <span><strong>Traitement privé sur votre serveur.</strong> Vos images ne sont envoyées à aucune API externe. Le modèle open source fonctionne sur CPU et le fichier temporaire est supprimé après le traitement.</span>
+            <span><strong>Clé protégée par Supabase.</strong> Votre navigateur n’accède jamais à la clé Live. L’image est transmise à PhotoRoom uniquement pour le détourage, puis le résultat est corrigé et exporté dans TransferLab.</span>
           </div>
 
           <div class="br-workspace" data-studio-mode="simple">
             <aside id="brLeftControls" class="panel br-controls" aria-label="Préparation et analyse IA">
               <div class="br-side-title"><span>OUTILS IA</span><strong>Préparation du détourage</strong><small>Importation, sujet et réglages du moteur</small></div>
               <section id="brEngineSection" class="br-control-section" data-br-pro-only>
-                <div class="br-section-head"><span>01</span><div><h3>Moteur local</h3><p>Connexion sécurisée au serveur de détourage</p></div></div>
-                <label class="br-api-field"><span>Adresse du serveur</span><input id="brApiUrl" type="url" spellcheck="false" placeholder="http://localhost:8000"></label>
+                <div class="br-section-head"><span>01</span><div><h3>PhotoRoom sécurisé</h3><p>Proxy Supabase sans Docker et sans clé dans le navigateur</p></div></div>
+                <input id="brApiUrl" type="hidden" value="https://jitxplfujyypfepiajgz.supabase.co/functions/v1/printelly-background-removal">
                 <div class="br-api-row"><span id="brApiStatus" class="br-status" data-state="checking">Vérification…</span><button id="brTestApi" class="secondary" type="button">TESTER</button></div>
-                <p class="br-help">Avec Docker sur cet ordinateur, utilisez l’adresse proposée. Sur le site public, indiquez l’adresse HTTPS de votre serveur privé.</p>
+                <p class="br-help">Le compteur vérifie votre quota PhotoRoom. Seuls les clients PRINTELLY connectés peuvent lancer un traitement.</p>
               </section>
 
               <section class="br-control-section">
-                <div class="br-section-head"><span>02</span><div><h3>Votre image</h3><p>PNG, JPEG ou WebP • 50 Mo • 40 mégapixels</p></div></div>
+                <div class="br-section-head"><span>02</span><div><h3>Votre image</h3><p>PNG, JPEG ou WebP • 10 Mo • côté maximal 6 000 px</p></div></div>
                 <input id="brFileInput" type="file" accept="image/png,image/jpeg,image/webp" hidden>
                 <div id="brDropzone" class="br-dropzone" role="button" tabindex="0" aria-label="Choisir ou déposer une image">
                   <span class="upload-circle"><svg class="icon"><use href="#i-upload"/></svg></span>
