@@ -122,3 +122,13 @@ test("trial settings and statistics are available only through the admin service
   assert.match(edge, /trial_stats/);
   assert.match(api, /saveSettings/);
 });
+
+test("paid pack validation unlocks Studio through the live entitlement event", () => {
+  const client = read("background-remover.js");
+  const transport = read("background-removal-api.js");
+  assert.match(transport, /printelly:studio-entitlement/);
+  assert.match(client, /window\.addEventListener\("printelly:studio-entitlement"/);
+  assert.match(client, /subscription_active:\s*detail\.subscriptionActive/);
+  assert.match(client, /renderEntitlement\(/);
+  assert.match(client, /window\.addEventListener\("focus"/);
+});
