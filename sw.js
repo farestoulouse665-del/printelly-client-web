@@ -1,4 +1,4 @@
-const CACHE="printelly-client-v47";
+const CACHE="printelly-client-v48";
 const ASSETS=["./","./index.html","./styles.css","./background-remover.css","./app.js","./background-removal-api.js","./studio-billing-api.js","./studio-credit-badge.js","./background-color-selection.js","./background-quality.js","./background-print-export.js","./background-remover.js","./background-studio/","./background-studio/index.html","./background-studio/standalone.css","./studio-packs/","./studio-packs/index.html","./studio-packs/styles.css","./studio-packs/app.js","./studio-admin/","./studio-admin/index.html","./studio-admin/styles.css","./studio-admin/app.js","./manifest.webmanifest"];
 self.addEventListener("install",event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS))));
 self.addEventListener("activate",event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))));
