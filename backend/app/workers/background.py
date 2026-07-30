@@ -95,7 +95,6 @@ def get_runtime() -> tuple[RuntimeProvider, BackgroundRemovalPipeline]:
     return _provider, _pipeline
 
 
-
 def get_upscale_runtime() -> PhotoRoomUpscaleService:
     global _upscale_service
     if _upscale_service is None:
@@ -141,6 +140,7 @@ def process_background_job(job_id: str) -> dict:
     """Run the configured provider and persist every observable state."""
     image: Image.Image | None = None
     tiled_provider: TiledInferenceEngine | None = None
+    created_storage_keys: list[str] = []
     with SessionLocal() as database:
         job = database.get(ProcessingJob, job_id)
         if job is None:
@@ -263,6 +263,7 @@ def process_background_job(job_id: str) -> dict:
 
             cutout_key = f"assets/{asset.id}/results/{job.id}-cutout.png"
             storage.put_bytes(cutout_key, result.png)
+            created_storage_keys.append(cutout_key)
             record_event(
                 database,
                 job,
@@ -293,6 +294,7 @@ def process_background_job(job_id: str) -> dict:
                     f"assets/{asset.id}/results/{job.id}-upscale-{safe_mode}.png"
                 )
                 storage.put_bytes(result_key, final_png)
+                created_storage_keys.append(result_key)
                 record_event(
                     database,
                     job,
@@ -309,6 +311,7 @@ def process_background_job(job_id: str) -> dict:
 
             preview_key = f"assets/{asset.id}/previews/{job.id}.png"
             storage.put_bytes(preview_key, _make_preview(final_png))
+            created_storage_keys.append(preview_key)
             record_event(
                 database,
                 job,
@@ -404,6 +407,15 @@ def process_background_job(job_id: str) -> dict:
             }
         except Exception as exc:
             logger.exception("Background job failed id=%s", job_id)
+            for created_key in reversed(created_storage_keys):
+                try:
+                    storage.delete(created_key)
+                except Exception:
+                    logger.warning(
+                        "Impossible de nettoyer le fichier partiel %s.",
+                        created_key,
+                        exc_info=True,
+                    )
             database.rollback()
             failed_job = database.get(ProcessingJob, job_id)
             if failed_job is not None:
