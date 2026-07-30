@@ -112,7 +112,7 @@ begin
         idempotency_key,reason,metadata
       )
       select p_user_id,v_created_batch,'grant',v_trial_credits,
-             available_credits,reserved_credits,v_created_batch,
+             available_credits,reserved_credits,gen_random_uuid(),
              'Essai gratuit Studio AI',
              jsonb_build_object('credit_source','free_trial','automatic',true)
         from public.studio_credit_wallets
