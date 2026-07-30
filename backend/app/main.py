@@ -78,8 +78,8 @@ app = FastAPI(
     description=(
         "Préparation de fichiers DTF avec fournisseur configurable. "
         + (
-            "Le mode remove.bg transmet l’image au prestataire externe."
-            if settings.background_provider == "removebg"
+            "Le mode externe transmet l’image au prestataire configuré."
+            if settings.background_provider in {"removebg", "photoroom"}
             else "Le mode local ne transmet aucune image à un tiers."
         )
     ),
