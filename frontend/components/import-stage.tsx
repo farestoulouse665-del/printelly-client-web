@@ -62,9 +62,11 @@ function formatBytes(bytes: number) {
 function AssetPreview({
   asset,
   resultUrl,
+  onResultLoadError,
 }: {
   asset: Asset;
   resultUrl: string | null;
+  onResultLoadError: (assetId: string) => void;
 }) {
   const original = asset.original_download_url;
   const result = resultUrl;
@@ -72,10 +74,12 @@ function AssetPreview({
     result ? "result" : "original",
   );
   const [loadError, setLoadError] = useState("");
+  const failedResultUrl = useRef<string | null>(null);
 
   useEffect(() => {
     setView(result ? "result" : "original");
     setLoadError("");
+    failedResultUrl.current = null;
   }, [asset.id, result]);
 
   const visibleUrl = view === "result" && result ? result : original;
@@ -89,11 +93,19 @@ function AssetPreview({
           src={visibleUrl}
           alt={`${visibleLabel} de ${asset.name}`}
           onLoad={() => setLoadError("")}
-          onError={() =>
+          onError={() => {
             setLoadError(
-              "L’aperçu n’a pas pu charger le PNG. Le lien va être renouvelé.",
-            )
-          }
+              "L’aperçu n’a pas pu charger le PNG. Nouvelle tentative en cours…",
+            );
+            if (
+              view === "result" &&
+              result &&
+              failedResultUrl.current !== result
+            ) {
+              failedResultUrl.current = result;
+              onResultLoadError(asset.id);
+            }
+          }}
         />
       ) : (
         <FileImage size={40} />
@@ -468,6 +480,22 @@ export function ImportStage() {
       [assetId]: resultUrl,
     }));
   }, []);
+  const renewResultUrl = useCallback(
+    (assetId: string) => {
+      window.setTimeout(() => {
+        void apiFetch<Asset>(`/assets/${assetId}`)
+          .then((refreshed) => {
+            if (refreshed.final_download_url) {
+              registerResult(assetId, refreshed.final_download_url);
+            }
+          })
+          .catch(() => {
+            // The visible error remains available to the user.
+          });
+      }, 1000);
+    },
+    [registerResult],
+  );
   const completedResultUrl = useMemo(() => {
     if (!selected) return null;
     return (
@@ -512,6 +540,7 @@ export function ImportStage() {
               key={`${selected.id}:${selectedResultUrl ?? "original"}:${selected.updated_at}`}
               asset={selected}
               resultUrl={selectedResultUrl}
+              onResultLoadError={renewResultUrl}
             />
             <div className="asset-meta">
               <div><strong>{selected.name}</strong><span>{formatBytes(selected.byte_size)}</span></div>
