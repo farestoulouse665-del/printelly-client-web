@@ -13,8 +13,18 @@ if [ "$BACKGROUND_PROVIDER_VALUE" = "removebg" ]; then
     echo "REMOVEBG_API_KEY est absente dans .env." >&2
     exit 1
   fi
-elif [ ! -f models/background-removal.onnx ]; then
-  echo "Modèle absent: models/background-removal.onnx" >&2
+elif [ "$BACKGROUND_PROVIDER_VALUE" = "photoroom" ]; then
+  if ! grep -Eq '^[[:space:]]*PHOTOROOM_API_KEY[[:space:]]*=[[:space:]]*[^[:space:]]+' .env; then
+    echo "PHOTOROOM_API_KEY est absente dans .env." >&2
+    exit 1
+  fi
+elif [ "$BACKGROUND_PROVIDER_VALUE" = "local" ]; then
+  if [ ! -f models/background-removal.onnx ]; then
+    echo "Modèle absent: models/background-removal.onnx" >&2
+    exit 1
+  fi
+else
+  echo "BACKGROUND_PROVIDER doit valoir local, removebg ou photoroom." >&2
   exit 1
 fi
 docker compose up -d --build
