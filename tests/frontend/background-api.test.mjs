@@ -75,7 +75,7 @@ test("service worker excludes cross-origin private API responses from cache", as
   const worker = await readFile(new URL("../../sw.js", import.meta.url), "utf8");
   assert.match(worker, /url\.origin!==self\.location\.origin/);
   assert.match(worker, /pathname\.startsWith\("\/api\/"\)/);
-  assert.match(worker, /printelly-client-v46/);
+  assert.match(worker, /printelly-client-v47/);
 });
 
 test("production requests use the authenticated Supabase Edge Function", () => {
