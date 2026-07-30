@@ -30,9 +30,12 @@ def download_file(
         ".json": "application/json",
     }.get(suffix, "application/octet-stream")
     download_name = sanitize_filename(filename or storage.internal_path(key).name)
+    headers = {"Cache-Control": "private, no-store"}
+    if filename is None and media.startswith("image/"):
+        headers["Content-Disposition"] = f'inline; filename="{download_name}"'
     return FileResponse(
         storage.internal_path(key),
         media_type=media,
-        filename=download_name,
-        headers={"Cache-Control": "private, no-store"},
+        filename=download_name if filename is not None else None,
+        headers=headers,
     )
