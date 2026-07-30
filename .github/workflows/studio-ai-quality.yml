@@ -1,0 +1,43 @@
+name: Studio AI quality
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "background-*.js"
+      - "background-*.css"
+      - "background-studio/**"
+      - "studio-*.js"
+      - "supabase/**"
+      - "tests/**"
+      - "sw.js"
+      - ".github/workflows/studio-ai-quality.yml"
+  push:
+    branches: [main]
+    paths:
+      - "background-*.js"
+      - "background-*.css"
+      - "background-studio/**"
+      - "studio-*.js"
+      - "supabase/**"
+      - "tests/**"
+      - "sw.js"
+      - ".github/workflows/studio-ai-quality.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run test:frontend
+      - run: node --test tests/studio-pages-contract.test.mjs
