@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   ClipboardPaste,
   FileImage,
+  Download,
   Edit3,
   FolderSearch,
   LoaderCircle,
@@ -16,7 +17,7 @@ import {
   UploadCloud,
   X,
 } from "lucide-react";
-import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   apiFetch,
@@ -36,7 +37,17 @@ const backgroundProvider =
   process.env.NEXT_PUBLIC_BACKGROUND_PROVIDER ?? "local";
 const externalRemovalProvider = backgroundProvider !== "local";
 const externalProviderLabel =
-  backgroundProvider === "photoroom" ? "PhotoRoom API payante" : "remove.bg API payante";
+  backgroundProvider === "photoroom" ? "PhotoRoom API" : "remove.bg API";
+
+const MaskEditor = dynamic(
+  () => import("@/components/mask-editor").then((module) => module.MaskEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="editor-loading">Chargement de l’atelier de retouche…</div>
+    ),
+  },
+);
 
 function waitForNextPoll(signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -396,9 +407,11 @@ function Library() {
 function ProcessingPanel({
   asset,
   onResultReady,
+  onOpenEditor,
 }: {
   asset: Asset;
   onResultReady: (assetId: string, resultUrl: string) => void;
+  onOpenEditor: () => void;
 }) {
   const queryClient = useQueryClient();
   const mode = useStudio((state) => state.mode);
@@ -530,9 +543,14 @@ function ProcessingPanel({
             <CheckCircle2 size={17} />
             Résultat prêt : l’aperçu transparent est affiché à gauche.
           </p>
-          <Link className="secondary-button full editor-link" href={`/editor/${asset.id}`}>
-            <Edit3 size={17} /> Corriger le masque manuellement
-          </Link>
+          <div className="result-actions">
+            <button type="button" className="secondary-button full editor-link" onClick={onOpenEditor}>
+              <Edit3 size={17} /> Retoucher le résultat ici
+            </button>
+            <a className="primary-button full" href={asset.final_download_url} download>
+              <Download size={17} /> Télécharger le PNG transparent
+            </a>
+          </div>
         </>
       )}
       {error && <p className="inline-error"><AlertCircle size={17} /> {error}</p>}
@@ -546,8 +564,9 @@ export function ImportStage() {
   const assets = useStudio((state) => state.assets);
   const selectedAssetId = useStudio((state) => state.selectedAssetId);
   const jobs = useStudio((state) => state.jobs);
-  const sizes = useStudio((state) => state.sizes);
   const [liveResultUrls, setLiveResultUrls] = useState<Record<string, string>>({});
+  const [printWidthCm, setPrintWidthCm] = useState(20);
+  const [editorAssetId, setEditorAssetId] = useState<string | null>(null);
   const selected = assets.find((asset) => asset.id === selectedAssetId) ?? assets[0];
   const registerResult = useCallback((assetId: string, resultUrl: string) => {
     setLiveResultUrls((current) => ({
@@ -598,18 +617,19 @@ export function ImportStage() {
         null
       )
     : null;
-  const selectedSize = sizes[0] ?? null;
-  const availablePrintDpi =
-    selected && selectedSize
-      ? Math.round(
-          dpiForPrintSize(
-            selected.width,
-            selected.height,
-            selectedSize.widthCm,
-            selectedSize.heightCm,
-          ),
-        )
-      : null;
+  const printHeightCm = selected
+    ? (printWidthCm * selected.height) / Math.max(1, selected.width)
+    : 0;
+  const availablePrintDpi = selected
+    ? Math.round(
+        dpiForPrintSize(
+          selected.width,
+          selected.height,
+          printWidthCm,
+          printHeightCm,
+        ),
+      )
+    : null;
   const maximumAt300Dpi = selected
     ? maximumPrintSizeAtDpi(selected.width, selected.height, 300)
     : null;
@@ -627,15 +647,15 @@ export function ImportStage() {
   return (
     <section className="stage-card" aria-labelledby="import-title">
       <div className="stage-heading">
-        <span className="stage-kicker">ÉTAPE 1</span>
-        <div><h2 id="import-title">Importez votre design</h2><p>Le fond sera supprimé localement, sans modifier votre texte, vos couleurs ou votre sujet.</p></div>
+        <span className="stage-kicker">STUDIO</span>
+        <div><h2 id="import-title">Importez votre design</h2><p>Le moteur configuré supprime le fond sans modifier votre texte, vos couleurs ou votre sujet.</p></div>
       </div>
       <div className="tab-list" role="tablist">
         <button type="button" role="tab" aria-selected={tab === "new"} className={tab === "new" ? "active" : ""} onClick={() => setTab("new")}>
           Nouveau fichier
         </button>
         <button type="button" role="tab" aria-selected={tab === "library"} className={tab === "library" ? "active" : ""} onClick={() => setTab("library")}>
-          Mes designs
+          Images de cette session
         </button>
       </div>
       {tab === "new" ? <UploadZone /> : <Library />}
@@ -660,24 +680,59 @@ export function ImportStage() {
               </dl>
               <div className={`dpi-capacity ${dpiTone}`} role="status">
                 <strong>
-                  {availablePrintDpi && selectedSize
-                    ? `${availablePrintDpi} DPI disponibles à ${selectedSize.widthCm.toFixed(1)} × ${selectedSize.heightCm.toFixed(1)} cm`
+                  {availablePrintDpi
+                    ? `${availablePrintDpi} DPI disponibles à ${printWidthCm.toFixed(1)} × ${printHeightCm.toFixed(1)} cm`
                     : `300 DPI jusqu’à ${maximumAt300Dpi?.widthCm.toFixed(1)} × ${maximumAt300Dpi?.heightCm.toFixed(1)} cm`}
                 </strong>
                 <small>
                   Calcul réel à partir des {selected.width} × {selected.height} pixels.
-                  {selectedSize
-                    ? " La valeur suit la première dimension choisie à l’étape 2."
-                    : " Choisissez ensuite votre taille pour obtenir le DPI exact."}
+                  {" Ajustez la largeur ci-dessous : le ratio original reste verrouillé."}
                 </small>
+              </div>
+              <div className="print-size-control">
+                <label htmlFor="print-width">Largeur d’impression</label>
+                <div>
+                  <input
+                    id="print-width"
+                    type="number"
+                    min="1"
+                    max="200"
+                    step="0.5"
+                    value={printWidthCm}
+                    onChange={(event) =>
+                      setPrintWidthCm(
+                        Math.min(200, Math.max(1, Number(event.target.value) || 1)),
+                      )
+                    }
+                  />
+                  <span>cm</span>
+                  <strong>× {printHeightCm.toFixed(1)} cm</strong>
+                </div>
+                <small>Proportions verrouillées · calcul DPI instantané</small>
               </div>
             </div>
           </div>
           <ProcessingPanel
             asset={selected}
             onResultReady={registerResult}
+            onOpenEditor={() => setEditorAssetId(selected.id)}
           />
         </div>
+      )}
+      {selected?.final_download_url && editorAssetId === selected.id && (
+        <section className="inline-mask-editor" aria-label="Retouche manuelle du résultat">
+          <div className="inline-editor-heading">
+            <div>
+              <span>RETOUCHE NON DESTRUCTIVE</span>
+              <h3>Perfectionnez les cheveux, contours et détails fins</h3>
+              <p>Chaque correction crée une nouvelle version. Les couleurs et l’original restent intacts.</p>
+            </div>
+            <button type="button" className="secondary-button" onClick={() => setEditorAssetId(null)}>
+              Fermer l’atelier
+            </button>
+          </div>
+          <MaskEditor key={selected.id} assetId={selected.id} />
+        </section>
       )}
     </section>
   );
