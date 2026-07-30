@@ -387,11 +387,14 @@ docker compose build --no-cache frontend api worker
 docker compose up -d --force-recreate frontend api worker proxy
 ```
 
-Tests ciblés prévus par le dépôt :
+Tests ciblés prévus par le dépôt, après installation des dépendances décrite
+dans les sections de tests :
 
 ```powershell
-docker compose exec api pytest -q backend/tests/test_photoroom_provider.py backend/tests/test_api_v1_integration.py
-docker compose exec frontend npm run test -- --run
+Set-Location -LiteralPath "C:\Users\PROTECH_WD\Documents\printelly-background-studio\backend"
+.\.venv\Scripts\python.exe -m pytest -q tests/test_photoroom_provider.py tests/test_api_v1_integration.py
+Set-Location -LiteralPath "C:\Users\PROTECH_WD\Documents\printelly-background-studio\frontend"
+npm test
 ```
 
 ## Parcours autonome sur une seule façade
