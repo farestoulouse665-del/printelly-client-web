@@ -353,7 +353,7 @@ class HealthOut(BaseModel):
     model_loaded: bool
     model_name: str
     execution_provider: str | None
-    privacy: str = "Aucun fichier client n’est envoyé à un service tiers."
+    privacy: str
 
 
 class ExportCreateIn(BaseModel):
