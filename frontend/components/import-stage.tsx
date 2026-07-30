@@ -27,6 +27,8 @@ import {
   streamJobEvents,
   uploadAsset,
 } from "@/lib/api";
+import { dpiForPrintSize, maximumPrintSizeAtDpi, qualityForDpi } from "@/lib/dtf";
+import { parametersForRemovalMode, REMOVAL_PROFILES } from "@/lib/removal-profiles";
 import type { Asset } from "@/lib/types";
 import { useStudio } from "@/store/studio";
 
@@ -73,6 +75,8 @@ function AssetPreview({
   const [view, setView] = useState<"result" | "original">(
     result ? "result" : "original",
   );
+  const [resultBlobUrl, setResultBlobUrl] = useState<string | null>(null);
+  const [resultLoading, setResultLoading] = useState(Boolean(result));
   const [loadError, setLoadError] = useState("");
   const failedResultUrl = useRef<string | null>(null);
 
@@ -80,22 +84,75 @@ function AssetPreview({
     setView(result ? "result" : "original");
     setLoadError("");
     failedResultUrl.current = null;
-  }, [asset.id, result]);
+    if (!result) {
+      setResultBlobUrl(null);
+      setResultLoading(false);
+      return;
+    }
 
-  const visibleUrl = view === "result" && result ? result : original;
+    const controller = new AbortController();
+    let objectUrl: string | null = null;
+    setResultBlobUrl(null);
+    setResultLoading(true);
+
+    void fetch(result, {
+      signal: controller.signal,
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { Accept: "image/png,image/*;q=0.9" },
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Aperçu indisponible (HTTP ${response.status}).`);
+        }
+        const blob = await response.blob();
+        if (!blob.type.toLowerCase().startsWith("image/")) {
+          throw new Error("Le serveur n’a pas retourné une image.");
+        }
+        objectUrl = URL.createObjectURL(blob);
+        setResultBlobUrl(objectUrl);
+      })
+      .catch((cause: unknown) => {
+        if (cause instanceof DOMException && cause.name === "AbortError") return;
+        setResultLoading(false);
+        setLoadError(
+          cause instanceof Error
+            ? `${cause.message} Nouvelle tentative en cours…`
+            : "L’aperçu PNG n’a pas pu être chargé. Nouvelle tentative en cours…",
+        );
+        if (failedResultUrl.current !== result) {
+          failedResultUrl.current = result;
+          onResultLoadError(asset.id);
+        }
+      });
+
+    return () => {
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [asset.id, onResultLoadError, result]);
+
+  const visibleUrl =
+    view === "result" && result ? resultBlobUrl : original;
   const visibleLabel = view === "result" && result ? "Résultat" : "Original";
+  const waitingForResult =
+    view === "result" && Boolean(result) && !resultBlobUrl && !loadError;
 
   return (
-    <div className="asset-preview checkerboard">
+    <div className="asset-preview checkerboard" aria-busy={waitingForResult}>
       {visibleUrl ? (
         <img
           key={visibleUrl}
           src={visibleUrl}
           alt={`${visibleLabel} de ${asset.name}`}
-          onLoad={() => setLoadError("")}
+          onLoad={() => {
+            setResultLoading(false);
+            setLoadError("");
+          }}
           onError={() => {
+            setResultLoading(false);
             setLoadError(
-              "L’aperçu n’a pas pu charger le PNG. Nouvelle tentative en cours…",
+              "Le PNG a été reçu mais son aperçu n’a pas pu être affiché. Nouvelle tentative en cours…",
             );
             if (
               view === "result" &&
@@ -107,6 +164,12 @@ function AssetPreview({
             }
           }}
         />
+      ) : waitingForResult || resultLoading ? (
+        <div className="preview-loading" role="status">
+          <LoaderCircle className="spin" size={30} />
+          <strong>Affichage du résultat transparent…</strong>
+          <small>Le PNG final est chargé directement dans l’aperçu.</small>
+        </div>
       ) : (
         <FileImage size={40} />
       )}
@@ -330,6 +393,7 @@ function ProcessingPanel({
   onResultReady: (assetId: string, resultUrl: string) => void;
 }) {
   const queryClient = useQueryClient();
+  const mode = useStudio((state) => state.mode);
   const setMode = useStudio((state) => state.setMode);
   const jobs = useStudio((state) => state.jobs);
   const setJob = useStudio((state) => state.setJob);
@@ -343,20 +407,17 @@ function ProcessingPanel({
   );
 
   useEffect(() => {
-    setMode("automatic");
     return () => streamController.current?.abort();
-  }, [setMode]);
+  }, []);
 
   async function start() {
     setError("");
     try {
-      const created = await createBackgroundJob(asset.id, "automatic", {
-        protect_details: true,
-        remove_haze: true,
-        decontaminate: true,
-        cleanup: "normal",
-        black_background_mode: "off",
-      });
+      const created = await createBackgroundJob(
+        asset.id,
+        mode,
+        parametersForRemovalMode(mode),
+      );
       setJob(created);
       const controller = new AbortController();
       streamController.current = controller;
@@ -426,16 +487,19 @@ function ProcessingPanel({
           Les couleurs et dimensions originales restent préservées localement.
         </p>
       )}
-      <div className="mode-grid automatic-only">
-        <button
-          type="button"
-          className="active"
-          aria-pressed="true"
-          onClick={() => setMode("automatic")}
-        >
-          <strong>Automatique</strong>
-          <small>Le moteur détecte automatiquement le sujet et ses contours.</small>
-        </button>
+      <div className="mode-grid">
+        {REMOVAL_PROFILES.map((profile) => (
+          <button
+            type="button"
+            key={profile.mode}
+            className={mode === profile.mode ? "active" : ""}
+            aria-pressed={mode === profile.mode}
+            onClick={() => setMode(profile.mode)}
+          >
+            <strong>{profile.label}</strong>
+            <small>{profile.description}</small>
+          </button>
+        ))}
       </div>
       {job && !["completed", "failed", "cancelled"].includes(job.state) ? (
         <div className="job-progress" aria-live="polite">
@@ -472,6 +536,7 @@ export function ImportStage() {
   const assets = useStudio((state) => state.assets);
   const selectedAssetId = useStudio((state) => state.selectedAssetId);
   const jobs = useStudio((state) => state.jobs);
+  const sizes = useStudio((state) => state.sizes);
   const [liveResultUrls, setLiveResultUrls] = useState<Record<string, string>>({});
   const selected = assets.find((asset) => asset.id === selectedAssetId) ?? assets[0];
   const registerResult = useCallback((assetId: string, resultUrl: string) => {
@@ -518,6 +583,32 @@ export function ImportStage() {
         null
       )
     : null;
+  const selectedSize = sizes[0] ?? null;
+  const availablePrintDpi =
+    selected && selectedSize
+      ? Math.round(
+          dpiForPrintSize(
+            selected.width,
+            selected.height,
+            selectedSize.widthCm,
+            selectedSize.heightCm,
+          ),
+        )
+      : null;
+  const maximumAt300Dpi = selected
+    ? maximumPrintSizeAtDpi(selected.width, selected.height, 300)
+    : null;
+  const dpiTone =
+    availablePrintDpi && availablePrintDpi > 0
+      ? qualityForDpi(availablePrintDpi).tone
+      : "good";
+  const embeddedDpi =
+    selected?.dpi_x || selected?.dpi_y
+      ? [selected.dpi_x, selected.dpi_y]
+          .filter((value): value is number => typeof value === "number")
+          .map((value) => Math.round(value))
+          .join(" × ")
+      : "Métadonnée absente";
   return (
     <section className="stage-card" aria-labelledby="import-title">
       <div className="stage-heading">
@@ -548,10 +639,23 @@ export function ImportStage() {
                 <div><dt>Pixels</dt><dd>{selected.width} × {selected.height}</dd></div>
                 <div><dt>Format</dt><dd>{selected.mime_type.replace("image/", "").toUpperCase()}</dd></div>
                 <div><dt>Transparence</dt><dd>{selected.has_transparency ? "Présente" : "Absente"}</dd></div>
-                <div><dt>DPI</dt><dd>{selected.dpi_x ? Math.round(selected.dpi_x) : "Non défini"}</dd></div>
+                <div><dt>DPI intégré</dt><dd>{embeddedDpi}</dd></div>
                 <div><dt>Profil</dt><dd>{selected.color_profile}</dd></div>
                 <div><dt>Qualité</dt><dd>{selected.quality_score ?? "À analyser"}</dd></div>
               </dl>
+              <div className={`dpi-capacity ${dpiTone}`} role="status">
+                <strong>
+                  {availablePrintDpi && selectedSize
+                    ? `${availablePrintDpi} DPI disponibles à ${selectedSize.widthCm.toFixed(1)} × ${selectedSize.heightCm.toFixed(1)} cm`
+                    : `300 DPI jusqu’à ${maximumAt300Dpi?.widthCm.toFixed(1)} × ${maximumAt300Dpi?.heightCm.toFixed(1)} cm`}
+                </strong>
+                <small>
+                  Calcul réel à partir des {selected.width} × {selected.height} pixels.
+                  {selectedSize
+                    ? " La valeur suit la première dimension choisie à l’étape 2."
+                    : " Choisissez ensuite votre taille pour obtenir le DPI exact."}
+                </small>
+              </div>
             </div>
           </div>
           <ProcessingPanel
