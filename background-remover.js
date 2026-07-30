@@ -426,17 +426,17 @@
       return;
     }
     file = normalized;
-    if (file.size > 10 * 1024 * 1024) {
-      setMessage("Le fichier dépasse la limite publique de 10 Mo.", "error");
+    if (file.size > 50 * 1024 * 1024) {
+      setMessage("Le fichier dépasse la limite de 50 Mo.", "error");
       return;
     }
     clearResult(false);
     if (remover.sourceUrl) URL.revokeObjectURL(remover.sourceUrl);
     try {
       var loaded = await loadImageFromBlob(file);
-      if (loaded.image.naturalWidth > 6000 || loaded.image.naturalHeight > 6000) {
+      if (loaded.image.naturalWidth * loaded.image.naturalHeight > 40000000) {
         URL.revokeObjectURL(loaded.url);
-        setMessage("PhotoRoom accepte au maximum 6 000 pixels sur le côté le plus large.", "error");
+        setMessage("Cette image dépasse la limite de sécurité de 40 mégapixels.", "error");
         return;
       }
       remover.file = file;

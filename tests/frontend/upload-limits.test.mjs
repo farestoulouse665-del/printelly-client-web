@@ -43,5 +43,5 @@ test("a stalled analysis is aborted after the proxy and backend deadlines", () =
   assert.match(editor, /var requestTimedOut = false/);
   assert.match(editor, /requestTimedOut = true/);
   assert.match(editor, /315000/);
-  assert.match(editor, /Le serveur n’a pas terminé dans le délai prévu/);
+  assert.match(editor, /PhotoRoom n’a pas terminé dans le délai prévu/);
 });

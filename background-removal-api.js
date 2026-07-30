@@ -47,6 +47,17 @@
     return clean ? message + " Référence: " + clean.slice(0, 12) + "." : message;
   }
 
+  function publishCredits(payload) {
+    var quota = payload && payload.quota ? payload.quota : payload;
+    if (!quota) return;
+    window.dispatchEvent(new CustomEvent("printelly:credits-updated", { detail: {
+      available: Number(quota.available == null ? quota.availableCredits : quota.available),
+      reserved: Number(quota.reserved == null ? quota.reservedCredits : quota.reserved),
+      plan: quota.plan || "",
+      expiresAt: quota.expires_at || null
+    }}));
+  }
+
   async function apiError(response) {
     var headerReference = response.headers.get("x-request-id") || "";
     try {
@@ -71,7 +82,9 @@
         headers: secureHeaders("application/json")
       });
       if (!response.ok) throw await apiError(response);
-      return response.json();
+      var data = await response.json();
+      publishCredits(data);
+      return data;
     },
 
     async remove(baseUrl, file, options, signal) {
@@ -88,11 +101,13 @@
       form.append("remove_haze", String(options.removeHaze !== false));
       if (options.backgroundColor) form.append("background_color", options.backgroundColor);
 
+      var requestHeaders = secureHeaders("image/png");
+      requestHeaders["x-idempotency-key"] = crypto.randomUUID();
       var response = await fetch(endpoint(baseUrl, "remove"), {
         method: "POST",
         body: form,
         signal: signal,
-        headers: secureHeaders("image/png")
+        headers: requestHeaders
       });
       if (!response.ok) throw await apiError(response);
       if (!(response.headers.get("content-type") || "").includes("image/png")) {
@@ -109,7 +124,9 @@
         warnings = ["Les avertissements du service n’ont pas pu être décodés."];
       }
 
-      return {
+      var availableCredits = Number(response.headers.get("x-credits-available") || 0);
+      var reservedCredits = Number(response.headers.get("x-credits-reserved") || 0);
+      var result = {
         blob: await response.blob(),
         metadata: {
           width: Number(response.headers.get("x-image-width") || 0),
@@ -123,9 +140,14 @@
           blackBackgroundConfidence: Number(response.headers.get("x-black-background-confidence") || 0),
           requestId: response.headers.get("x-request-id") || "",
           modelName: response.headers.get("x-model-name") || "PhotoRoom Remove Background",
+          availableCredits: availableCredits,
+          reservedCredits: reservedCredits,
+          studioJobId: response.headers.get("x-studio-job-id") || "",
           warnings: warnings
         }
       };
+      publishCredits({ availableCredits: availableCredits, reservedCredits: reservedCredits });
+      return result;
     }
   };
 })();

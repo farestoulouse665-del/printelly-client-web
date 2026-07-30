@@ -11,12 +11,13 @@ const editor = await readFile(new URL("../../background-remover.js", import.meta
 const appSource = await readFile(new URL("../../app.js", import.meta.url), "utf8");
 
 
-test("background studio is public and separated from the authenticated client", () => {
+test("background studio is separated from the client shell and requires the shared account", () => {
   assert.doesNotMatch(clientHtml, /data-view="background-remover"/);
   assert.doesNotMatch(clientHtml, /id="bgRemoverView"/);
   assert.doesNotMatch(clientHtml, /background-remover\.js/);
   assert.doesNotMatch(clientHtml, /background-remover\.css/);
-  assert.match(html, /ACCÈS DIRECT • SANS INSCRIPTION/);
+  assert.match(html, /id="studioCreditsBadge"/);
+  assert.match(html, /href="\.\.\/studio-packs\//);
   assert.doesNotMatch(html, /id="authView"/);
   assert.doesNotMatch(html, /id="loginForm"/);
   assert.doesNotMatch(html, /id="signupForm"/);
