@@ -1,7 +1,7 @@
 "use strict";
 (function () {
   var api = window.PrintellyStudioBilling;
-  var state = { data: null, currentOrder: null };
+  var state = { data: null, currentOrder: null, busy: false, syncTimer: null };
   var statusLabels = {
     pending_payment: "Paiement attendu", waiting_proof: "Preuve attendue", proof_received: "À vérifier",
     under_review: "En vérification", additional_proof_required: "Nouvelle preuve demandée",
@@ -62,15 +62,17 @@
     all("[data-edit-method]", list).forEach(function (button) { button.addEventListener("click", function () { editMethod(methodFor(button.dataset.editMethod)); }); });
   }
 
-  async function load() {
+  async function load(silent) {
+    if (state.busy) return;
+    state.busy = true;
     $("#refreshBtn").disabled = true;
     try {
       state.data = await api.admin();
       renderStats(); renderPayments(); renderPlans(); renderMethods();
     } catch (error) {
-      toast(error.message);
+      if (!silent) toast(error.message);
       if (/administrateur|session|Connectez/i.test(error.message)) setTimeout(function () { location.href = "../"; }, 1200);
-    } finally { $("#refreshBtn").disabled = false; }
+    } finally { state.busy = false; $("#refreshBtn").disabled = false; }
   }
 
   function showTab(name) {
@@ -160,5 +162,7 @@
   $("#planForm").addEventListener("submit", savePlan); $("#methodForm").addEventListener("submit", saveMethod); $("#actionForm").addEventListener("submit", submitAction);
   all("[data-cancel-form]").forEach(function (button) { button.addEventListener("click", function () { button.closest("form").classList.add("hidden"); }); });
   all("[data-close]").forEach(function (button) { button.addEventListener("click", function () { button.closest("dialog").close(); }); });
-  load();
+  state.syncTimer = setInterval(function () { if (!document.hidden) load(true); }, 8000);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) load(true); });
+  load(false);
 })();
