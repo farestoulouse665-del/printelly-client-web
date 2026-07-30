@@ -48,9 +48,12 @@ test("legendary UI groups color tools and exposes a professional final summary",
 });
 
 
-test("loader applies the dark class before loading upgrade scripts", () => {
-  assert.match(loader, /classList\.add\("br-pro-upgraded", "br-legendary-theme"\)/);
-  assert.ok(loader.indexOf("studio-pro-upgrade.js") < loader.indexOf("studio-legendary-ui.js"));
+test("loader restores the selected theme before loading upgrade scripts", () => {
+  assert.match(loader, /dataset\.studioTheme = theme/);
+  assert.match(loader, /classList\.add\("br-pro-upgraded"\)/);
+  assert.match(loader, /classList\.toggle\("br-legendary-theme", theme === "legendary"\)/);
+  assert.ok(loader.indexOf("dataset.studioTheme") < loader.indexOf("studio-pro-upgrade.js"));
+  assert.ok(loader.indexOf("studio-pro-upgrade.js") < loader.indexOf("studio-three-themes.js"));
   assert.doesNotThrow(() => new vm.Script(loader));
 });
 
@@ -60,5 +63,7 @@ test("Studio quality workflow executes Python visual audits", () => {
   assert.match(workflow, /audit_studio_theme\.py/);
   assert.match(workflow, /check_css_contrast\.py/);
   assert.match(workflow, /check_studio_layout\.py/);
+  assert.match(workflow, /check_studio_theme_modes\.py/);
+  assert.match(workflow, /check_studio_upscale\.py/);
   assert.match(workflow, /tools\/\*\*/);
 });

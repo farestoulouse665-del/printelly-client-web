@@ -4,7 +4,7 @@
   const GROUPS = [
     { title: "Lumière", note: "Exposition, dynamique et profondeur", ids: ["exposure", "brightness", "contrast", "highlights", "shadows", "whites", "blacks"] },
     { title: "Couleurs", note: "Intensité, température et teinte", ids: ["saturation", "vibrance", "temperature", "hue"] },
-    { title: "Finition", note: "Lisibilité des détails fins", ids: ["detail"] }
+    { title: "Détails", note: "Lisibilité des éléments fins", ids: ["detail"] }
   ];
 
   function refineCopy() {
@@ -15,14 +15,12 @@
       const description = head.querySelector("p:not(.eyebrow)");
       if (eyebrow) eyebrow.textContent = "STUDIO AI • PRODUCTION DTF";
       if (title) title.textContent = "Studio AI Pro";
-      if (description) description.textContent = "Détourage, colorimétrie et contrôle d’impression dans un espace de production unifié.";
+      if (description) description.textContent = "Détourage, comparaison, colorimétrie, upscale et contrôle d’impression dans un espace unifié.";
     }
     const localNote = document.querySelector(".br-local-note span");
     if (localNote) localNote.innerHTML = "<strong>Traitement sécurisé.</strong> La clé PhotoRoom reste protégée dans Supabase et le PNG final conserve sa transparence réelle.";
     const leftTitle = document.querySelector("#brLeftControls .br-side-title");
-    if (leftTitle) leftTitle.innerHTML = "<span>PRÉPARATION</span><strong>Source et détourage</strong><small>Importation, accès, sujet et corrections du masque</small>";
-    const rightTitle = document.querySelector("#brRightControls .br-side-title");
-    if (rightTitle) rightTitle.innerHTML = "<span>FINITION</span><strong>Production DTF</strong><small>Couleurs, préflight, export et commande</small>";
+    if (leftTitle) leftTitle.innerHTML = "<span>OUTILS AI</span><strong>Studio de production</strong><small>Importation, détourage, amélioration et contrôle DTF</small>";
   }
 
   function groupColorControls() {
@@ -65,7 +63,7 @@
     summary.id = "studioFinalSummary";
     summary.className = "studio-final-summary";
     summary.innerHTML = `
-      <div class="studio-final-summary-head"><span>RÉSULTAT FINAL</span><b id="studioFinalStatus" data-state="waiting">EN ATTENTE</b></div>
+      <div class="studio-final-summary-head"><span>FICHIER FINAL</span><b id="studioFinalStatus" data-state="waiting">EN ATTENTE</b></div>
       <div class="studio-final-metrics">
         <span><b id="studioFinalFile">Aucune image</b><small>Fichier</small></span>
         <span><b id="studioFinalDimensions">—</b><small>Dimensions</small></span>
@@ -127,8 +125,7 @@
 
   function boot() {
     if (!$("bgRemoverView")) return;
-    document.documentElement.style.colorScheme = "dark";
-    document.body.classList.add("br-pro-upgraded", "br-legendary-theme");
+    document.body.classList.add("br-pro-upgraded");
     refineCopy();
     groupColorControls();
     createFinalSummary();

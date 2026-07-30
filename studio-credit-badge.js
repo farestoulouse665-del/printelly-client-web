@@ -1,5 +1,7 @@
 "use strict";
 (function () {
+  var THEMES = ["light", "dark", "legendary"];
+  var STORAGE_KEY = "printellyStudioTheme";
   var badge = document.getElementById("studioCreditsBadge");
   if (badge) {
     function update(event) {
@@ -13,8 +15,20 @@
   }
 
   if (!document.getElementById("bgRemoverView")) return;
-  document.documentElement.style.colorScheme = "dark";
-  document.body.classList.add("br-pro-upgraded", "br-legendary-theme");
+
+  function initialTheme() {
+    try {
+      var saved = localStorage.getItem(STORAGE_KEY);
+      if (THEMES.indexOf(saved) !== -1) return saved;
+    } catch (_) {}
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  }
+
+  var theme = initialTheme();
+  document.documentElement.dataset.studioTheme = theme;
+  document.documentElement.style.colorScheme = theme === "light" ? "light" : "dark";
+  document.body.classList.add("br-pro-upgraded");
+  document.body.classList.toggle("br-legendary-theme", theme === "legendary");
 
   function loadStyle(href, id) {
     if (document.getElementById(id)) return;
@@ -39,7 +53,13 @@
   }
 
   loadStyle("../studio-pro-upgrade.css", "studioProUpgradeStyles");
+  loadStyle("../studio-three-themes.css", "studioThreeThemesStyles");
+  loadStyle("../studio-upscale.css", "studioUpscaleStyles");
   loadScript("../studio-pro-upgrade.js", "studioProUpgradeScript", function () {
-    loadScript("../studio-legendary-ui.js", "studioLegendaryUiScript");
+    loadScript("../studio-legendary-ui.js", "studioLegendaryUiScript", function () {
+      loadScript("../studio-three-themes.js", "studioThreeThemesScript", function () {
+        loadScript("../studio-upscale.js", "studioUpscaleScript");
+      });
+    });
   });
 })();
