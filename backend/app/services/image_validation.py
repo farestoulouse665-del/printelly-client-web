@@ -10,6 +10,7 @@ from fastapi import HTTPException, UploadFile, status
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 from app.core.config import Settings
+from app.services.security_scan import scan_local_file
 
 _MIME_TO_FORMAT = {
     "image/png": "PNG",
@@ -17,10 +18,13 @@ _MIME_TO_FORMAT = {
     "image/jpeg": "JPEG",
     "image/jpg": "JPEG",
     "image/webp": "WEBP",
+    "image/tiff": "TIFF",
+    "image/x-tiff": "TIFF",
+    "image/bmp": "BMP",
+    "image/x-ms-bmp": "BMP",
 }
 _GENERIC_MIME = {"", "application/octet-stream"}
-_ALLOWED_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
-_EXTENSIONS = {"PNG": ".png", "JPEG": ".jpg", "WEBP": ".webp"}
+_ALLOWED_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"}
 
 
 @dataclass
@@ -29,6 +33,9 @@ class ValidatedImage:
     original_filename: str
     output_filename: str
     temp_path: Path
+    detected_format: str = ""
+    declared_mime: str = ""
+    source_temp_path: Path | None = None
 
 
 def _detect_format(header: bytes) -> str | None:
@@ -38,11 +45,14 @@ def _detect_format(header: bytes) -> str | None:
         return "JPEG"
     if len(header) >= 12 and header[:4] == b"RIFF" and header[8:12] == b"WEBP":
         return "WEBP"
+    if header.startswith((b"II*\x00", b"MM\x00*")):
+        return "TIFF"
+    if header.startswith(b"BM"):
+        return "BMP"
     return None
 
 
 def _safe_unlink(path: Path) -> None:
-    """Best-effort cleanup that never hides the original upload error."""
     try:
         path.unlink(missing_ok=True)
     except OSError:
@@ -64,7 +74,7 @@ async def validate_upload(upload: UploadFile, config: Settings) -> ValidatedImag
     if declared_format is None and not generic_with_known_extension:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Format refusé. Utilisez PNG, JPEG ou WEBP.",
+            detail="Format raster refusé. Utilisez PNG, JPEG, WebP, TIFF ou BMP. Les PDF, SVG, PSD et AI passent par le convertisseur isolé.",
         )
 
     try:
@@ -88,8 +98,8 @@ async def validate_upload(upload: UploadFile, config: Settings) -> ValidatedImag
                             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                             detail=f"Le fichier dépasse {config.max_upload_mb} Mo.",
                         )
-                    if len(header) < 16:
-                        header = (header + chunk)[:16]
+                    if len(header) < 32:
+                        header = (header + chunk)[:32]
                     target.write(chunk)
         except HTTPException:
             raise
@@ -99,6 +109,9 @@ async def validate_upload(upload: UploadFile, config: Settings) -> ValidatedImag
                 detail="Le serveur ne peut pas écrire le fichier temporaire.",
             ) from exc
 
+        if total == 0:
+            raise HTTPException(status_code=422, detail="Le fichier est vide.")
+        scan_local_file(temp_path, config)
         detected = _detect_format(header)
         if detected is None:
             raise HTTPException(
@@ -123,10 +136,32 @@ async def validate_upload(upload: UploadFile, config: Settings) -> ValidatedImag
                         )
                     probe.verify()
                 with Image.open(temp_path) as source:
+                    source_width, source_height = source.size
+                    if (
+                        source_width < 2
+                        or source_height < 2
+                        or source_width * source_height > config.max_image_pixels
+                    ):
+                        raise HTTPException(
+                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            detail=(
+                                "Résolution refusée avant décodage. "
+                                f"Maximum: {config.max_image_pixels:,} pixels."
+                            ),
+                        )
                     source.load()
                     image = ImageOps.exif_transpose(source).copy()
+                    image.info.update(source.info)
             except HTTPException:
                 raise
+            except MemoryError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=(
+                        "Mémoire insuffisante pour décoder ce fichier. "
+                        "Réduisez sa résolution ou augmentez la mémoire du worker."
+                    ),
+                ) from exc
             except (
                 UnidentifiedImageError,
                 OSError,
@@ -142,6 +177,7 @@ async def validate_upload(upload: UploadFile, config: Settings) -> ValidatedImag
 
         width, height = image.size
         if width < 2 or height < 2 or width * height > config.max_image_pixels:
+            image.close()
             raise HTTPException(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 detail=f"Résolution refusée. Maximum: {config.max_image_pixels:,} pixels.",
@@ -152,6 +188,8 @@ async def validate_upload(upload: UploadFile, config: Settings) -> ValidatedImag
             original_filename=upload.filename or "image",
             output_filename=safe_output_name(upload.filename),
             temp_path=temp_path,
+            detected_format=detected,
+            declared_mime=declared,
         )
     except Exception:
         _safe_unlink(temp_path)

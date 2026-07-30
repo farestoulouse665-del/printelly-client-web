@@ -53,6 +53,36 @@ def _remove_isolated_specks(mask: np.ndarray, min_area: int) -> np.ndarray:
     return np.where((binary == 1) & (keep == 0) & (mask > 0.95), 0.0, mask)
 
 
+def _remove_low_confidence_residue(mask: np.ndarray, min_area: int) -> np.ndarray:
+    """Remove only tiny, disconnected, low-confidence matte fragments.
+
+    Opaque micro-details are preserved. This targets faint provider residue
+    without applying destructive erosion to hair, text or logo geometry.
+    """
+    candidate = (mask >= 0.035).astype(np.uint8)
+    count, labels, stats, _ = cv2.connectedComponentsWithStats(
+        candidate,
+        connectivity=8,
+    )
+    if count <= 1:
+        return mask
+    cleaned = mask.copy()
+    height, width = mask.shape
+    for label in range(1, count):
+        area = int(stats[label, cv2.CC_STAT_AREA])
+        if area >= min_area:
+            continue
+        x = int(stats[label, cv2.CC_STAT_LEFT])
+        y = int(stats[label, cv2.CC_STAT_TOP])
+        w = int(stats[label, cv2.CC_STAT_WIDTH])
+        h = int(stats[label, cv2.CC_STAT_HEIGHT])
+        touches_edge = x == 0 or y == 0 or x + w == width or y + h == height
+        values = mask[labels == label]
+        if not touches_edge and values.size and float(np.max(values)) < 0.72:
+            cleaned[labels == label] = 0.0
+    return cleaned
+
+
 def _border_pixels(image: np.ndarray) -> np.ndarray:
     height, width = image.shape[:2]
     strip = max(1, min(12, round(min(height, width) * 0.015)))
@@ -348,6 +378,11 @@ def refine_mask(
     pixels = mask.shape[0] * mask.shape[1]
     min_area_ratio = 0.000002 if mode is RemovalMode.design else 0.00001
     mask = _remove_isolated_specks(mask, max(2, int(pixels * min_area_ratio)))
+    residue_area_ratio = 0.000002 if mode is RemovalMode.design else 0.000006
+    mask = _remove_low_confidence_residue(
+        mask,
+        max(3, int(pixels * residue_area_ratio)),
+    )
 
     if options.edge_shift:
         kernel = np.ones((3, 3), np.uint8)

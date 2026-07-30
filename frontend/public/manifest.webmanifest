@@ -1,0 +1,11 @@
+{
+  "name": "TransferLab",
+  "short_name": "TransferLab",
+  "description": "Préparation locale de fichiers pour l’impression DTF",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f8fb",
+  "theme_color": "#15171c",
+  "lang": "fr",
+  "dir": "ltr"
+}

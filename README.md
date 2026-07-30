@@ -1,34 +1,411 @@
-# TransferLab — configurateur DTF autonome
+# TransferLab
 
-Cette branche contient une première version autonome de TransferLab, indépendante de l’interface PRINTELLY présente sur `main`.
+> Supprimez le fond. Préservez le design. Imprimez sans erreur.
 
-## Branche
+Cette branche contient le nouveau **TransferLab autonome** : une application séparée du site client PRINTELLY, avec une façade unique Next.js, FastAPI, PostgreSQL, Redis/RQ et un moteur de détourage configurable.
 
-`transferlab-autonome`
+- Branche de développement : `transferlab-background-studio`
+- Branche d’origine conservée : `transferlab-autonome`
+- Le site client sur `main` n’est pas modifié.
+- En mode `local`, les images ne quittent jamais le serveur. Les modes `photoroom` et `removebg` transmettent l’image uniquement au prestataire explicitement configuré.
 
-La branche `main` n’est pas modifiée.
+## Capacités
 
-## Fonctionnalités disponibles
+- façade unique sans inscription : import, aperçu, détourage, DPI, retouche et téléchargement sur la même page ;
+- import direct ou par morceaux, jusqu’à 25 fichiers ;
+- contrôle de la signature, du MIME, de la taille et des dimensions ;
+- PNG, JPEG, WebP, TIFF, BMP, PDF/AI-PDF, SVG nettoyé et PSD ;
+- file Redis/RQ avec progression réellement enregistrée et annulation ;
+- session ONNX persistante, sélection CUDA → DirectML → CPU ;
+- inférence BiRefNet par tuiles avec recouvrement pour les grandes images ;
+- modes logo, cheveux, fonds blanc, noir, gris et coloré ;
+- véritable PNG RGBA, éditeur non destructif, annuler/rétablir ;
+- contrôle DTF de l’alpha, du DPI, des halos, détails et résidus ;
+- tailles multiples, tarification DZD, commandes et 58 wilayas ;
+- comptes scrypt, sessions signées et bibliothèque persistante ;
+- administration, vérification humaine et purge automatique.
 
-- interface responsive desktop et mobile ;
-- import local PNG, JPG ou WEBP jusqu’à 15 Mo ;
-- aperçu du visuel sur un textile avec plusieurs couleurs ;
-- dimensions personnalisables en centimètres ;
-- quantité et paliers de remise dynamiques ;
-- options de contrôle, détourage et production express ;
-- estimation instantanée en dinars algériens ;
-- panier de démonstration ;
-- sections qualité, processus et FAQ ;
-- aucune API, bibliothèque ou ressource externe nécessaire.
+## Architecture
 
-## Confidentialité
+```text
+Navigateur
+   │
+   ▼
+Nginx :8080
+   ├── Next.js :3000
+   └── FastAPI :8000
+          ├── PostgreSQL : métadonnées, versions, commandes, audit
+          ├── Redis/RQ : file, annulation, progression
+          ├── Worker CPU ou GPU : BiRefNet ONNX persistant
+          ├── Volume privé : originaux, masques et exports
+          └── Maintenance : rétention et suppression physique
+```
 
-Le fichier choisi dans le configurateur reste dans le navigateur. Il n’est pas envoyé à un serveur dans cette version.
+L’API ne renvoie jamais de chemin interne. Les téléchargements utilisent une URL HMAC courte qui lie la clé, l’expiration et le nom de fichier.
 
-## Utilisation
+## Prérequis
 
-Ouvrir simplement `index.html` dans un navigateur moderne ou servir la racine de cette branche avec un serveur statique.
+Sous Windows : Docker Desktop, WSL2, 16 Go de RAM recommandés et 20 Go libres. Le GPU NVIDIA est facultatif. Sous Linux : Docker Engine et Docker Compose v2.
 
-## Prochaine étape
+## Installation
 
-Connecter le panier à un vrai parcours de commande, au stockage des fichiers, au paiement et au suivi de production lorsque les services correspondants auront été choisis.
+```powershell
+git switch transferlab-background-studio
+Copy-Item .env.example .env
+```
+
+Remplacer au minimum dans `.env` : `POSTGRES_PASSWORD`, `SIGNING_SECRET`, `ADMIN_TOKEN` et `BACKGROUND_MODEL_SHA256`. Ne jamais committer `.env`, le modèle ou des fichiers clients.
+
+## Choisir le moteur de détourage
+
+Le studio accepte trois configurations. Une seule est active à la fois :
+
+```dotenv
+# Local, privé, nécessite le modèle ONNX
+BACKGROUND_PROVIDER=local
+NEXT_PUBLIC_BACKGROUND_PROVIDER=local
+```
+
+```dotenv
+# PhotoRoom, consomme les crédits du compte configuré
+BACKGROUND_PROVIDER=photoroom
+NEXT_PUBLIC_BACKGROUND_PROVIDER=photoroom
+PHOTOROOM_API_KEY=VOTRE_CLE_LIVE
+```
+
+```dotenv
+# remove.bg, consomme les crédits du compte configuré
+BACKGROUND_PROVIDER=removebg
+NEXT_PUBLIC_BACKGROUND_PROVIDER=removebg
+REMOVEBG_API_KEY=VOTRE_CLE
+```
+
+Ne jamais publier une clé dans Git, une capture d’écran ou une conversation. Après tout changement de fournisseur, reconstruire le frontend et recréer les services :
+
+```powershell
+docker compose build --no-cache frontend api worker
+docker compose up -d --force-recreate frontend api worker proxy
+docker compose ps
+```
+
+L’interface affiche le fournisseur réellement intégré au build et avertit lorsqu’un prestataire externe reçoit l’image.
+
+## Modèle BiRefNet local
+
+Le modèle n’est volontairement pas stocké dans Git. Lire `MODEL_LICENSE.md` puis installer avec une empreinte approuvée :
+
+```powershell
+New-Item -ItemType Directory -Force models
+python backend/scripts/install_model.py --sha256 VOTRE_SHA256_APPROUVE_DE_64_CARACTERES --accept-mit-license
+python backend/scripts/verify_model.py --model models/background-removal.onnx --sha256 VOTRE_SHA256_APPROUVE_DE_64_CARACTERES --load
+```
+
+Aucun import client ne déclenche un téléchargement externe.
+
+## Démarrage CPU
+
+```powershell
+.\scripts\start.ps1
+```
+
+Équivalent manuel :
+
+```powershell
+docker compose up -d --build
+docker compose ps
+```
+
+- application : http://localhost:8080
+- documentation API : http://localhost:8080/docs
+- santé : http://localhost:8080/api/v1/health
+
+## Démarrage GPU NVIDIA
+
+Dans `.env` :
+
+```dotenv
+BACKGROUND_DEVICE=cuda
+RQ_QUEUE_NAME=background-removal-gpu
+```
+
+Puis :
+
+```powershell
+.\scripts\start.ps1 -Gpu
+```
+
+Le script lance le worker GPU et désactive le worker CPU pour éviter deux chargements du modèle.
+
+## Revenir au CPU
+
+```dotenv
+BACKGROUND_DEVICE=auto
+RQ_QUEUE_NAME=background-removal
+```
+
+```powershell
+docker compose --profile gpu down
+.\scripts\start.ps1
+```
+
+Avec `auto`, le code choisit CUDA, DirectML puis CPU selon les providers réellement installés. Le conteneur Linux CPU fournit CPU ; le profil GPU fournit CUDA.
+
+## Exploitation
+
+Arrêter sans supprimer les volumes :
+
+```powershell
+.\scripts\stop.ps1
+```
+
+Voir les journaux :
+
+```powershell
+docker compose logs -f api worker frontend maintenance
+docker compose logs --tail 200 worker
+```
+
+Migrations :
+
+```powershell
+docker compose exec api alembic upgrade head
+docker compose exec api alembic current
+```
+
+Créer ou promouvoir un administrateur :
+
+```powershell
+docker compose exec api python scripts/create_admin.py --email admin@transferlab.dz --name "Administrateur TransferLab"
+```
+
+Le mot de passe est demandé sans être affiché. L’accès technique à `/admin` utilise aussi `ADMIN_TOKEN`, distribué hors du dépôt.
+
+Purge manuelle sûre :
+
+```powershell
+.\scripts\cleanup.ps1
+```
+
+Le service `maintenance` effectue déjà la purge périodiquement. Cette commande ne supprime aucun volume. `docker compose down --volumes` efface la base et les fichiers ; ne l’utiliser qu’après une décision explicite et une sauvegarde.
+
+## Tests backend
+
+```powershell
+cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+alembic upgrade head
+pytest -q --cov=app --cov-report=term-missing
+```
+
+PostgreSQL et Redis doivent correspondre à `DATABASE_URL` et `REDIS_URL`.
+
+## Tests frontend
+
+```powershell
+cd frontend
+npm install
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npx playwright install chromium
+npm run test:e2e
+```
+
+Validation Docker :
+
+```powershell
+docker compose config --quiet
+docker compose build api frontend
+```
+
+GitHub Actions exécute les migrations PostgreSQL, les tests unitaires/API, la sécurité d’upload, les régressions de masque, le frontend, les parcours desktop/mobile et le build Docker.
+
+## API v1
+
+Principaux endpoints :
+
+- `POST /api/v1/sessions/guest`
+- `POST /api/v1/accounts/register`
+- `POST /api/v1/accounts/login`
+- `GET /api/v1/accounts/me`
+- `POST /api/v1/assets/upload` et endpoints d’upload par morceaux
+- `GET /api/v1/assets`
+- `POST /api/v1/background-removal/jobs`
+- `GET /api/v1/background-removal/jobs/{job_id}/events`
+- `POST /api/v1/masks/{asset_id}/operations`
+- `POST /api/v1/masks/{asset_id}/undo` et `redo`
+- `POST /api/v1/preflight/analyze`
+- `POST /api/v1/exports`
+- `POST /api/v1/quotes`
+- `POST /api/v1/orders`
+- `GET /api/v1/admin/dashboard`
+
+Swagger expose la spécification complète une fois le service démarré.
+
+## Sécurité
+
+Le projet contrôle le contenu réel avant décodage, limite poids et pixels, protège contre les bombes de décompression, nettoie les SVG, exécute les conversions sans shell dans un conteneur non privilégié, utilise des noms aléatoires et des URLs signées, protège les mots de passe avec scrypt, contrôle la propriété des designs, retire les métadonnées à l’export et ne journalise pas le contenu d’image.
+
+Avant ouverture Internet : TLS, sauvegardes chiffrées, antivirus configuré, rotation des secrets et supervision externe sont obligatoires.
+
+## Dépannage Windows, Docker et WSL2
+
+Vérifier le moteur :
+
+```powershell
+wsl --status
+wsl --update
+docker version
+docker compose version
+```
+
+Si le modèle est absent :
+
+```powershell
+Test-Path models/background-removal.onnx
+docker compose exec worker ls -lh /models/background-removal.onnx
+```
+
+En cas de mémoire insuffisante : réduire `MAX_IMAGE_PIXELS` et `INFERENCE_TILE_SIZE`, conserver `MAX_CONCURRENT_JOBS=1`, augmenter la mémoire WSL2 et ne pas lancer les workers CPU et GPU ensemble. Les tuiles réduisent la mémoire d’inférence, mais le raffinement final manipule encore le masque original.
+
+Si la progression reste en attente :
+
+```powershell
+docker compose ps
+docker compose logs --tail 200 redis worker
+```
+
+Vérifier que `RQ_QUEUE_NAME` correspond à la file du worker.
+
+## Pourquoi GitHub Pages renvoyait 404
+
+Cette version n’est pas un sous-dossier statique `/transferlab/`. Elle requiert FastAPI, PostgreSQL, Redis, un worker ONNX et du stockage privé. GitHub Pages ne peut pas les exécuter. Il faut déployer la pile Docker sur un serveur derrière Nginx et TLS.
+
+## Limites avant production publique
+
+- fournir le modèle ONNX et son SHA-256 approuvé ;
+- tester PDF, SVG, PSD et AI avec les fichiers réels de production ;
+- configurer `ANTIVIRUS_COMMAND` pour activer l’antivirus ;
+- connecter l’adaptateur de paiement en ligne choisi ;
+- l’amélioration 2×/4× reste conservatrice et non générative ;
+- faire valider humainement les transparences artistiques et cas extrêmes.
+
+Voir [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) pour l’audit et les décisions.
+
+
+## Fournisseur payant remove.bg (optionnel)
+
+TransferLab reste configuré sur BiRefNet local par défaut. Pour utiliser l’API payante
+remove.bg, créer une clé dans le compte remove.bg puis définir uniquement dans le
+fichier local `.env` :
+
+```dotenv
+BACKGROUND_PROVIDER=removebg
+REMOVEBG_API_KEY=VOTRE_CLE_PRIVEE
+REMOVEBG_API_URL=https://api.remove.bg/v1.0/removebg
+REMOVEBG_SIZE=auto
+REMOVEBG_TIMEOUT_SECONDS=180
+```
+
+Reconstruire ensuite les services concernés :
+
+```powershell
+docker compose up -d --build --force-recreate api worker frontend proxy
+```
+
+La clé reste dans les conteneurs backend et n’est jamais incluse dans le JavaScript
+du navigateur. En mode `removebg`, le fichier est transmis au prestataire externe
+et un crédit peut être consommé. TransferLab utilise uniquement l’alpha retourné :
+les couleurs et dimensions finales proviennent toujours du fichier original.
+
+Pour revenir au traitement privé local :
+
+```dotenv
+BACKGROUND_PROVIDER=local
+REMOVEBG_API_KEY=
+```
+
+
+## Fournisseur payant PhotoRoom (optionnel)
+
+La clé **Live** produit le résultat final sans filigrane. La clé Sandbox sert
+uniquement aux essais et peut produire un résultat filigrané.
+
+```dotenv
+BACKGROUND_PROVIDER=photoroom
+PHOTOROOM_API_KEY=VOTRE_CLE_LIVE_PRIVEE
+PHOTOROOM_API_URL=https://sdk.photoroom.com/v1/segment
+PHOTOROOM_TIMEOUT_SECONDS=180
+```
+
+Reconstruire les services concernés après modification de `.env` :
+
+```powershell
+docker compose up -d --build --force-recreate api worker frontend proxy
+```
+
+La clé PhotoRoom reste exclusivement dans les services backend. TransferLab
+conserve les pixels RGB originaux et applique localement le canal alpha renvoyé
+par PhotoRoom.
+
+### Upscale PhotoRoom ×4 facultatif
+
+L’upscale est une seconde opération explicite, séparée du détourage. Il est
+désactivé par défaut dans l’interface pour éviter toute consommation involontaire.
+Il nécessite l’accès **PhotoRoom Image Editing API Plus** et utilise uniquement
+l’endpoint officiel v2 :
+
+```dotenv
+PHOTOROOM_EDIT_API_URL=https://image-api.photoroom.com/v2/edit
+PHOTOROOM_UPSCALE_ENABLED=true
+PHOTOROOM_UPSCALE_DEFAULT_MODE=ai.fast
+PHOTOROOM_EDIT_TIMEOUT_SECONDS=240
+NEXT_PUBLIC_PHOTOROOM_UPSCALE_ENABLED=true
+```
+
+Deux modes sont proposés :
+
+- `ai.fast` : entrée maximale de 1000 × 1000 px, sortie exacte ×4 ;
+- `ai.slow` : entrée maximale de 512 × 512 px, sortie exacte ×4.
+
+TransferLab refuse un fichier trop grand avant l’appel payant. Le RGB amélioré
+vient de PhotoRoom, mais l’alpha raffiné par TransferLab est redimensionné et
+réappliqué localement : l’upscale ne peut donc pas restaurer l’ancien fond. Le
+PNG détouré et le PNG ×4 sont conservés comme deux versions distinctes. Chaque
+upscale sélectionné peut consommer une opération ou un crédit PhotoRoom selon
+le contrat du compte.
+
+Après une mise à jour de cette fonctionnalité :
+
+```powershell
+Set-Location -LiteralPath "C:\Users\PROTECH_WD\Documents\printelly-background-studio"
+git pull origin transferlab-background-studio
+docker compose build --no-cache frontend api worker
+docker compose up -d --force-recreate frontend api worker proxy
+```
+
+Tests ciblés prévus par le dépôt, après installation des dépendances décrite
+dans les sections de tests :
+
+```powershell
+Set-Location -LiteralPath "C:\Users\PROTECH_WD\Documents\printelly-background-studio\backend"
+.\.venv\Scripts\python.exe -m pytest -q tests/test_photoroom_provider.py tests/test_api_v1_integration.py
+Set-Location -LiteralPath "C:\Users\PROTECH_WD\Documents\printelly-background-studio\frontend"
+npm test
+```
+
+## Parcours autonome sur une seule façade
+
+La page `http://localhost:8080/` ne présente ni inscription, ni panier, ni administration. Le parcours principal est volontairement direct :
+
+1. déposer ou sélectionner une image ;
+2. choisir l’un des 13 profils, ou garder **Automatique** ;
+3. cliquer sur **Supprimer le fond** ;
+4. voir le résultat transparent apparaître à gauche dès que le job est terminé ;
+5. régler la largeur d’impression pour lire le DPI réel ;
+6. télécharger le PNG ou ouvrir la retouche non destructive dans la même page.
+
+Les anciennes routes techniques restent dans le dépôt pour préserver la compatibilité de l’API et des données, mais elles ne sont plus proposées dans la façade autonome.
