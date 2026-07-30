@@ -26,6 +26,16 @@ describe("background removal profiles", () => {
     expect(new Set(REMOVAL_PROFILES.map((profile) => profile.mode)).size).toBe(13);
   });
 
+  it("keeps high precision and original dimensions enabled for every profile", () => {
+    for (const profile of REMOVAL_PROFILES) {
+      expect(parametersForRemovalMode(profile.mode)).toMatchObject({
+        high_precision: true,
+        protect_details: true,
+        output_original_size: true,
+      });
+    }
+  });
+
   it("enables protected smart processing for black backgrounds", () => {
     expect(parametersForRemovalMode("black_background")).toMatchObject({
       black_background_mode: "smart",
