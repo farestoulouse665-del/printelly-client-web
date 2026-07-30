@@ -67,8 +67,8 @@ Services Docker :
 
 ## 3. Invariants techniques
 
-- Aucun fichier client envoyé à un service tiers.
-- Aucun appel à une API payante de suppression de fond.
+- Le mode local ne transmet aucun fichier client à un tiers.
+- PhotoRoom et remove.bg sont des options explicites : elles ne sont appelées que lorsque le fournisseur correspondant est configuré, avec avertissement visible dans l’interface.
 - Le modèle est chargé une fois par processus worker et réutilisé.
 - Les dimensions originales et les pixels opaques sont préservés sauf action explicite.
 - Toute transparence livrée est un véritable PNG RGBA ; aucun damier n’est exporté.
@@ -192,3 +192,30 @@ La revue statique de livraison a ajouté les garanties suivantes :
 - totalité des profils IA et des variantes lasso exposée dans l’interface.
 
 La branche contient le workflow de validation complet, mais le connecteur disponible ne remonte pas les exécutions déclenchées par `push`. L’environnement Windows local refuse aussi l’exécution du shell par sa politique ACL. En conséquence, aucun test n’est déclaré réussi sans résultat GitHub Actions observable. La PR reste volontairement en brouillon et aucun déploiement ou merge n’a été effectué.
+
+## 11. Façade autonome « légendaire » — 30 juillet 2026
+
+### Réalisé
+
+- remplacement de l’accueil e-commerce par une façade TransferLab autonome sans inscription, panier ni administration visibles ;
+- conservation du backend, des jobs RQ, des URLs signées et des 13 profils fonctionnels ;
+- affichage automatique du résultat traité dans le panneau gauche sans navigation vers une autre page ;
+- chargement de l’aperçu traité en Blob, renouvellement de l’URL signée en cas d’expiration et bascule Original/Résultat ;
+- téléchargement direct du PNG transparent final ;
+- calcul du DPI réel à partir des pixels et d’une largeur d’impression réglable avec ratio verrouillé ;
+- intégration de l’éditeur de masque Konva dans la même façade, avec versions, annulation et rétablissement ;
+- identité visuelle premium responsive dédiée à TransferLab ;
+- adaptation du test Playwright desktop/mobile au parcours autonome ;
+- documentation des modes local, PhotoRoom et remove.bg sans inclure aucune clé.
+
+### Vérification disponible
+
+- revue statique des fichiers mis à jour et contrôle des imports/états ;
+- workflow GitHub Actions toujours présent pour TypeScript, ESLint, Vitest, build Next.js, Playwright, pytest et Docker ;
+- aucun résultat de test n’est déclaré réussi tant qu’une exécution CI observable ou une exécution Docker locale n’a pas été reçue.
+
+### Périmètre préservé
+
+- modifications limitées à `transferlab-background-studio` ;
+- aucune modification de `main` ni du site client PRINTELLY ;
+- anciennes routes conservées pour la compatibilité des données et de l’API, mais absentes de la navigation principale.
