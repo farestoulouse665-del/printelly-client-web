@@ -28,7 +28,8 @@
   function renderWallet() {
     var wallet = state.data.wallet || {};
     $("#walletCard").classList.remove("loading");
-    $("#walletCard").innerHTML = '<div class="wallet-label">CRÉDITS DISPONIBLES</div><div class="wallet-balance"><strong>' + Number(wallet.available_credits || 0) + '</strong><span>images</span></div><div class="wallet-stats"><div><small>Réservés</small><b>' + Number(wallet.reserved_credits || 0) + '</b></div><div><small>Déjà utilisés</small><b>' + Number(wallet.consumed_credits || 0) + '</b></div></div>';
+    var available = Number(wallet.available_credits || 0);
+    $("#walletCard").innerHTML = '<div class="wallet-label">CRÉDITS DISPONIBLES</div><div class="wallet-balance"><strong>' + available + '</strong><span>images</span></div><div class="wallet-stats"><div><small>Réservés</small><b>' + Number(wallet.reserved_credits || 0) + '</b></div><div><small>Déjà utilisés</small><b>' + Number(wallet.consumed_credits || 0) + '</b></div></div>' + (available === 0 ? '<p class="wallet-empty">Vous avez utilisé tous vos crédits. Choisissez ou renouvelez un pack ci-dessous.</p>' : '');
   }
 
   function renderSubscription() {
@@ -37,7 +38,7 @@
     if (!active) { section.classList.add("hidden"); return; }
     var plan = active.plan_snapshot || {};
     section.classList.remove("hidden");
-    $("#subscriptionCard").innerHTML = '<article class="subscription-card"><div><h3>' + esc(plan.name || "Pack Studio IA") + '</h3><p>' + esc((plan.features || []).join(" • ") || "Suppression de fond professionnelle") + '</p></div><div class="subscription-dates"><div><small>ACTIVÉ LE</small><b>' + date(active.starts_at) + '</b></div><div><small>EXPIRE LE</small><b>' + date(active.expires_at) + '</b></div></div></article>';
+    $("#subscriptionCard").innerHTML = '<article class="subscription-card"><div><h3>' + esc(plan.name || "Pack Studio IA") + '</h3><p>' + esc((plan.features || []).join(" • ") || "Suppression de fond professionnelle") + '</p><button class="ghost choose-plan renew-button" data-plan-id="' + esc(plan.id || active.plan_id) + '">Renouveler mon pack</button></div><div class="subscription-dates"><div><small>ACTIVÉ LE</small><b>' + date(active.starts_at) + '</b></div><div><small>EXPIRE LE</small><b>' + date(active.expires_at) + '</b></div></div></article>';
   }
 
   function planFeatures(plan) {
@@ -81,10 +82,31 @@
       var plan = snapshot(order); var progress = timelineIndex(order.status);
       var steps = ["Pack choisi", "Commande créée", "Paiement effectué", "Preuve envoyée", "Vérification", "Activation"];
       var action = canUpload(order.status) ? '<button class="primary proof-button" data-order-id="' + esc(order.id) + '">Envoyer une preuve</button>' : '';
-      if (order.status === "paid") action += '<a class="primary" href="../background-studio/">Utiliser Studio IA</a>';
+      if (order.status === "paid") action += '<a class="primary" href="../background-studio/">Utiliser Studio IA</a><button class="receipt-button" data-order-id="' + esc(order.id) + '">Télécharger le reçu</button>';
       return '<article class="order-card"><div class="order-head"><div><h3>' + esc(order.reference) + ' · ' + esc(plan.name || "Pack Studio IA") + '</h3><p>Créée le ' + date(order.created_at) + '</p></div><span class="status ' + esc(order.status) + '">' + esc(labels[order.status] || order.status) + '</span></div><div class="order-details"><div><small>MONTANT</small><b>' + money(order.expected_amount_dzd) + '</b></div><div><small>CRÉDITS</small><b>' + Number(plan.included_credits || 0) + '</b></div><div><small>PREUVE AVANT</small><b>' + date(order.proof_deadline_at) + '</b></div><div><small>DERNIÈRE MISE À JOUR</small><b>' + date(order.updated_at) + '</b></div></div>' + (order.rejection_reason ? '<p class="notice">Motif : ' + esc(order.rejection_reason) + '</p>' : '') + (order.review_note ? '<p class="notice">Message PRINTELLY : ' + esc(order.review_note) + '</p>' : '') + '<div class="timeline">' + steps.map(function (step, index) { var number = index + 1; return '<span class="' + (number < progress ? "done" : number === progress ? "current" : "") + '">' + esc(step) + '</span>'; }).join("") + '</div><div class="order-actions">' + action + '</div></article>';
     }).join("");
     all(".proof-button").forEach(function (button) { button.addEventListener("click", function () { openProof(button.dataset.orderId); }); });
+    all(".receipt-button").forEach(function (button) { button.addEventListener("click", function () { downloadReceipt(button.dataset.orderId); }); });
+  }
+
+  function downloadReceipt(orderId) {
+    var order = (state.data.orders || []).find(function (item) { return item.id === orderId; });
+    if (!order || order.status !== "paid") return;
+    var plan = snapshot(order);
+    var lines = [
+      "PRINTELLY — REÇU STUDIO IA", "",
+      "Reçu : " + (order.receipt_number || order.reference),
+      "Commande : " + order.reference,
+      "Pack : " + (plan.name || "Studio IA"),
+      "Montant : " + money(order.expected_amount_dzd),
+      "Crédits : " + Number(plan.included_credits || 0),
+      "Validé le : " + date(order.approved_at), "",
+      "Ce reçu confirme l’activation du pack après validation administrative."
+    ];
+    var blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+    var url = URL.createObjectURL(blob); var link = document.createElement("a");
+    link.href = url; link.download = (order.receipt_number || order.reference) + ".txt"; link.click();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
   function renderUsage() {
