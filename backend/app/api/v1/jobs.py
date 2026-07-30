@@ -10,11 +10,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.v1.dependencies import current_guest
+from app.core.config import settings
 from app.db.session import SessionLocal, get_db
 from app.models.entities import GuestSession, JobEvent, ProcessingJob
 from app.schemas.api import BackgroundJobCreate, JobOut
 from app.services.assets import asset_service
 from app.services.job_queue import enqueue_background_job, record_event, request_cancellation
+from app.services.photoroom_upscale import PhotoRoomUpscaleService
 from app.storage.local import storage
 
 
@@ -38,6 +40,32 @@ def create_job(
     database: Session = Depends(get_db),
 ) -> JobOut:
     asset = asset_service.owned_asset(database, body.asset_id, guest.id)
+    if body.upscale_mode != "off":
+        if settings.background_provider != "photoroom":
+            raise HTTPException(
+                status_code=422,
+                detail="L’upscale IA est disponible uniquement avec le fournisseur PhotoRoom.",
+            )
+        if not settings.photoroom_upscale_enabled:
+            raise HTTPException(
+                status_code=409,
+                detail="L’upscale PhotoRoom est désactivé sur ce serveur.",
+            )
+        if not settings.photoroom_api_key:
+            raise HTTPException(
+                status_code=503,
+                detail="PHOTOROOM_API_KEY est absente du serveur.",
+            )
+        limit = PhotoRoomUpscaleService.maximum_dimension(body.upscale_mode)
+        if asset.width > limit or asset.height > limit:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"Le mode {body.upscale_mode} accepte au maximum "
+                    f"{limit} × {limit} pixels. Votre fichier mesure "
+                    f"{asset.width} × {asset.height} pixels."
+                ),
+            )
     active = database.scalar(
         select(ProcessingJob).where(
             ProcessingJob.asset_id == asset.id,
