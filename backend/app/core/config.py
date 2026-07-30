@@ -48,6 +48,16 @@ class Settings:
         "https://sdk.photoroom.com/v1/segment",
     ).strip()
     photoroom_timeout_seconds: int = _int("PHOTOROOM_TIMEOUT_SECONDS", 180)
+    photoroom_edit_api_url: str = os.getenv(
+        "PHOTOROOM_EDIT_API_URL",
+        "https://image-api.photoroom.com/v2/edit",
+    ).strip()
+    photoroom_upscale_enabled: bool = _bool("PHOTOROOM_UPSCALE_ENABLED", True)
+    photoroom_upscale_default_mode: str = os.getenv(
+        "PHOTOROOM_UPSCALE_DEFAULT_MODE",
+        "ai.fast",
+    ).strip().lower()
+    photoroom_edit_timeout_seconds: int = _int("PHOTOROOM_EDIT_TIMEOUT_SECONDS", 240)
     max_concurrent_jobs: int = _int("MAX_CONCURRENT_JOBS", 1)
     tile_size: int = _int("INFERENCE_TILE_SIZE", 2048)
     tile_overlap: int = _int("INFERENCE_TILE_OVERLAP", 192)
