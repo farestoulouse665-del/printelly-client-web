@@ -297,6 +297,7 @@ Les fichiers de référence sont dans :
 supabase/migrations/20260730090000_studio_ai_ccp_packs.sql
 supabase/migrations/20260730090100_schedule_studio_expiry.sql
 supabase/migrations/20260730090200_studio_ai_credit_expiry_hardening.sql
+supabase/migrations/20260730090300_studio_ai_fk_indexes.sql
 supabase/functions/printelly-studio-billing/index.ts
 supabase/functions/printelly-background-removal/index.ts
 ```
