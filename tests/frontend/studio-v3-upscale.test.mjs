@@ -35,7 +35,7 @@ test("obsolete finishing and recovery systems leave the rendered Studio", () => 
   assert.match(themes, /recovery\.remove\(\)/);
   assert.match(themes, /brRemovalMenu/);
   assert.match(themes, /removal\.remove\(\)/);
-  assert.match(themes, /data-br-view=\\"result\\"/);
+  assert.match(themes, /data-br-view="result"/);
   assert.match(themes, /right\.remove\(\)/);
   assert.doesNotMatch(legendaryUi, /<span>FINITION<\/span>/);
   assert.doesNotMatch(legendaryUi, /title:\s*"Finition"/);
