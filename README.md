@@ -1,42 +1,28 @@
-# PRINTELLY Client — détourage sémantique local
+# PRINTELLY Client — TransferLab Studio IA
 
-Cette version remplace la suppression de couleur par une segmentation réelle du sujet. Le
-frontend existant reste statique. Un serveur Python privé exécute BiRefNet avec ONNX Runtime,
-raffine le masque puis retourne un PNG RGBA dans les dimensions originales.
+Le site public reste un frontend statique GitHub Pages. En production, TransferLab appelle
+une Edge Function Supabase authentifiée qui protège la clé PhotoRoom, vérifie le pack actif,
+réserve un crédit, valide le PNG retourné puis consomme ou restitue le crédit de façon
+atomique. Le backend Python/BiRefNet présent dans ce dépôt reste une option locale autonome.
 
-Aucune API d'image payante, aucun crédit, aucune clé commerciale et aucun envoi vers un
-fournisseur tiers ne sont nécessaires. Le logiciel fonctionne sur CPU. Le logiciel est
-gratuit; la machine, l'électricité, le VPS éventuel et son trafic ne le sont pas forcément.
-
-## Architecture
+## Architecture de production
 
 ```text
-Navigateur PRINTELLY
-  -> validation immédiate du type/taille
-  -> POST multipart vers le serveur privé
-FastAPI
-  -> vérification MIME + signature + décodage + limites
-  -> LocalOnnxProvider (BiRefNet chargé une fois)
-  -> masque sémantique du premier plan
-  -> protection des objets, textes, logos et couleurs internes
-  -> détection structurelle des fonds unis connectés aux bords
-  -> estimation de la couleur réelle du fond depuis les bords
-  -> récupération du matte alpha (voiles blancs, noirs ou colorés)
-  -> protection sémantique des micro-détails et couleurs identiques au fond
-  -> affinage alpha guidé par les contours et décontamination localisée
-  -> fusion avec l'alpha déjà présent
-  -> vérification du PNG RGBA
-  -> suppression du fichier temporaire
-Navigateur
-  -> aperçu, masque, contours, zones ambiguës
-  -> scanner de résidus (voiles, bords reliés, petits fragments)
-  -> guidage manuel intelligent à 8 directions avec zone de sécurité
-  -> corrections alpha non destructives
-  -> téléchargement ou ajout à une commande
+Compte PRINTELLY authentifié
+  -> /studio-packs/ : catalogue dynamique, commande CCP, preuve privée
+  -> printelly-studio-billing : autorisation, validation MIME, stockage signé
+  -> administrateur /studio-admin/ : vérification explicite
+  -> transaction PostgreSQL : abonnement + lot de crédits + journal d'audit
+  -> /background-studio/ : contrôle du pack et des limites
+  -> réservation atomique d'un crédit
+  -> PhotoRoom Remove Background via secret Supabase
+  -> validation du vrai PNG et des dimensions
+  -> succès : consommation définitive et coût 6,8 DZD enregistré
+  -> échec : crédit restitué; aucune consommation définitive
 ```
 
-L'interface fournisseur dans `backend/app/providers/base.py` permet de remplacer BiRefNet
-sans réécrire l'API ni le pipeline.
+Aucun secret privilégié n'est présent dans le frontend. Les justificatifs sont placés dans
+le bucket privé `studio-payment-proofs` et ne sont ouverts que par URL signée temporaire.
 
 ## Installation du modèle
 
@@ -268,3 +254,65 @@ La source versionnée du proxy se trouve dans
 `supabase/functions/printelly-background-removal/index.ts`. Aucun fichier
 `.env` ni aucune clé PhotoRoom ne doit être commité.
 
+
+
+## Packs Studio IA et paiement CCP
+
+Pages :
+
+- `/studio-packs/` : packs actifs, portefeuille, commandes, preuve et historique.
+- `/studio-admin/` : packs, coordonnées CCP et file de validation protégée par le rôle administrateur.
+- `/background-studio/` : TransferLab avec solde réel et consommation des crédits.
+
+Configuration initiale :
+
+1. Se connecter avec le compte administrateur PRINTELLY.
+2. Ouvrir `/studio-admin/`.
+3. Créer au moins un pack actif et disponible à la vente.
+4. Ajouter et activer les coordonnées CCP.
+5. Vérifier côté client que le pack apparaît dans `/studio-packs/`.
+
+Le client crée ensuite une commande `SAI-AAAA-000001`, paie, puis téléverse un véritable
+JPG, PNG ou PDF. L'envoi d'une preuve place seulement la commande dans
+`proof_received`. Il ne crée ni abonnement ni crédit. Seule l'action administrateur
+« Accepter le paiement » exécute la transaction atomique d'activation.
+
+### États et garanties
+
+- commandes : `pending_payment`, `proof_received`, `under_review`,
+  `additional_proof_required`, `paid`, `rejected`, `expired`, etc.;
+- double validation bloquée par clé d'idempotence et verrouillage de ligne;
+- copie figée du pack enregistrée dans chaque commande;
+- expiration automatique exécutée chaque heure par `pg_cron`;
+- justificatifs privés, signature SHA-256 et détection du MIME réel;
+- fonctions sensibles exécutables uniquement par `service_role`;
+- un traitement réussi consomme un crédit; un échec technique le restitue;
+- si le pack expire pendant un traitement, le crédit échoué devient expiré et n'est jamais ressuscité.
+
+### Déploiement Supabase
+
+Les fichiers de référence sont dans :
+
+```text
+supabase/migrations/20260730090000_studio_ai_ccp_packs.sql
+supabase/migrations/20260730090100_schedule_studio_expiry.sql
+supabase/migrations/20260730090200_studio_ai_credit_expiry_hardening.sql
+supabase/functions/printelly-studio-billing/index.ts
+supabase/functions/printelly-background-removal/index.ts
+```
+
+Les Edge Functions exigent un JWT valide. Les secrets `PHOTOROOM_API_KEY`,
+`SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` restent exclusivement côté Supabase.
+
+### Validation frontend
+
+```bash
+node --check background-removal-api.js
+node --check studio-billing-api.js
+node --check studio-credit-badge.js
+node --check studio-packs/app.js
+node --check studio-admin/app.js
+```
+
+La GitHub Action exécute ces contrôles sur chaque pull request et ne déploie GitHub Pages
+que depuis `main`.
