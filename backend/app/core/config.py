@@ -42,6 +42,12 @@ class Settings:
     ).strip()
     removebg_size: str = os.getenv("REMOVEBG_SIZE", "auto").strip().lower()
     removebg_timeout_seconds: int = _int("REMOVEBG_TIMEOUT_SECONDS", 180)
+    photoroom_api_key: str = os.getenv("PHOTOROOM_API_KEY", "").strip()
+    photoroom_api_url: str = os.getenv(
+        "PHOTOROOM_API_URL",
+        "https://sdk.photoroom.com/v1/segment",
+    ).strip()
+    photoroom_timeout_seconds: int = _int("PHOTOROOM_TIMEOUT_SECONDS", 180)
     max_concurrent_jobs: int = _int("MAX_CONCURRENT_JOBS", 1)
     tile_size: int = _int("INFERENCE_TILE_SIZE", 2048)
     tile_overlap: int = _int("INFERENCE_TILE_OVERLAP", 192)
@@ -121,11 +127,17 @@ class Settings:
             raise RuntimeError(
                 "SIGNING_SECRET et ADMIN_TOKEN doivent être définis en production."
             )
-        if self.background_provider not in {"local", "removebg"}:
-            raise RuntimeError("BACKGROUND_PROVIDER doit valoir local ou removebg.")
+        if self.background_provider not in {"local", "removebg", "photoroom"}:
+            raise RuntimeError(
+                "BACKGROUND_PROVIDER doit valoir local, removebg ou photoroom."
+            )
         if self.background_provider == "removebg":
             if not self.removebg_api_key:
                 raise RuntimeError("REMOVEBG_API_KEY doit être définie en production.")
+            return
+        if self.background_provider == "photoroom":
+            if not self.photoroom_api_key:
+                raise RuntimeError("PHOTOROOM_API_KEY doit être définie en production.")
             return
         if (
             len(self.model_sha256) != 64
