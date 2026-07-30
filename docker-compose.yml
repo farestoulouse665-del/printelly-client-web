@@ -46,6 +46,11 @@ services:
       REDIS_URL: redis://redis:6379/0
       RQ_QUEUE_NAME: ${RQ_QUEUE_NAME:-background-removal}
       STORAGE_ROOT: /data/objects
+      BACKGROUND_PROVIDER: ${BACKGROUND_PROVIDER:-local}
+      REMOVEBG_API_KEY: ${REMOVEBG_API_KEY:-}
+      REMOVEBG_API_URL: ${REMOVEBG_API_URL:-https://api.remove.bg/v1.0/removebg}
+      REMOVEBG_SIZE: ${REMOVEBG_SIZE:-auto}
+      REMOVEBG_TIMEOUT_SECONDS: ${REMOVEBG_TIMEOUT_SECONDS:-180}
       BACKGROUND_MODEL_PATH: /models/background-removal.onnx
       BACKGROUND_MODEL_SHA256: ${BACKGROUND_MODEL_SHA256:-}
       BACKGROUND_MODEL_NAME: ${BACKGROUND_MODEL_NAME:-BiRefNet-general}
@@ -182,9 +187,11 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: /api/v1
+        NEXT_PUBLIC_BACKGROUND_PROVIDER: ${BACKGROUND_PROVIDER:-local}
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_BASE_URL: /api/v1
+      NEXT_PUBLIC_BACKGROUND_PROVIDER: ${BACKGROUND_PROVIDER:-local}
       NODE_ENV: production
     depends_on:
       api:
