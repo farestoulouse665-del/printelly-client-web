@@ -221,3 +221,45 @@ La branche contient le workflow de validation complet, mais le connecteur dispon
 - modifications limitées à `transferlab-background-studio` ;
 - aucune modification de `main` ni du site client PRINTELLY ;
 - anciennes routes conservées pour la compatibilité des données et de l’API, mais absentes de la navigation principale.
+
+## 12. Détourage haute précision et upscale PhotoRoom ×4 — 30 juillet 2026
+
+### Implémentation réalisée
+
+- le connecteur PhotoRoom v1 exige désormais un PNG complet avec canaux RGBA ;
+- le raffinement élimine uniquement les petits résidus semi-transparents à faible confiance et conserve les micro-détails opaques ;
+- les 13 profils envoient `high_precision=true`, `protect_details=true` et conservent les dimensions originales ;
+- l’upscale PhotoRoom Plus est isolé dans `PhotoRoomUpscaleService` et n’est jamais lancé avec le mode `off` ;
+- les limites officielles sont validées avant l’appel distant : 1000 px pour `ai.fast` et 512 px pour `ai.slow` ;
+- les erreurs de clé, accès Plus, crédits, quota, taille, réponse invalide et indisponibilité transitoire sont traduites en messages compréhensibles sans exposer la clé ;
+- seuls les codes HTTP transitoires sont retentés, une fois ; les timeouts et erreurs fonctionnelles ne sont pas retentés automatiquement ;
+- le RGB ×4 retourné par PhotoRoom est recomposé avec l’alpha local raffiné, puis vérifié en PNG RGBA aux dimensions exactes ×4 ;
+- le PNG détouré et le PNG amélioré sont enregistrés comme deux versions de masque liées ;
+- la progression expose les étapes réelles `protecting_details`, `cleaning_residues`, `upscaling` et `validating_upscale` ;
+- l’annulation nettoie les résultats partiels avant de terminer le job ;
+- l’éditeur accepte une version ×4 de même ratio et adapte l’original de façon contrôlée ;
+- la façade permet de garder la résolution originale, choisir ×4 rapide ou ×4 qualité, affiche les limites et recalcule le DPI depuis les pixels finaux.
+
+### Régressions ajoutées
+
+- contrat multipart du détourage PhotoRoom complet RGBA ;
+- contrat multipart Image Editing v2 ;
+- préservation exacte de l’alpha local ;
+- refus des dimensions trop grandes avant tout appel ;
+- traduction des refus Plus et absence de fuite de clé ;
+- refus d’une réponse sans alpha ;
+- retry limité à une erreur serveur transitoire ;
+- conservation des micro-détails opaques pendant le nettoyage ;
+- refus de l’upscale sur un fournisseur non PhotoRoom ;
+- garantie haute précision pour tous les profils ;
+- compatibilité de l’éditeur avec un résultat ×4.
+
+### Validation et limite connue
+
+Les tests ont été écrits mais ne sont pas déclarés verts dans ce document :
+l’environnement PowerShell local est toujours bloqué par une politique ACL et
+le connecteur GitHub ne fournit pas encore de run CI observable pour ce commit.
+L’accès PhotoRoom Image Editing API Plus, ses quotas et sa facturation dépendent
+du compte PhotoRoom configuré. Le mode d’upscale reste volontairement facultatif
+et désactivé par défaut dans chaque nouveau traitement.
+
