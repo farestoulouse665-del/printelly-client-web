@@ -1,7 +1,7 @@
 "use strict";
 (function () {
   var api = window.PrintellyStudioBilling;
-  var state = { data: null, busy: false, checkout: null };
+  var state = { data: null, busy: false, checkout: null, syncTimer: null };
   var labels = {
     pending_payment: "Paiement à effectuer", waiting_proof: "Preuve attendue",
     proof_received: "Preuve reçue", under_review: "Vérification en cours",
@@ -120,14 +120,14 @@
     ].map(function (item) { return '<article class="usage-card"><small>' + esc(item[0]) + '</small><strong>' + item[1] + '</strong></article>'; }).join("");
   }
 
-  async function load() {
+  async function load(silent) {
     if (state.busy) return;
     state.busy = true; $("#refreshBtn").disabled = true;
     try {
       state.data = await api.dashboard();
       renderWallet(); renderSubscription(); renderPlans(); renderOrders(); renderUsage();
     } catch (error) {
-      toast(error.message);
+      if (!silent) toast(error.message);
       if (/session|Connectez/i.test(error.message)) setTimeout(function () { location.href = "../"; }, 900);
     } finally { state.busy = false; $("#refreshBtn").disabled = false; }
   }
@@ -187,5 +187,8 @@
   $("#refreshBtn").addEventListener("click", load);
   $("#proofForm").addEventListener("submit", submitProof);
   all("[data-close]").forEach(function (button) { button.addEventListener("click", function () { button.closest("dialog").close(); }); });
-  load();
+  state.syncTimer = setInterval(function () { if (!document.hidden) load(true); }, 8000);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) load(true); });
+  window.addEventListener("focus", function () { load(true); });
+  load(false);
 })();
