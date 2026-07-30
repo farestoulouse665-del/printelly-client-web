@@ -1,0 +1,19 @@
+{
+  "success": true,
+  "checks": {
+    "light_theme": true,
+    "dark_theme": true,
+    "legendary_theme": true,
+    "theme_switcher": true,
+    "theme_persistence": true,
+    "theme_before_modules": true,
+    "accessible_pressed_state": true,
+    "reduced_motion": true,
+    "mobile_theme_selector": true,
+    "finishing_panel_removed": true,
+    "result_view_removed": true,
+    "recovery_removed": true,
+    "before_after_default": true
+  },
+  "errors": []
+}
