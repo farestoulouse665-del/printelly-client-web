@@ -80,11 +80,25 @@ export const useStudio = create<StudioState>()(
   setLocale: (locale) => set({ locale }),
   setStep: (activeStep) => set({ activeStep }),
   setTab: (activeTab) => set({ activeTab }),
-  setAssets: (assets) => set({ assets }),
+  setAssets: (assets) =>
+    set((state) => {
+      const selectedAssetStillExists = assets.some(
+        (asset) => asset.id === state.selectedAssetId,
+      );
+      return {
+        assets,
+        selectedAssetId: selectedAssetStillExists
+          ? state.selectedAssetId
+          : (assets[0]?.id ?? null),
+      };
+    }),
   addAsset: (asset) =>
     set((state) => ({
       assets: [asset, ...state.assets.filter((item) => item.id !== asset.id)],
-      selectedAssetId: state.selectedAssetId ?? asset.id,
+      selectedAssetId: asset.id,
+      activeTab: "new",
+      activeStep: 1,
+      preflight: null,
     })),
   patchAsset: (assetId, patch) =>
     set((state) => ({
