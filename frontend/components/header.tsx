@@ -16,6 +16,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useStudio } from "@/store/studio";
 
+const externalRemovalProvider =
+  process.env.NEXT_PUBLIC_BACKGROUND_PROVIDER === "removebg";
+
 const links = [
   { href: "/", label: "Studio IA", icon: Sparkles },
   { href: "/orders", label: "Commander du DTF", icon: ShoppingBag },
@@ -45,7 +48,9 @@ export function Header() {
     <>
       <div className="privacy-strip">
         <span className="privacy-dot" />
-        Traitement 100 % local sur votre infrastructure · aucun fichier envoyé à un tiers
+        {externalRemovalProvider
+          ? "Détourage remove.bg activé · l’image est transmise au prestataire externe"
+          : "Traitement 100 % local sur votre infrastructure · aucun fichier envoyé à un tiers"}
       </div>
       <header className="site-header">
         <div className="header-inner">
