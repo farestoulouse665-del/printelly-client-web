@@ -16,8 +16,11 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useStudio } from "@/store/studio";
 
-const externalRemovalProvider =
-  process.env.NEXT_PUBLIC_BACKGROUND_PROVIDER === "removebg";
+const backgroundProvider =
+  process.env.NEXT_PUBLIC_BACKGROUND_PROVIDER ?? "local";
+const externalRemovalProvider = backgroundProvider !== "local";
+const externalProviderLabel =
+  backgroundProvider === "photoroom" ? "PhotoRoom" : "remove.bg";
 
 const links = [
   { href: "/", label: "Studio IA", icon: Sparkles },
@@ -49,7 +52,7 @@ export function Header() {
       <div className="privacy-strip">
         <span className="privacy-dot" />
         {externalRemovalProvider
-          ? "Détourage remove.bg activé · l’image est transmise au prestataire externe"
+          ? `Détourage ${externalProviderLabel} activé · l’image est transmise au prestataire externe`
           : "Traitement 100 % local sur votre infrastructure · aucun fichier envoyé à un tiers"}
       </div>
       <header className="site-header">
