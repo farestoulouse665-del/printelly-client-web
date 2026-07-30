@@ -76,8 +76,12 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.app_name,
     description=(
-        "Préparation locale et privée de fichiers DTF. "
-        "Aucune image n’est envoyée à un service tiers."
+        "Préparation de fichiers DTF avec fournisseur configurable. "
+        + (
+            "Le mode remove.bg transmet l’image au prestataire externe."
+            if settings.background_provider == "removebg"
+            else "Le mode local ne transmet aucune image à un tiers."
+        )
     ),
     version="1.0.0",
     docs_url="/docs" if settings.enable_docs else None,
