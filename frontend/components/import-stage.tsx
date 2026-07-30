@@ -320,7 +320,7 @@ function UploadZone() {
       <div className="recommendations">
         <span><CheckCircle2 size={15} /> PNG transparent recommandé</span>
         <span><CheckCircle2 size={15} /> 300 DPI à la taille d’impression</span>
-        <span><LockKeyhole size={15} /> Traitement sur votre serveur</span>
+        <span><LockKeyhole size={15} /> {externalRemovalProvider ? "Prestataire configuré uniquement" : "Traitement sur votre serveur"}</span>
       </div>
       {!!uploads.length && (
         <div className="upload-list" aria-live="polite">
@@ -564,6 +564,7 @@ export function ImportStage() {
   const assets = useStudio((state) => state.assets);
   const selectedAssetId = useStudio((state) => state.selectedAssetId);
   const jobs = useStudio((state) => state.jobs);
+  const patchAsset = useStudio((state) => state.patchAsset);
   const [liveResultUrls, setLiveResultUrls] = useState<Record<string, string>>({});
   const [printWidthCm, setPrintWidthCm] = useState(20);
   const [editorAssetId, setEditorAssetId] = useState<string | null>(null);
@@ -731,7 +732,17 @@ export function ImportStage() {
               Fermer l’atelier
             </button>
           </div>
-          <MaskEditor key={selected.id} assetId={selected.id} />
+          <MaskEditor
+            key={selected.id}
+            assetId={selected.id}
+            onResultChange={(resultUrl) => {
+              registerResult(selected.id, resultUrl);
+              patchAsset(selected.id, {
+                final_download_url: resultUrl,
+                status: "processed",
+              });
+            }}
+          />
         </section>
       )}
     </section>
