@@ -13,6 +13,7 @@ from starlette.datastructures import Headers, UploadFile
 from app.core.config import settings
 from app.models.schemas import RemovalMode
 from app.providers.local_onnx_provider import LocalOnnxProvider
+from app.providers.photoroom_provider import PhotoroomProvider
 from app.providers.removebg_provider import RemoveBgProvider
 from app.providers.tiled_inference import TiledInferenceEngine, _tile_starts
 from app.schemas.api import ExportCreateIn, MaskOperationIn, NormalizedPoint
@@ -292,6 +293,37 @@ def test_removebg_provider_uses_remote_alpha_but_preserves_original_dimensions()
     source = Image.new("RGB", (12, 8), (12, 80, 180))
     mask = provider.predict_mask(source, RemovalMode.product)
     assert mask.shape == (8, 12)
+    assert mask.dtype == np.float32
+    assert float(mask.min()) == 0.0
+    assert float(mask.max()) == 1.0
+
+
+def test_photoroom_provider_uses_secret_header_and_restores_mask_size():
+    remote_result = Image.new("RGBA", (3, 2), (10, 200, 40, 0))
+    remote_result.putpixel((2, 1), (10, 200, 40, 255))
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.headers["x-api-key"] == "photo-secret"
+        assert str(request.url) == "https://sdk.photoroom.com/v1/segment"
+        return httpx.Response(
+            200,
+            content=_png(remote_result),
+            headers={"content-type": "image/png"},
+        )
+
+    config = replace(
+        settings,
+        background_provider="photoroom",
+        photoroom_api_key="photo-secret",
+        photoroom_timeout_seconds=5,
+    )
+    provider = PhotoroomProvider(
+        config,
+        transport=httpx.MockTransport(handler),
+    )
+    source = Image.new("RGB", (15, 10), (50, 60, 70))
+    mask = provider.predict_mask(source, RemovalMode.product)
+    assert mask.shape == (10, 15)
     assert mask.dtype == np.float32
     assert float(mask.min()) == 0.0
     assert float(mask.max()) == 1.0
