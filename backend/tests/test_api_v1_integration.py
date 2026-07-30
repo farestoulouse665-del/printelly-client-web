@@ -39,6 +39,7 @@ def test_guest_upload_library_queue_and_cancellation_are_connected():
         assert asset["height"] == 72
         assert "/data/" not in str(asset)
         assert asset["original_download_url"].startswith("/api/v1/files/")
+        assert asset["preview_download_url"].startswith("/api/v1/files/")
 
         library_response = client.get("/api/v1/assets", headers=headers)
         assert library_response.status_code == 200
