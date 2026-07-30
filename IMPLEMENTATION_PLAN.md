@@ -193,6 +193,7 @@ La revue statique de livraison a ajouté les garanties suivantes :
 
 La branche contient le workflow de validation complet, mais le connecteur disponible ne remonte pas les exécutions déclenchées par `push`. L’environnement Windows local refuse aussi l’exécution du shell par sa politique ACL. En conséquence, aucun test n’est déclaré réussi sans résultat GitHub Actions observable. La PR reste volontairement en brouillon et aucun déploiement ou merge n’a été effectué.
 
+
 ## 11. Façade autonome « légendaire » — 30 juillet 2026
 
 ### Réalisé
@@ -204,6 +205,7 @@ La branche contient le workflow de validation complet, mais le connecteur dispon
 - téléchargement direct du PNG transparent final ;
 - calcul du DPI réel à partir des pixels et d’une largeur d’impression réglable avec ratio verrouillé ;
 - intégration de l’éditeur de masque Konva dans la même façade, avec versions, annulation et rétablissement ;
+- synchronisation de chaque nouvelle version manuelle avec l’aperçu principal et le bouton de téléchargement ;
 - identité visuelle premium responsive dédiée à TransferLab ;
 - adaptation du test Playwright desktop/mobile au parcours autonome ;
 - documentation des modes local, PhotoRoom et remove.bg sans inclure aucune clé.
