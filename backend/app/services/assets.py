@@ -282,6 +282,11 @@ class AssetService:
         return AssetOut.model_validate(asset).model_copy(
             update={
                 "original_download_url": storage.signed_download_path(asset.original_key),
+                "preview_download_url": (
+                    storage.signed_download_path(asset.preview_key)
+                    if asset.preview_key
+                    else None
+                ),
                 "final_download_url": (
                     storage.signed_download_path(asset.final_key)
                     if asset.final_key
