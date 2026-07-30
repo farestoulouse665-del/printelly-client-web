@@ -1,95 +1,182 @@
 "use client";
 
 import {
+  ArrowRight,
   CheckCircle2,
+  Cloud,
   Cpu,
-  FileCheck2,
+  FileDown,
+  Layers3,
   LockKeyhole,
   ScanLine,
   Sparkles,
   WandSparkles,
+  Zap,
 } from "lucide-react";
-import { DimensionsStage } from "@/components/dimensions-stage";
-import { FinalizeStage } from "@/components/finalize-stage";
-import { Header } from "@/components/header";
 import { ImportStage } from "@/components/import-stage";
-import { OrderSummary } from "@/components/order-summary";
-import { Stepper } from "@/components/stepper";
-import { useStudio } from "@/store/studio";
 
-const guarantees = [
-  { icon: Cpu, title: "Moteur local", detail: "BiRefNet ONNX sur votre serveur" },
-  { icon: LockKeyhole, title: "Fichiers privés", detail: "Aucun envoi à un service tiers" },
-  { icon: ScanLine, title: "Détails protégés", detail: "Textes, logos, cheveux et couleurs" },
-  { icon: FileCheck2, title: "Contrôle DTF", detail: "Alpha, DPI, halos et finesse" },
+const backgroundProvider =
+  process.env.NEXT_PUBLIC_BACKGROUND_PROVIDER ?? "local";
+const providerLabel =
+  backgroundProvider === "photoroom"
+    ? "PhotoRoom haute précision"
+    : backgroundProvider === "removebg"
+      ? "remove.bg haute précision"
+      : "BiRefNet ONNX local";
+const privacyLabel =
+  backgroundProvider === "local"
+    ? "Vos fichiers restent sur votre serveur"
+    : "Transmission chiffrée au prestataire configuré uniquement";
+
+const promises = [
+  { icon: ScanLine, label: "Cheveux et détails fins" },
+  { icon: Layers3, label: "Texte et logos protégés" },
+  { icon: FileDown, label: "Vrai PNG transparent" },
+  { icon: Zap, label: "Contrôle DPI instantané" },
 ];
 
 export default function StudioPage() {
-  const step = useStudio((state) => state.activeStep);
-  const setStep = useStudio((state) => state.setStep);
+  const openStudio = () =>
+    document.getElementById("studio")?.scrollIntoView({ behavior: "smooth" });
+
   return (
-    <>
-      <Header />
+    <div className="legendary-page">
+      <header className="legendary-nav">
+        <a className="legendary-brand" href="#" aria-label="TransferLab, accueil">
+          <span className="legendary-mark">TL</span>
+          <span>
+            <strong>TransferLab</strong>
+            <small>BACKGROUND STUDIO</small>
+          </span>
+        </a>
+        <div className="legendary-nav-status">
+          <span className="legendary-live-dot" aria-hidden="true" />
+          <span>
+            <strong>{providerLabel}</strong>
+            <small>{privacyLabel}</small>
+          </span>
+        </div>
+        <button type="button" className="primary-button" onClick={openStudio}>
+          Commencer <ArrowRight size={17} />
+        </button>
+      </header>
+
       <main>
-        <section className="hero-section">
-          <div className="hero-copy">
-            <span className="hero-badge"><Sparkles size={15} /> STUDIO IA POUR L’IMPRESSION DTF</span>
-            <h1>Un fond parfaitement supprimé.<br /><em>Un design parfaitement préservé.</em></h1>
-            <p>Importez votre fichier, laissez notre moteur local analyser les contours, puis téléchargez un PNG transparent prêt pour l’impression DTF.</p>
-            <div className="hero-actions">
-              <button type="button" className="primary-button large" onClick={() => { setStep(1); document.getElementById("studio")?.scrollIntoView({ behavior: "smooth" }); }}>
-                <WandSparkles size={19} /> Importer mon design
+        <section className="legendary-hero">
+          <div className="legendary-hero-copy">
+            <span className="legendary-eyebrow">
+              <Sparkles size={15} /> DÉTOURAGE PROFESSIONNEL POUR LE DTF
+            </span>
+            <h1>
+              Votre design mérite
+              <em>un détourage impeccable.</em>
+            </h1>
+            <p>
+              Importez une image. TransferLab protège les cheveux, les textes et
+              les couleurs, affiche immédiatement le résultat transparent et
+              contrôle sa résolution d’impression.
+            </p>
+            <div className="legendary-hero-actions">
+              <button
+                type="button"
+                className="primary-button large"
+                onClick={openStudio}
+              >
+                <WandSparkles size={19} /> Supprimer mon arrière-plan
               </button>
-              <a className="secondary-button large" href="/guide">Consulter le guide DTF</a>
+              <span>
+                <LockKeyhole size={16} />
+                Aucune inscription nécessaire
+              </span>
             </div>
-            <ul className="hero-proof">
-              <li><CheckCircle2 /> Véritable PNG RGBA</li>
-              <li><CheckCircle2 /> Mode spécial fonds noirs</li>
-              <li><CheckCircle2 /> Correction manuelle précise</li>
-            </ul>
+            <div className="legendary-promise-grid">
+              {promises.map(({ icon: Icon, label }) => (
+                <span key={label}>
+                  <Icon size={16} /> {label}
+                </span>
+              ))}
+            </div>
           </div>
-          <div className="hero-visual" aria-label="Aperçu de suppression de fond">
-            <div className="visual-orbit one" /><div className="visual-orbit two" />
-            <div className="visual-card original-card">
-              <span>ORIGINAL</span>
-              <div className="sample-design"><strong>PRINT</strong><em>READY</em><small>DTF</small></div>
+
+          <div className="legendary-visual" aria-label="Exemple avant et après">
+            <div className="legendary-glow" />
+            <div className="legendary-visual-card legendary-before">
+              <span>AVANT</span>
+              <div className="legendary-art">
+                <small>TRANSFER</small>
+                <strong>LAB</strong>
+                <em>DTF READY</em>
+              </div>
             </div>
-            <div className="visual-card result-card checkerboard">
-              <span>PNG TRANSPARENT</span>
-              <div className="sample-design"><strong>PRINT</strong><em>READY</em><small>DTF</small></div>
-              <i className="quality-chip"><CheckCircle2 size={14} /> 300 DPI</i>
+            <div className="legendary-visual-card legendary-after checkerboard">
+              <span>APRÈS</span>
+              <div className="legendary-art">
+                <small>TRANSFER</small>
+                <strong>LAB</strong>
+                <em>DTF READY</em>
+              </div>
+              <i><CheckCircle2 size={14} /> Alpha réel</i>
             </div>
-            <div className="local-chip"><LockKeyhole size={17} /><span><strong>Traitement local</strong><small>Confidentiel par conception</small></span></div>
+            <div className="legendary-engine-chip">
+              {backgroundProvider === "local" ? <Cpu size={18} /> : <Cloud size={18} />}
+              <span>
+                <strong>{providerLabel}</strong>
+                <small>Résultat haute définition</small>
+              </span>
+            </div>
           </div>
         </section>
 
-        <section className="guarantee-grid" aria-label="Garanties du studio">
-          {guarantees.map(({ icon: Icon, title, detail }) => (
-            <div key={title}><Icon size={21} /><span><strong>{title}</strong><small>{detail}</small></span></div>
-          ))}
+        <section className="legendary-trust-band" aria-label="Garanties TransferLab">
+          <span><CheckCircle2 /> Aucun faux damier exporté</span>
+          <span><CheckCircle2 /> Dimensions originales conservées</span>
+          <span><CheckCircle2 /> Retouche non destructive</span>
+          <span><CheckCircle2 /> Fonds blancs, noirs et colorés</span>
         </section>
 
-        <section id="studio" className="studio-shell">
-          <div className="studio-intro">
-            <span>PARCOURS PROFESSIONNEL</span>
-            <h2>De l’original au fichier imprimable, sans approximation</h2>
-            <p>Trois étapes reliées au backend : import sécurisé, préparation exacte et validation DTF.</p>
+        <section id="studio" className="legendary-studio">
+          <div className="legendary-section-heading">
+            <span>TOUT DANS UNE SEULE FAÇADE</span>
+            <h2>Importez. Détourez. Vérifiez. Téléchargez.</h2>
+            <p>
+              Le résultat apparaît dans l’aperçu dès la fin du traitement.
+              Ajustez ensuite les contours ou la taille d’impression sans changer
+              de page.
+            </p>
           </div>
-          <Stepper />
-          <div className="studio-layout">
-            <div className="stage-column">
-              {step === 1 && <ImportStage />}
-              {step === 2 && <DimensionsStage />}
-              {step === 3 && <FinalizeStage />}
-            </div>
-            <OrderSummary />
-          </div>
+          <ImportStage />
+        </section>
+
+        <section className="legendary-workflow">
+          <article>
+            <span>01</span>
+            <WandSparkles />
+            <h3>Analyse intelligente</h3>
+            <p>Le profil automatique choisit le traitement puis protège les détails internes.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <ScanLine />
+            <h3>Résultat contrôlable</h3>
+            <p>Comparez l’original et le PNG transparent directement dans le studio.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <FileDown />
+            <h3>Prêt à imprimer</h3>
+            <p>Vérifiez le DPI réel, retouchez si nécessaire et téléchargez le PNG RGBA.</p>
+          </article>
         </section>
       </main>
-      <footer className="site-footer">
-        <div><strong>TRANSFERLAB</strong><p>Supprimez le fond. Préservez le design. Imprimez sans erreur.</p></div>
-        <div><span>Infrastructure locale</span><span>Devise DZD</span><span>Français · العربية</span></div>
+
+      <footer className="legendary-footer">
+        <div className="legendary-brand inverse">
+          <span className="legendary-mark">TL</span>
+          <span><strong>TransferLab</strong><small>BACKGROUND STUDIO</small></span>
+        </div>
+        <p>Supprimez le fond. Préservez le design. Imprimez sans erreur.</p>
+        <span>Studio autonome · Sans inscription</span>
       </footer>
-    </>
+    </div>
   );
 }
