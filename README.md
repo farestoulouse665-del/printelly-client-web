@@ -259,3 +259,36 @@ Cette version n’est pas un sous-dossier statique `/transferlab/`. Elle requier
 - faire valider humainement les transparences artistiques et cas extrêmes.
 
 Voir [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) pour l’audit et les décisions.
+
+
+## Fournisseur payant remove.bg (optionnel)
+
+TransferLab reste configuré sur BiRefNet local par défaut. Pour utiliser l’API payante
+remove.bg, créer une clé dans le compte remove.bg puis définir uniquement dans le
+fichier local `.env` :
+
+```dotenv
+BACKGROUND_PROVIDER=removebg
+REMOVEBG_API_KEY=VOTRE_CLE_PRIVEE
+REMOVEBG_API_URL=https://api.remove.bg/v1.0/removebg
+REMOVEBG_SIZE=auto
+REMOVEBG_TIMEOUT_SECONDS=180
+```
+
+Reconstruire ensuite les services concernés :
+
+```powershell
+docker compose up -d --build --force-recreate api worker frontend proxy
+```
+
+La clé reste dans les conteneurs backend et n’est jamais incluse dans le JavaScript
+du navigateur. En mode `removebg`, le fichier est transmis au prestataire externe
+et un crédit peut être consommé. TransferLab utilise uniquement l’alpha retourné :
+les couleurs et dimensions finales proviennent toujours du fichier original.
+
+Pour revenir au traitement privé local :
+
+```dotenv
+BACKGROUND_PROVIDER=local
+REMOVEBG_API_KEY=
+```
