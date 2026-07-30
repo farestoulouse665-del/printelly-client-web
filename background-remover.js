@@ -9,6 +9,17 @@
     toggleRight: document.getElementById("brToggleRight"),
     apiUrl: document.getElementById("brApiUrl"),
     apiStatus: document.getElementById("brApiStatus"),
+    studioAccess: document.getElementById("brStudioAccess"),
+    entitlementTitle: document.getElementById("brEntitlementTitle"),
+    entitlementBadge: document.getElementById("brEntitlementBadge"),
+    entitlementText: document.getElementById("brEntitlementText"),
+    entitlementMeter: document.getElementById("brEntitlementMeter"),
+    packDialog: document.getElementById("brPackDialog"),
+    packDialogTitle: document.getElementById("brPackDialogTitle"),
+    packDialogText: document.getElementById("brPackDialogText"),
+    packList: document.getElementById("brPackList"),
+    closePackDialog: document.getElementById("brClosePackDialog"),
+    refreshEntitlement: document.getElementById("brRefreshEntitlement"),
     testApi: document.getElementById("brTestApi"),
     file: document.getElementById("brFileInput"),
     pick: document.getElementById("brPickFile"),
@@ -36,11 +47,16 @@
     magicTolerance: document.getElementById("brMagicTolerance"),
     magicToleranceValue: document.getElementById("brMagicToleranceValue"),
     removalHint: document.getElementById("brRemovalHint"),
+    removalConnectivity: document.getElementById("brRemovalConnectivity"),
+    removalSafety: document.getElementById("brRemovalSafety"),
+    removalSelectionCount: document.getElementById("brRemovalSelectionCount"),
     previewRemoval: document.getElementById("brPreviewRemoval"),
     applyRemoval: document.getElementById("brApplyRemoval"),
     cancelRemoval: document.getElementById("brCancelRemoval"),
     paletteMenu: document.getElementById("brPaletteMenu"),
     paletteCount: document.getElementById("brPaletteCount"),
+    paletteMetrics: document.getElementById("brPaletteMetrics"),
+    paletteWarnings: document.getElementById("brPaletteWarnings"),
     analyzeColors: document.getElementById("brAnalyzeColors"),
     paletteList: document.getElementById("brPaletteList"),
     showAllColors: document.getElementById("brShowAllColors"),
@@ -78,6 +94,9 @@
     message: document.getElementById("brMessage"),
     qualityPanel: document.getElementById("brQualityPanel"),
     qualityScore: document.getElementById("brQualityScore"),
+    qualityVerdict: document.getElementById("brQualityVerdict"),
+    qualityMetrics: document.getElementById("brQualityMetrics"),
+    downloadQualityReport: document.getElementById("brDownloadQualityReport"),
     printWidth: document.getElementById("brPrintWidth"),
     printHeight: document.getElementById("brPrintHeight"),
     printUnit: document.getElementById("brPrintUnit"),
@@ -97,11 +116,7 @@
     cleanMicro: document.getElementById("brCleanMicro"),
     qualitySummary: document.getElementById("brQualitySummary"),
     qualityIssues: document.getElementById("brQualityIssues"),
-    qualityCertificate: document.getElementById("brQualityCertificate"),
-    scanResidues: document.getElementById("brScanResidues"),
-    forgottenClick: document.getElementById("brForgottenClick"),
-    multiPoint: document.getElementById("brMultiPoint"),
-    assistantStatus: document.getElementById("brAssistantStatus")
+    qualityCertificate: document.getElementById("brQualityCertificate")
   };
 
   if (!ui.canvas) return;
@@ -240,6 +255,7 @@
     paletteAssignments: null,
     paletteHidden: {},
     paletteSelectedIndex: -1,
+    paletteProtected: {},
     qualityReport: null,
     qualityIssueIndex: -1,
     multiPointMode: false,
@@ -249,6 +265,10 @@
     lastClientX: 0,
     lastClientY: 0,
     abortController: null,
+    processing: false,
+    entitlement: { checked: false, accessAllowed: false, accessReason: "checking", available: 0, trialAvailable: 0, paidAvailable: 0, plan: "" },
+    entitlementPromise: null,
+    entitlementTimer: null,
     progressTimers: [],
     outputName: "image-sans-fond.png",
     printUnit: "cm"
@@ -279,30 +299,155 @@
     ui.apiStatus.dataset.state = stateName;
   }
 
-  async function testApi() {
-    setApiState("Vérification…", "checking");
-    try {
-      if (!window.PrintellyBackgroundApi) throw new Error("Client API non chargé.");
-      var data = await window.PrintellyBackgroundApi.health(apiBase());
-      if (!data.model_loaded) {
-        setApiState("PhotoRoom non prêt", "error");
-        setMessage(data.status || "Le service PhotoRoom n’est pas disponible.", "warning");
+  function updateAnalyzeButton() {
+    if (!ui.analyze) return;
+    var locked = remover.entitlement.checked && !remover.entitlement.accessAllowed;
+    ui.analyze.disabled = remover.processing || !remover.file || !remover.entitlement.checked;
+    ui.analyze.classList.toggle("is-locked", locked);
+    ui.analyze.setAttribute("aria-disabled", locked ? "true" : "false");
+    if (!remover.entitlement.checked) ui.analyze.textContent = "VÉRIFICATION DE L’ACCÈS…";
+    else if (locked) ui.analyze.textContent = "🔒 CHOISIR UN PACK STUDIO AI";
+    else if (remover.entitlement.trialAvailable > 0) ui.analyze.textContent = "ESSAYER GRATUITEMENT — 1 CRÉDIT";
+    else ui.analyze.textContent = "SUPPRIMER LE FOND — " + remover.entitlement.available + " CRÉDIT" + (remover.entitlement.available === 1 ? "" : "S");
+  }
+
+  function renderEntitlement(data) {
+    var quota = data && data.quota ? data.quota : {};
+    var access = data && data.entitlement ? data.entitlement : quota;
+    var available = Math.max(0, Number(quota.available || 0));
+    var reason = String(access.access_reason || quota.access_reason || "trial_exhausted");
+    var trial = Math.max(0, Number(access.trial_available || quota.trial_available || 0));
+    var paid = Math.max(0, Number(access.paid_available || quota.paid_available || 0));
+    remover.entitlement = {
+      checked: true,
+      accessAllowed: access.access_allowed !== false && available > 0,
+      accessReason: reason,
+      available: available,
+      trialAvailable: trial,
+      paidAvailable: paid,
+      plan: String(quota.plan || "")
+    };
+    var state = remover.entitlement.accessAllowed ? (trial > 0 ? "trial" : "active") : "locked";
+    if (ui.studioAccess) ui.studioAccess.dataset.state = state;
+    if (ui.entitlementBadge) {
+      ui.entitlementBadge.textContent = state === "trial" ? "ESSAI GRATUIT" : state === "active" ? "PACK ACTIF" : "ACCÈS BLOQUÉ";
+    }
+    if (ui.entitlementTitle) {
+      ui.entitlementTitle.textContent = state === "trial"
+        ? "1 détourage gratuit disponible"
+        : state === "active"
+          ? (remover.entitlement.plan || "Studio AI") + " • " + available + " crédit" + (available === 1 ? "" : "s")
+          : "Essai gratuit terminé";
+    }
+    if (ui.entitlementText) {
+      ui.entitlementText.textContent = state === "trial"
+        ? "Le résultat valide consommera votre unique essai. Un échec technique restitue automatiquement le crédit."
+        : state === "active"
+          ? "Votre abonnement validé par l’administration est actif. Les droits sont synchronisés automatiquement."
+          : "Le détourage est verrouillé. Choisissez un pack ; le Studio se débloquera dès sa validation par l’administration.";
+    }
+    if (ui.entitlementMeter) ui.entitlementMeter.style.width = state === "locked" ? "0%" : state === "trial" ? "100%" : Math.min(100, Math.max(8, available * 10)) + "%";
+    updateAnalyzeButton();
+  }
+
+  async function refreshEntitlement(silent) {
+    if (remover.entitlementPromise) return remover.entitlementPromise;
+    remover.entitlementPromise = (async function () {
+      if (!silent) setApiState("Vérification…", "checking");
+      try {
+        if (!window.PrintellyBackgroundApi) throw new Error("Client API non chargé.");
+        var data = await window.PrintellyBackgroundApi.health(apiBase());
+        renderEntitlement(data);
+        if (!data.model_loaded) {
+          setApiState("PhotoRoom non prêt", "error");
+          if (!silent) setMessage(data.status || "Le service PhotoRoom n’est pas disponible.", "warning");
+          return false;
+        }
+        setApiState("PhotoRoom prêt • Cloud", "ready");
+        if (!silent) {
+          setMessage(
+            remover.entitlement.accessAllowed
+              ? "Accès Studio AI vérifié côté serveur. " + remover.entitlement.available + " crédit" + (remover.entitlement.available === 1 ? "" : "s") + " disponible" + (remover.entitlement.available === 1 ? "" : "s") + "."
+              : "Votre essai est terminé. Choisissez un pack pour continuer.",
+            remover.entitlement.accessAllowed ? "success" : "warning"
+          );
+        }
+        return remover.entitlement.accessAllowed;
+      } catch (error) {
+        remover.entitlement = {
+          checked: true, accessAllowed: false,
+          accessReason: error && error.code ? error.code : "session_required",
+          available: 0, trialAvailable: 0, paidAvailable: 0, plan: ""
+        };
+        if (ui.studioAccess) ui.studioAccess.dataset.state = "locked";
+        if (ui.entitlementBadge) ui.entitlementBadge.textContent = "CONNEXION REQUISE";
+        if (ui.entitlementTitle) ui.entitlementTitle.textContent = "Connectez-vous pour utiliser Studio AI";
+        if (ui.entitlementText) ui.entitlementText.textContent = error && error.message ? error.message : "Votre session PRINTELLY est nécessaire.";
+        setApiState("Accès non vérifié", "error");
+        updateAnalyzeButton();
+        if (!silent) setMessage(error && error.message ? error.message : "Impossible de vérifier votre accès Studio AI.", "error");
         return false;
+      } finally {
+        remover.entitlementPromise = null;
       }
-      var available = Number(data.quota && data.quota.available);
-      var quotaText = Number.isFinite(available)
-        ? " • " + available + " crédit" + (available === 1 ? "" : "s") + " disponible" + (available === 1 ? "" : "s")
-        : "";
-      setApiState("PhotoRoom prêt • Cloud", "ready");
-      setMessage(
-        "Proxy Supabase sécurisé connecté" + quotaText + ". Votre clé PhotoRoom reste invisible dans le navigateur.",
-        "success"
-      );
-      return true;
+    })();
+    return remover.entitlementPromise;
+  }
+
+  async function testApi() {
+    return refreshEntitlement(false);
+  }
+
+  function closePackDialog() {
+    if (ui.packDialog && ui.packDialog.open) ui.packDialog.close();
+  }
+
+  function appendPackCard(plan) {
+    var card = document.createElement("article");
+    card.className = "br-pack-card";
+    var title = document.createElement("strong");
+    title.textContent = String(plan.name || "Pack Studio AI");
+    var meta = document.createElement("span");
+    meta.textContent = Number(plan.included_credits || plan.background_removals || 0) + " crédits • " + Number(plan.validity_days || 0) + " jours";
+    var price = document.createElement("b");
+    price.textContent = Number(plan.price_dzd || 0).toLocaleString("fr-DZ") + " DZD";
+    var link = document.createElement("a");
+    link.className = "primary";
+    link.href = "../studio-packs/?plan=" + encodeURIComponent(String(plan.id || ""));
+    link.textContent = "CHOISIR CE PACK";
+    card.appendChild(title); card.appendChild(meta); card.appendChild(price); card.appendChild(link);
+    ui.packList.appendChild(card);
+  }
+
+  async function openPackDialog() {
+    if (!ui.packDialog) {
+      window.location.href = "../studio-packs/";
+      return;
+    }
+    if (ui.packDialogTitle) ui.packDialogTitle.textContent = remover.entitlement.accessReason === "session_required" ? "Connexion nécessaire" : "Votre essai gratuit est terminé";
+    if (ui.packDialogText) ui.packDialogText.textContent = remover.entitlement.accessReason === "session_required"
+      ? "Connectez-vous pour recevoir votre essai gratuit unique ou utiliser votre pack actif."
+      : "Choisissez un pack actif. Dès que l’administrateur valide votre paiement, ce Studio se déverrouille automatiquement.";
+    if (!ui.packDialog.open) ui.packDialog.showModal();
+    if (!ui.packList) return;
+    ui.packList.innerHTML = "<p>Chargement des packs actifs…</p>";
+    try {
+      if (!window.PrintellyStudioBilling) throw new Error("Catalogue indisponible.");
+      var catalog = await window.PrintellyStudioBilling.catalog();
+      ui.packList.innerHTML = "";
+      var plans = Array.isArray(catalog.plans) ? catalog.plans : [];
+      if (!plans.length) {
+        ui.packList.innerHTML = "<p>Aucun pack n’est actuellement proposé. Contactez l’assistance PRINTELLY.</p>";
+        return;
+      }
+      plans.slice(0, 3).forEach(appendPackCard);
     } catch (error) {
-      setApiState("Service inaccessible", "error");
-      setMessage(error && error.message ? error.message : "Impossible de joindre le service PhotoRoom sécurisé.", "error");
-      return false;
+      ui.packList.innerHTML = "";
+      var link = document.createElement("a");
+      link.className = "primary";
+      link.href = remover.entitlement.accessReason === "session_required" ? "../account/" : "../studio-packs/";
+      link.textContent = remover.entitlement.accessReason === "session_required" ? "SE CONNECTER" : "OUVRIR LES PACKS";
+      ui.packList.appendChild(link);
     }
   }
 
@@ -446,7 +591,7 @@
       prepareOriginalPreview();
       updatePrintPanel(false);
       ui.empty.classList.add("hidden");
-      ui.analyze.disabled = false;
+      updateAnalyzeButton();
       ui.reset.disabled = false;
       ui.imageMeta.textContent = file.name + " • " + loaded.image.naturalWidth + " × " + loaded.image.naturalHeight + " px • " + formatBytes(file.size);
       ui.resultInfo.textContent = "Original chargé • lancez l’analyse du sujet";
@@ -541,15 +686,67 @@
     return remover.qualityReport;
   }
 
+  function qualityReportText(report) {
+    var lines = [
+      "PRINTELLY — RAPPORT DE CONTRÔLE DTF",
+      "Verdict : " + (report.verdict || "Vérification recommandée"),
+      "Score : " + report.score + " / 100",
+      "DPI effectif : " + (report.dpi ? Math.round(report.dpi) : "non défini"),
+      "Transparence réelle : " + (report.transparentRatio * 100).toFixed(2) + " %",
+      "Semi-transparence : " + (report.semiTransparentRatio * 100).toFixed(2) + " %",
+      "Qualité des contours : " + (report.edgeScore == null ? "—" : report.edgeScore + " / 100"),
+      "Micro-pixels : " + report.microCount,
+      "Marge minimale : " + (report.minimumMargin == null ? "—" : report.minimumMargin + " px"),
+      "",
+      "POINTS À VÉRIFIER"
+    ];
+    if (!report.issues.length) lines.push("Aucun défaut critique détecté automatiquement.");
+    report.issues.forEach(function (issue, index) {
+      lines.push((index + 1) + ". [" + String(issue.severity || "info").toUpperCase() + "] " + issue.title);
+      lines.push("   " + issue.message);
+      if (issue.measured) lines.push("   Mesuré : " + issue.measured);
+      if (issue.recommended) lines.push("   Recommandé : " + issue.recommended);
+    });
+    lines.push("", "Ce rapport est une aide au contrôle. Il ne modifie pas le design.");
+    return lines.join("\n");
+  }
+
+  function downloadQualityReport() {
+    if (!remover.qualityReport) return;
+    var blob = new Blob([qualityReportText(remover.qualityReport)], { type: "text/plain;charset=utf-8" });
+    var link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = remover.outputName.replace(/\.png$/i, "") + "-rapport-dtf.txt";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(function () { URL.revokeObjectURL(link.href); }, 1000);
+  }
+
   function renderQualityReport() {
     var report = remover.qualityReport;
     if (!report) return;
     ui.qualityScore.dataset.state = report.status;
     ui.qualityScore.querySelector("strong").textContent = report.score;
     var dpiText = report.dpi ? Math.round(report.dpi) + " DPI" : "taille d’impression non définie";
+    if (ui.qualityVerdict) {
+      ui.qualityVerdict.dataset.state = report.status;
+      ui.qualityVerdict.querySelector("strong").textContent = report.verdict || (report.score >= 90 ? "Prêt pour impression" : "Vérification recommandée");
+      ui.qualityVerdict.querySelector("small").textContent = report.issues.length
+        ? report.issues.filter(function (issue) { return issue.severity === "error"; }).length + " erreur(s) • " + report.issues.filter(function (issue) { return issue.severity !== "error"; }).length + " avertissement(s)"
+        : "Alpha, dimensions, résolution et contours validés automatiquement.";
+    }
+    if (ui.qualityMetrics) {
+      ui.qualityMetrics.innerHTML =
+        "<span><b>" + (report.transparentRatio > 0 ? "OUI" : "NON") + "</b><small>Alpha réel</small></span>" +
+        "<span><b>" + (report.dpi ? Math.round(report.dpi) : "—") + "</b><small>DPI effectif</small></span>" +
+        "<span><b>" + (report.edgeScore == null ? "—" : report.edgeScore) + "</b><small>Contour /100</small></span>" +
+        "<span><b>" + report.microCount + "</b><small>Résidus</small></span>";
+    }
     ui.qualitySummary.innerHTML = "<p><strong>" + (report.issues.length ? report.issues.length + " point(s) à vérifier" : "Aucun défaut critique détecté") + "</strong><br>" +
       dpiText + " • " + (report.transparentRatio * 100).toFixed(1).replace(".", ",") + " % transparent • " +
-      (report.semiTransparentRatio * 100).toFixed(1).replace(".", ",") + " % semi-transparent.</p>";
+      (report.semiTransparentRatio * 100).toFixed(1).replace(".", ",") + " % semi-transparent • finesse estimée " +
+      (report.estimatedFineDetailMm ? report.estimatedFineDetailMm.toFixed(2).replace(".", ",") + " mm" : "non calculée") + ".</p>";
     ui.qualityIssues.innerHTML = "";
     report.issues.forEach(function (issue, index) {
       var item = document.createElement("div");
@@ -560,32 +757,28 @@
       title.textContent = issue.title;
       var message = document.createElement("span");
       message.textContent = issue.message;
-      content.appendChild(title);
-      content.appendChild(message);
+      content.appendChild(title); content.appendChild(message);
+      if (issue.measured || issue.recommended) {
+        var measure = document.createElement("small");
+        measure.textContent = (issue.measured ? "Mesuré : " + issue.measured : "") + (issue.measured && issue.recommended ? " • " : "") + (issue.recommended ? "Cible : " + issue.recommended : "");
+        content.appendChild(measure);
+      }
       var locate = document.createElement("button");
       locate.type = "button";
       locate.className = "secondary";
       locate.textContent = issue.bbox ? "VOIR" : "INFO";
       locate.disabled = !issue.bbox;
       locate.addEventListener("click", function () { focusQualityIssue(index); });
-      item.appendChild(indicator);
-      item.appendChild(content);
-      item.appendChild(locate);
+      item.appendChild(indicator); item.appendChild(content); item.appendChild(locate);
       ui.qualityIssues.appendChild(item);
     });
     if (!report.issues.length) ui.qualityIssues.innerHTML = '<div class="br-quality-issue"><i style="background:#23956b"></i><div><strong>Design prêt</strong><span>Aucun défaut critique n’a été détecté automatiquement.</span></div></div>';
     ui.nextIssue.disabled = !report.issues.some(function (issue) { return issue.bbox; });
     ui.cleanMicro.disabled = !report.microCount;
     ui.runQuality.disabled = false;
+    if (ui.downloadQualityReport) ui.downloadQualityReport.disabled = false;
     ui.qualityCertificate.classList.remove("hidden");
-    ui.qualityCertificate.textContent =
-      "PRINTELLY — CONTRÔLE DTF\n" +
-      (report.transparentRatio > 0 ? "✓ Transparence réelle\n" : "✗ Aucune transparence\n") +
-      "✓ Dimensions originales conservées\n" +
-      (report.dpi >= 250 ? "✓ Résolution adaptée : " : report.dpi ? "⚠ Résolution à vérifier : " : "• Résolution : ") + (report.dpi ? Math.round(report.dpi) + " DPI\n" : "taille non définie\n") +
-      (report.microCount ? "⚠ " + report.microCount + " micro-pixel(s) isolé(s)\n" : "✓ Aucun micro-fragment important\n") +
-      (report.holes.length ? "⚠ " + report.holes.length + " trou(s) intérieur(s) à vérifier\n" : "✓ Aucun petit trou suspect\n") +
-      "SCORE FINAL : " + report.score + " / 100";
+    ui.qualityCertificate.textContent = qualityReportText(report);
   }
 
   function focusQualityIssue(index) {
@@ -666,7 +859,8 @@
   }
 
   function setProcessing(processing) {
-    ui.analyze.disabled = processing || !remover.file;
+    remover.processing = Boolean(processing);
+    updateAnalyzeButton();
     ui.cancel.classList.toggle("hidden", !processing);
     ui.progress.classList.toggle("hidden", !processing);
     document.querySelectorAll("[data-br-mode]").forEach(function (button) { button.disabled = processing; });
@@ -683,6 +877,12 @@
 
   async function analyze() {
     if (!remover.file) return;
+    await refreshEntitlement(true);
+    if (!remover.entitlement.accessAllowed) {
+      setMessage("Votre essai gratuit est terminé. Choisissez un pack Studio AI pour continuer.", "warning");
+      openPackDialog();
+      return;
+    }
     if (remover.abortController) {
       setMessage("Un traitement est déjà en cours. Patientez ou utilisez Annuler.", "warning");
       return;
@@ -777,11 +977,18 @@
           active.classList.add("error");
         }
         setMessage(error.message || "Le traitement a échoué.", "error");
+        if (error && (error.status === 402 || ["trial_exhausted","credit_required","active_pack_required","pack_required"].includes(error.code))) {
+          remover.entitlement.checked = true;
+          remover.entitlement.accessAllowed = false;
+          remover.entitlement.accessReason = error.code || "trial_exhausted";
+          openPackDialog();
+        }
       }
     } finally {
       clearProgressTimers();
       setProcessing(false);
       remover.abortController = null;
+      refreshEntitlement(true);
     }
   }
 
@@ -1067,6 +1274,7 @@
     remover.manualGuide = null;
     if (ui.applyRemoval) ui.applyRemoval.disabled = true;
     if (ui.cancelRemoval) ui.cancelRemoval.disabled = true;
+    if (ui.removalSelectionCount) ui.removalSelectionCount.textContent = "0 px";
     if (render !== false && remover.sourceImage) renderPreview();
   }
 
@@ -1091,6 +1299,7 @@
     }
     ui.applyRemoval.disabled = false;
     ui.cancelRemoval.disabled = false;
+    if (ui.removalSelectionCount) ui.removalSelectionCount.textContent = remover.pendingSelectionCount.toLocaleString("fr-FR") + " px";
     var percent = remover.pendingSelectionCount * 100 / Math.max(1, remover.previewWidth * remover.previewHeight);
     var message = percent >= 75
       ? "Sélection très importante : " + percent.toFixed(1).replace(".", ",") + " % de l’image. Vérifiez attentivement avant de confirmer."
@@ -1142,9 +1351,12 @@
     remover.paletteColors = [];
     remover.paletteAssignments = null;
     remover.paletteHidden = {};
+    remover.paletteProtected = {};
     remover.paletteSelectedIndex = -1;
     if (ui.paletteCount) ui.paletteCount.textContent = "Non analysées";
     if (ui.paletteList) ui.paletteList.innerHTML = "<p>Analysez d’abord le sujet, puis détectez les couleurs du design.</p>";
+    if (ui.paletteMetrics) ui.paletteMetrics.innerHTML = "<span><b>—</b><small>Couleurs</small></span><span><b>—</b><small>Dominante</small></span><span><b>—</b><small>Contraste</small></span>";
+    if (ui.paletteWarnings) ui.paletteWarnings.textContent = "Analysez le résultat pour détecter les tons à protéger.";
     if (ui.showAllColors) ui.showAllColors.disabled = true;
     if (ui.previewColorRemoval) ui.previewColorRemoval.disabled = true;
     if (ui.deleteSelectedColor) ui.deleteSelectedColor.disabled = true;
@@ -1168,6 +1380,23 @@
     return Object.keys(remover.paletteHidden).some(function (key) { return remover.paletteHidden[key]; });
   }
 
+  function paletteLuminance(color) {
+    function linear(channel) {
+      var value = channel / 255;
+      return value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+    }
+    return 0.2126 * linear(color.r) + 0.7152 * linear(color.g) + 0.0722 * linear(color.b);
+  }
+
+  function paletteFamily(color) {
+    var max = Math.max(color.r, color.g, color.b);
+    var min = Math.min(color.r, color.g, color.b);
+    if (max < 35) return "Noir / très sombre";
+    if (min > 225) return "Blanc / très clair";
+    if (max - min < 18) return "Gris neutre";
+    return "Couleur chromatique";
+  }
+
   function renderPalette() {
     if (!ui.paletteList) return;
     ui.paletteList.innerHTML = "";
@@ -1175,11 +1404,31 @@
       ui.paletteList.innerHTML = "<p>Aucune couleur dominante détectée dans le sujet visible.</p>";
       return;
     }
+    var luminances = remover.paletteColors.map(paletteLuminance);
+    var contrast = (Math.max.apply(Math, luminances) + 0.05) / (Math.min.apply(Math, luminances) + 0.05);
+    if (ui.paletteMetrics) {
+      ui.paletteMetrics.innerHTML =
+        "<span><b>" + remover.paletteColors.length + "</b><small>Couleurs</small></span>" +
+        "<span><b>" + colorHex(remover.paletteColors[0]).toUpperCase() + "</b><small>Dominante</small></span>" +
+        "<span><b>" + contrast.toFixed(1).replace(".", ",") + ":1</b><small>Contraste</small></span>";
+    }
+    var lightCount = remover.paletteColors.filter(function (color) { return paletteLuminance(color) > 0.82; }).length;
+    var darkCount = remover.paletteColors.filter(function (color) { return paletteLuminance(color) < 0.03; }).length;
+    if (ui.paletteWarnings) {
+      ui.paletteWarnings.textContent = lightCount && darkCount
+        ? "Design à fort contraste : protégez les détails blancs et noirs avant toute suppression globale."
+        : lightCount
+          ? "Des tons très clairs sont présents dans le sujet : utilisez le fond extérieur connecté."
+          : darkCount
+            ? "Des tons noirs sont présents : vérifiez sur fond blanc et évitez un seuil de luminosité global."
+            : "Palette équilibrée. Contrôlez les couleurs proches du fond avant de les rendre transparentes.";
+    }
     remover.paletteColors.forEach(function (color, index) {
       var item = document.createElement("div");
       item.className = "br-palette-item";
       if (index === remover.paletteSelectedIndex) item.classList.add("selected");
       if (remover.paletteHidden[index]) item.classList.add("hidden-color");
+      if (remover.paletteProtected[index]) item.classList.add("protected-color");
 
       var swatch = document.createElement("span");
       swatch.className = "br-palette-swatch";
@@ -1188,11 +1437,13 @@
       var meta = document.createElement("div");
       meta.className = "br-palette-meta";
       var title = document.createElement("strong");
-      title.textContent = "Couleur " + (index + 1) + " • " + colorHex(color).toUpperCase();
+      title.textContent = colorHex(color).toUpperCase() + " • " + paletteFamily(color);
       var detail = document.createElement("small");
-      detail.textContent = (color.ratio * 100).toFixed(1).replace(".", ",") + " % du sujet";
-      meta.appendChild(title);
-      meta.appendChild(detail);
+      detail.textContent = "RGB " + color.r + ", " + color.g + ", " + color.b + " • " + (color.ratio * 100).toFixed(1).replace(".", ",") + " % du sujet";
+      var protection = document.createElement("small");
+      protection.className = "br-palette-protection";
+      protection.textContent = remover.paletteProtected[index] ? "PROTÉGÉE — suppression désactivée" : "Non protégée";
+      meta.appendChild(title); meta.appendChild(detail); meta.appendChild(protection);
 
       var buttons = document.createElement("div");
       buttons.className = "br-palette-buttons";
@@ -1202,38 +1453,31 @@
       eye.title = remover.paletteHidden[index] ? "Afficher cette couleur" : "Masquer temporairement cette couleur";
       eye.addEventListener("click", function () {
         remover.paletteHidden[index] = !remover.paletteHidden[index];
-        renderPalette();
-        renderPreview();
+        renderPalette(); renderPreview();
       });
-      var isolate = document.createElement("button");
-      isolate.type = "button";
-      isolate.textContent = "ISO";
-      isolate.title = "Isoler cette couleur";
-      isolate.addEventListener("click", function () {
-        remover.paletteColors.forEach(function (_, colorIndex) { remover.paletteHidden[colorIndex] = colorIndex !== index; });
-        remover.paletteSelectedIndex = index;
+      var protect = document.createElement("button");
+      protect.type = "button";
+      protect.textContent = remover.paletteProtected[index] ? "✓P" : "P";
+      protect.title = remover.paletteProtected[index] ? "Retirer la protection" : "Protéger cette couleur contre la suppression";
+      protect.addEventListener("click", function () {
+        remover.paletteProtected[index] = !remover.paletteProtected[index];
         renderPalette();
-        renderPreview();
-        setMessage("Couleur isolée. Les autres couleurs sont seulement masquées, pas supprimées.", "success");
+        setMessage(remover.paletteProtected[index] ? "Couleur protégée contre la suppression." : "Protection de couleur retirée.", "success");
       });
       var choose = document.createElement("button");
       choose.type = "button";
-      choose.textContent = "✓";
-      choose.title = "Sélectionner cette couleur";
+      choose.textContent = "CIBLE";
+      choose.title = "Sélectionner et contrôler cette couleur";
       choose.addEventListener("click", function () { selectPaletteColor(index); });
-      buttons.appendChild(eye);
-      buttons.appendChild(isolate);
-      buttons.appendChild(choose);
+      buttons.appendChild(eye); buttons.appendChild(protect); buttons.appendChild(choose);
 
-      item.appendChild(swatch);
-      item.appendChild(meta);
-      item.appendChild(buttons);
+      item.appendChild(swatch); item.appendChild(meta); item.appendChild(buttons);
       ui.paletteList.appendChild(item);
     });
     ui.paletteCount.textContent = remover.paletteColors.length + " couleur" + (remover.paletteColors.length > 1 ? "s" : "");
     ui.showAllColors.disabled = false;
     ui.previewColorRemoval.disabled = remover.paletteSelectedIndex < 0;
-    ui.deleteSelectedColor.disabled = remover.paletteSelectedIndex < 0;
+    ui.deleteSelectedColor.disabled = remover.paletteSelectedIndex < 0 || Boolean(remover.paletteProtected[remover.paletteSelectedIndex]);
   }
 
   function analyzeColors(silent) {
@@ -1255,6 +1499,7 @@
     remover.paletteColors = result.colors;
     remover.paletteAssignments = result.assignments;
     remover.paletteHidden = {};
+    remover.paletteProtected = {};
     remover.paletteSelectedIndex = -1;
     renderPalette();
     if (!silent) {
@@ -1284,6 +1529,10 @@
   function deleteSelectedPaletteColor() {
     var index = remover.paletteSelectedIndex;
     if (index < 0) return;
+    if (remover.paletteProtected[index]) {
+      setMessage("Cette couleur est protégée. Retirez sa protection avant de la rendre transparente.", "warning");
+      return;
+    }
     selectPaletteColor(index);
     if (!remover.pendingSelectionCount) return;
     delete remover.paletteHidden[index];
@@ -1317,6 +1566,8 @@
     };
     ui.removalHint.textContent = descriptions[method];
     ui.removalHint.classList.toggle("warning", method === "global");
+    if (ui.removalConnectivity) ui.removalConnectivity.textContent = method === "exterior" ? "BORDS ON" : method === "manual" ? "LOCAL" : method === "global" ? "GLOBAL" : "IA";
+    if (ui.removalSafety) ui.removalSafety.textContent = method === "global" ? "RISQUE" : "PROTÉGÉ";
     ui.previewRemoval.textContent = method === "manual" ? "DESSINER LA ZONE" : (method === "auto" ? "RELANCER L’IA" : "PRÉVISUALISER");
     clearPendingSelection(true);
     if (method === "manual") setTool("manual-background");
@@ -1790,7 +2041,7 @@
     ui.empty.classList.remove("hidden");
     ui.imageMeta.textContent = "Aucune image chargée";
     ui.resultInfo.textContent = "PNG transparent • dimensions originales";
-    ui.analyze.disabled = true;
+    updateAnalyzeButton();
     ui.reset.disabled = true;
     ui.download.disabled = true;
     ui.add.disabled = true;
@@ -1911,57 +2162,10 @@
     if (remover.paletteSelectedIndex >= 0) selectPaletteColor(remover.paletteSelectedIndex);
   });
   ui.deleteSelectedColor.addEventListener("click", deleteSelectedPaletteColor);
-  if (ui.scanResidues) ui.scanResidues.addEventListener("click", function () {
-    if (!remover.currentMask || !remover.originalPixels) { setMessage("Lancez d’abord l’analyse du sujet.", "warning"); return; }
-    if (!window.PrintellyColorSelection || !window.PrintellyColorSelection.scanResidualBackground) {
-      setMessage("Le scanner professionnel n’est pas chargé. Rechargez la page avec Ctrl+F5.", "error");
-      return;
-    }
-    try {
-      runQualityInspection(true);
-      var result = window.PrintellyColorSelection.scanResidualBackground(
-        remover.originalPixels,
-        remover.currentMask,
-        remover.previewWidth,
-        remover.previewHeight,
-        Number(ui.colorTolerance.value)
-      );
-      ui.targetColor.value = colorHex(result.color);
-      setPendingSelection(result, false, "Aucun reste de fond suffisamment sûr n’a été détecté.");
-      if (result.count) {
-        ui.assistantStatus.textContent = result.count + " pixel(s) suspects prévisualisés : voile, bord relié ou petit fragment.";
-        setMessage(ui.assistantStatus.textContent + " Vérifiez le rose avant de rendre transparent.", "warning");
-      } else {
-        ui.assistantStatus.textContent = "Aucun résidu de fond suffisamment sûr n’a été détecté.";
-        setMessage(ui.assistantStatus.textContent, "success");
-      }
-    } catch (error) {
-      setMessage(error.message || "Le scanner de résidus a échoué.", "error");
-    }
-  });
-  if (ui.forgottenClick) ui.forgottenClick.addEventListener("click", function () {
-    if (!remover.currentMask) { setMessage("Lancez d’abord l’analyse du sujet.", "warning"); return; }
-    remover.multiPointMode = false;
-    ui.removalMethod.value = "manual";
-    ui.removalMenu.open = true;
-    setTool("color-select");
-    ui.assistantStatus.textContent = "Cliquez sur un morceau de fond oublié : seule sa région connectée sera sélectionnée.";
-    setMessage(ui.assistantStatus.textContent, "success");
-  });
-  if (ui.multiPoint) ui.multiPoint.addEventListener("click", function () {
-    if (!remover.currentMask) { setMessage("Lancez d’abord l’analyse du sujet.", "warning"); return; }
-    remover.multiPointMode = !remover.multiPointMode;
-    ui.multiPoint.classList.toggle("active", remover.multiPointMode);
-    ui.multiPoint.setAttribute("aria-pressed", remover.multiPointMode ? "true" : "false");
-    ui.removalMethod.value = "manual";
-    ui.removalMenu.open = true;
-    setTool(remover.multiPointMode ? "color-select" : "pan");
-    ui.assistantStatus.textContent = remover.multiPointMode ? "Multipoints actif : cliquez sur plusieurs morceaux ou couleurs, puis rendez-les transparents." : "Sélection multipoints terminée.";
-    setMessage(ui.assistantStatus.textContent, "success");
-  });
   ui.runQuality.addEventListener("click", function () { runQualityInspection(false); });
   ui.nextIssue.addEventListener("click", focusNextQualityIssue);
   ui.cleanMicro.addEventListener("click", previewMicroCleanup);
+  if (ui.downloadQualityReport) ui.downloadQualityReport.addEventListener("click", downloadQualityReport);
   ui.printWidth.addEventListener("change", function () { if (remover.currentMask) runQualityInspection(true); });
   ui.microLimit.addEventListener("change", function () { if (remover.currentMask) runQualityInspection(true); });
   ui.feather.addEventListener("input", function () { ui.featherValue.textContent = Number(ui.feather.value).toFixed(1).replace(".", ",") + " px"; });
@@ -2024,7 +2228,40 @@
   });
 
   window.addEventListener("resize", function () { if (remover.zoom === 1) { sizeCanvasToShell(); applyTransform(); } });
-  window.addEventListener("beforeunload", clearUrls);
+  if (ui.closePackDialog) ui.closePackDialog.addEventListener("click", closePackDialog);
+  if (ui.refreshEntitlement) ui.refreshEntitlement.addEventListener("click", async function () {
+    var allowed = await refreshEntitlement(false);
+    if (allowed) closePackDialog();
+  });
+  if (ui.packDialog) ui.packDialog.addEventListener("click", function (event) {
+    if (event.target === ui.packDialog) closePackDialog();
+  });
+  window.addEventListener("printelly:studio-entitlement", function (event) {
+    var detail = event && event.detail ? event.detail : {};
+    renderEntitlement({
+      quota: {
+        available: detail.available, reserved: detail.reserved, plan: detail.plan,
+        expires_at: detail.expiresAt, access_reason: detail.accessReason,
+        trial_available: detail.trialAvailable, paid_available: detail.paidAvailable
+      },
+      entitlement: {
+        access_allowed: detail.accessAllowed, access_reason: detail.accessReason,
+        trial_available: detail.trialAvailable, trial_consumed: detail.trialConsumed,
+        paid_available: detail.paidAvailable, subscription_active: detail.subscriptionActive
+      }
+    });
+  });
+  window.addEventListener("focus", function () { refreshEntitlement(true); });
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) refreshEntitlement(true);
+  });
+  remover.entitlementTimer = setInterval(function () {
+    if (!document.hidden && !remover.processing) refreshEntitlement(true);
+  }, 15000);
+  window.addEventListener("beforeunload", function () {
+    clearUrls();
+    if (remover.entitlementTimer) clearInterval(remover.entitlementTimer);
+  });
   setTool("pan");
   setBackground("checker");
   updateRemovalMethod();
