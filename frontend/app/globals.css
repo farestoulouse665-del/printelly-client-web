@@ -267,8 +267,9 @@ button:disabled { cursor: not-allowed; opacity: 0.48; }
 .selected-workspace { display: grid; grid-template-columns: minmax(330px, 0.9fr) minmax(380px, 1.1fr); gap: 18px; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--line); }
 .asset-inspector { overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: #fafbfc; }
 .asset-preview { position: relative; display: grid; min-height: 340px; place-items: center; overflow: hidden; }
-.asset-preview > img, .result-layer img { width: 100%; height: 340px; object-fit: contain; }
-.result-layer { position: absolute; inset: 0; overflow: hidden; }
+.asset-preview > img, .result-layer img { display: block; width: 100%; height: 340px; object-fit: contain; }
+.asset-preview > img { position: relative; z-index: 1; }
+.result-layer { position: absolute; z-index: 2; inset: 0; display: grid; place-items: center; overflow: hidden; }
 .comparison-slider { position: absolute; z-index: 5; inset: 0; display: flex; align-items: end; padding: 15px; }
 .comparison-slider input { width: 100%; accent-color: var(--blue); cursor: ew-resize; }
 .preview-label { position: absolute; z-index: 3; top: 12px; padding: 6px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.86); font-size: 9px; font-weight: 900; }
@@ -288,6 +289,7 @@ button:disabled { cursor: not-allowed; opacity: 0.48; }
 .mode-header svg { color: var(--blue); }
 .mode-header small { color: var(--muted); font-size: 9px; }
 .mode-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 14px; }
+.mode-grid.automatic-only { grid-template-columns: 1fr; }
 .mode-grid button { display: flex; min-height: 62px; align-items: flex-start; flex-direction: column; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: #fafbfc; text-align: left; cursor: pointer; }
 .mode-grid button.active { color: var(--blue-dark); border-color: rgba(54, 92, 245, 0.42); background: rgba(54, 92, 245, 0.065); box-shadow: inset 0 0 0 1px rgba(54, 92, 245, 0.08); }
 .mode-grid strong { font-size: 11px; }
