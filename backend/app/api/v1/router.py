@@ -66,7 +66,9 @@ def health(request: Request) -> HealthOut:
         "execution_provider",
         None,
     )
-    model_name = runtime.get("model") or settings.model_name
+    model_name = runtime.get("model") or (
+        "remove.bg" if settings.background_provider == "removebg" else settings.model_name
+    )
     required_ready = (
         database_state == "ready"
         and redis_state == "ready"
@@ -81,6 +83,11 @@ def health(request: Request) -> HealthOut:
         model_loaded=model_loaded,
         model_name=model_name,
         execution_provider=execution_provider,
+        privacy=(
+            "Les images sont envoyées à remove.bg pour le détourage lorsque ce fournisseur est activé."
+            if settings.background_provider == "removebg"
+            else "Aucun fichier client n’est envoyé à un service tiers."
+        ),
     )
 
 
