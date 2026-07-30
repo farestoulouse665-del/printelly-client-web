@@ -20,6 +20,7 @@ from app.providers.tiled_inference import TiledInferenceEngine
 from app.services.background_removal import BackgroundRemovalPipeline
 from app.services.job_queue import record_event
 from app.services.mask_refinement import RefinementOptions
+from app.services.photoroom_upscale import PhotoRoomUpscaleService
 from app.storage.local import storage
 
 
@@ -29,6 +30,7 @@ RuntimeProvider = LocalOnnxProvider | RemoveBgProvider | PhotoroomProvider
 
 _provider: RuntimeProvider | None = None
 _pipeline: BackgroundRemovalPipeline | None = None
+_upscale_service: PhotoRoomUpscaleService | None = None
 
 
 _MODE_MAP = {
@@ -91,6 +93,15 @@ def get_runtime() -> tuple[RuntimeProvider, BackgroundRemovalPipeline]:
         )
     _publish_runtime_heartbeat(_provider)
     return _provider, _pipeline
+
+
+
+def get_upscale_runtime() -> PhotoRoomUpscaleService:
+    global _upscale_service
+    if _upscale_service is None:
+        _upscale_service = PhotoRoomUpscaleService(settings)
+        _upscale_service.load()
+    return _upscale_service
 
 
 def _cancelled(database: Session, job: ProcessingJob) -> bool:
@@ -237,22 +248,72 @@ def process_background_job(job_id: str) -> dict:
                 database,
                 job,
                 "refining",
-                72,
+                60,
                 "Raffinement multi-échelle des contours…",
+            )
+            record_event(
+                database,
+                job,
+                "protecting_details",
+                68,
+                "Protection des cheveux, textes et détails internes…",
             )
             if _cancelled(database, job):
                 return {"state": "cancelled"}
 
-            result_key = f"assets/{asset.id}/results/{job.id}.png"
+            cutout_key = f"assets/{asset.id}/results/{job.id}-cutout.png"
+            storage.put_bytes(cutout_key, result.png)
+            record_event(
+                database,
+                job,
+                "cleaning_residues",
+                76,
+                "Contrôle conservateur des halos et petits résidus…",
+            )
+
+            upscale_mode = str(job.parameters.get("upscale_mode", "off"))
+            final_png = result.png
+            upscale_result = None
+            result_key = cutout_key
+            if upscale_mode != "off":
+                if _cancelled(database, job):
+                    return {"state": "cancelled"}
+                record_event(
+                    database,
+                    job,
+                    "upscaling",
+                    82,
+                    "Amélioration PhotoRoom ×4 en cours…",
+                    {"mode": upscale_mode},
+                )
+                upscale_result = get_upscale_runtime().upscale(result.png, upscale_mode)
+                final_png = upscale_result.png
+                safe_mode = upscale_mode.replace(".", "-")
+                result_key = (
+                    f"assets/{asset.id}/results/{job.id}-upscale-{safe_mode}.png"
+                )
+                storage.put_bytes(result_key, final_png)
+                record_event(
+                    database,
+                    job,
+                    "validating_upscale",
+                    90,
+                    "Validation du canal alpha et des dimensions ×4…",
+                    {
+                        "input_width": upscale_result.input_width,
+                        "input_height": upscale_result.input_height,
+                        "output_width": upscale_result.output_width,
+                        "output_height": upscale_result.output_height,
+                    },
+                )
+
             preview_key = f"assets/{asset.id}/previews/{job.id}.png"
-            storage.put_bytes(result_key, result.png)
-            record_event(database, job, "cleaning", 82, "Contrôle des halos et résidus…")
-            storage.put_bytes(preview_key, _make_preview(result.png))
+            storage.put_bytes(preview_key, _make_preview(final_png))
             record_event(
                 database,
                 job,
                 "generating_preview",
-                90,
+                93,
                 "Génération de l’aperçu transparent…",
             )
 
@@ -262,15 +323,27 @@ def process_background_job(job_id: str) -> dict:
             )
             for version in previous_versions:
                 version.is_current = False
-            mask_version = MaskVersion(
+            base_mask_version = MaskVersion(
                 asset_id=asset.id,
-                storage_key=result_key,
+                storage_key=cutout_key,
                 source="ai",
                 operation_count=0,
-                is_current=True,
+                is_current=upscale_result is None,
             )
-            database.add(mask_version)
+            database.add(base_mask_version)
             database.flush()
+            mask_version = base_mask_version
+            if upscale_result is not None:
+                mask_version = MaskVersion(
+                    asset_id=asset.id,
+                    parent_id=base_mask_version.id,
+                    storage_key=result_key,
+                    source="ai_upscale",
+                    operation_count=0,
+                    is_current=True,
+                )
+                database.add(mask_version)
+                database.flush()
             report = result.report.model_dump()
             report.update(
                 {
@@ -280,6 +353,21 @@ def process_background_job(job_id: str) -> dict:
                     "tiled_inference": use_tiles,
                 }
             )
+            report["high_precision"] = bool(
+                job.parameters.get("high_precision", True)
+            )
+            if upscale_result is not None:
+                report["upscale"] = {
+                    "mode": upscale_result.mode,
+                    "input_width": upscale_result.input_width,
+                    "input_height": upscale_result.input_height,
+                    "output_width": upscale_result.output_width,
+                    "output_height": upscale_result.output_height,
+                    "scale_factor": upscale_result.scale_factor,
+                    "alpha_preserved_locally": (
+                        upscale_result.alpha_preserved_locally
+                    ),
+                }
             asset.final_key = result_key
             asset.preview_key = preview_key
             asset.current_mask_version_id = mask_version.id
