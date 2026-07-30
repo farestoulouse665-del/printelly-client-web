@@ -66,36 +66,66 @@ function AssetPreview({
   asset: Asset;
   resultUrl: string | null;
 }) {
-  const [position, setPosition] = useState(resultUrl ? 100 : 0);
   const original = asset.original_download_url;
   const result = resultUrl;
+  const [view, setView] = useState<"result" | "original">(
+    result ? "result" : "original",
+  );
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    setPosition(result ? 100 : 0);
+    setView(result ? "result" : "original");
+    setLoadError("");
   }, [asset.id, result]);
+
+  const visibleUrl = view === "result" && result ? result : original;
+  const visibleLabel = view === "result" && result ? "Résultat" : "Original";
 
   return (
     <div className="asset-preview checkerboard">
-      {original ? <img src={original} alt={`Original de ${asset.name}`} /> : <FileImage size={40} />}
+      {visibleUrl ? (
+        <img
+          key={visibleUrl}
+          src={visibleUrl}
+          alt={`${visibleLabel} de ${asset.name}`}
+          onLoad={() => setLoadError("")}
+          onError={() =>
+            setLoadError(
+              "L’aperçu n’a pas pu charger le PNG. Le lien va être renouvelé.",
+            )
+          }
+        />
+      ) : (
+        <FileImage size={40} />
+      )}
       {result && (
-        <div className="result-layer" style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }}>
-          <img src={result} alt={`Résultat transparent de ${asset.name}`} />
+        <div className="preview-switch" role="group" aria-label="Choisir l’aperçu">
+          <button
+            type="button"
+            className={view === "result" ? "active" : ""}
+            aria-pressed={view === "result"}
+            onClick={() => setView("result")}
+          >
+            Résultat
+          </button>
+          <button
+            type="button"
+            className={view === "original" ? "active" : ""}
+            aria-pressed={view === "original"}
+            onClick={() => setView("original")}
+          >
+            Original
+          </button>
         </div>
       )}
-      {result && (
-        <label className="comparison-slider">
-          <span className="sr-only">Comparer avant et après</span>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={position}
-            onChange={(event) => setPosition(Number(event.target.value))}
-          />
-        </label>
+      {loadError && (
+        <p className="preview-load-error" role="alert">
+          <AlertCircle size={16} /> {loadError}
+        </p>
       )}
-      <span className="preview-label before">Avant</span>
-      {result && <span className="preview-label after">Après</span>}
+      <span className={`preview-label ${view === "result" ? "after" : "before"}`}>
+        {visibleLabel}
+      </span>
     </div>
   );
 }
@@ -280,7 +310,13 @@ function Library() {
   );
 }
 
-function ProcessingPanel({ asset }: { asset: Asset }) {
+function ProcessingPanel({
+  asset,
+  onResultReady,
+}: {
+  asset: Asset;
+  onResultReady: (assetId: string, resultUrl: string) => void;
+}) {
   const queryClient = useQueryClient();
   const setMode = useStudio((state) => state.setMode);
   const jobs = useStudio((state) => state.jobs);
@@ -337,6 +373,7 @@ function ProcessingPanel({ asset }: { asset: Asset }) {
       setJob(completed);
       if (completed.state === "completed") {
         if (completed.download_url) {
+          onResultReady(asset.id, completed.download_url);
           patchAsset(asset.id, {
             final_download_url: completed.download_url,
             status: "processed",
@@ -344,10 +381,14 @@ function ProcessingPanel({ asset }: { asset: Asset }) {
           });
         }
         const refreshed = await apiFetch<Asset>(`/assets/${asset.id}`);
+        const finalResultUrl =
+          refreshed.final_download_url ?? completed.download_url;
+        if (finalResultUrl) {
+          onResultReady(asset.id, finalResultUrl);
+        }
         patchAsset(asset.id, {
           ...refreshed,
-          final_download_url:
-            refreshed.final_download_url ?? completed.download_url,
+          final_download_url: finalResultUrl,
         });
         await queryClient.invalidateQueries({ queryKey: ["assets"] });
       } else if (completed.error_message) {
@@ -419,7 +460,14 @@ export function ImportStage() {
   const assets = useStudio((state) => state.assets);
   const selectedAssetId = useStudio((state) => state.selectedAssetId);
   const jobs = useStudio((state) => state.jobs);
+  const [liveResultUrls, setLiveResultUrls] = useState<Record<string, string>>({});
   const selected = assets.find((asset) => asset.id === selectedAssetId) ?? assets[0];
+  const registerResult = useCallback((assetId: string, resultUrl: string) => {
+    setLiveResultUrls((current) => ({
+      ...current,
+      [assetId]: resultUrl,
+    }));
+  }, []);
   const completedResultUrl = useMemo(() => {
     if (!selected) return null;
     return (
@@ -434,8 +482,14 @@ export function ImportStage() {
         ?.download_url ?? null
     );
   }, [jobs, selected]);
-  const selectedResultUrl =
-    completedResultUrl ?? selected?.final_download_url ?? null;
+  const selectedResultUrl = selected
+    ? (
+        liveResultUrls[selected.id] ??
+        completedResultUrl ??
+        selected.final_download_url ??
+        null
+      )
+    : null;
   return (
     <section className="stage-card" aria-labelledby="import-title">
       <div className="stage-heading">
@@ -471,7 +525,10 @@ export function ImportStage() {
               </dl>
             </div>
           </div>
-          <ProcessingPanel asset={selected} />
+          <ProcessingPanel
+            asset={selected}
+            onResultReady={registerResult}
+          />
         </div>
       )}
     </section>
