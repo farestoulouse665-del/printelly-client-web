@@ -292,3 +292,26 @@ Pour revenir au traitement privé local :
 BACKGROUND_PROVIDER=local
 REMOVEBG_API_KEY=
 ```
+
+
+## Fournisseur payant PhotoRoom (optionnel)
+
+La clé **Live** produit le résultat final sans filigrane. La clé Sandbox sert
+uniquement aux essais et peut produire un résultat filigrané.
+
+```dotenv
+BACKGROUND_PROVIDER=photoroom
+PHOTOROOM_API_KEY=VOTRE_CLE_LIVE_PRIVEE
+PHOTOROOM_API_URL=https://sdk.photoroom.com/v1/segment
+PHOTOROOM_TIMEOUT_SECONDS=180
+```
+
+Reconstruire les services concernés après modification de `.env` :
+
+```powershell
+docker compose up -d --build --force-recreate api worker frontend proxy
+```
+
+La clé PhotoRoom reste exclusivement dans les services backend. TransferLab
+conserve les pixels RGB originaux et applique localement le canal alpha renvoyé
+par PhotoRoom.
