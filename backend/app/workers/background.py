@@ -14,6 +14,7 @@ from app.db.session import SessionLocal
 from app.models.entities import Asset, MaskVersion, ProcessingJob
 from app.models.schemas import BackgroundCleanup, BlackBackgroundMode, RemovalMode
 from app.providers.local_onnx_provider import LocalOnnxProvider
+from app.providers.removebg_provider import RemoveBgProvider
 from app.providers.tiled_inference import TiledInferenceEngine
 from app.services.background_removal import BackgroundRemovalPipeline
 from app.services.job_queue import record_event
@@ -22,7 +23,10 @@ from app.storage.local import storage
 
 
 logger = logging.getLogger("transferlab.worker")
-_provider: LocalOnnxProvider | None = None
+RuntimeProvider = LocalOnnxProvider | RemoveBgProvider
+
+
+_provider: RuntimeProvider | None = None
 _pipeline: BackgroundRemovalPipeline | None = None
 
 
@@ -43,7 +47,7 @@ _MODE_MAP = {
 }
 
 
-def _publish_runtime_heartbeat(provider: LocalOnnxProvider) -> None:
+def _publish_runtime_heartbeat(provider: RuntimeProvider) -> None:
     try:
         redis = Redis.from_url(settings.redis_url, decode_responses=True)
         redis.setex(
@@ -64,11 +68,16 @@ def _publish_runtime_heartbeat(provider: LocalOnnxProvider) -> None:
         logger.warning("Impossible de publier le heartbeat du modèle.", exc_info=True)
 
 
-def get_runtime() -> tuple[LocalOnnxProvider, BackgroundRemovalPipeline]:
-    """Load BiRefNet once per worker process and reuse its ONNX session."""
+def get_runtime() -> tuple[RuntimeProvider, BackgroundRemovalPipeline]:
+    """Load the configured provider once per worker process and reuse it."""
     global _provider, _pipeline
     if _provider is None or _pipeline is None:
-        provider = LocalOnnxProvider(settings)
+        if settings.background_provider == "removebg":
+            provider: RuntimeProvider = RemoveBgProvider(settings)
+        elif settings.background_provider == "local":
+            provider = LocalOnnxProvider(settings)
+        else:
+            raise RuntimeError("BACKGROUND_PROVIDER doit valoir local ou removebg.")
         provider.load()
         _provider = provider
         _pipeline = BackgroundRemovalPipeline(
@@ -148,7 +157,12 @@ def process_background_job(job_id: str) -> dict:
                 return {"state": "cancelled"}
 
             provider, pipeline = get_runtime()
-            use_tiles = pixels >= settings.large_image_threshold_pixels
+            # A paid remote request is made once per design. Its returned alpha
+            # is resized locally when the provider limits output resolution.
+            use_tiles = (
+                settings.background_provider == "local"
+                and pixels >= settings.large_image_threshold_pixels
+            )
             if use_tiles:
                 tiled_provider = TiledInferenceEngine(
                     provider,
