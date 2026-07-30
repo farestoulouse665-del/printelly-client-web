@@ -2,15 +2,16 @@
 
 > Supprimez le fond. Préservez le design. Imprimez sans erreur.
 
-Cette branche contient le nouveau **TransferLab autonome** : une application séparée du site client TransferLab, avec Next.js, FastAPI, PostgreSQL, Redis/RQ et BiRefNet ONNX local.
+Cette branche contient le nouveau **TransferLab autonome** : une application séparée du site client PRINTELLY, avec une façade unique Next.js, FastAPI, PostgreSQL, Redis/RQ et un moteur de détourage configurable.
 
 - Branche de développement : `transferlab-background-studio`
 - Branche d’origine conservée : `transferlab-autonome`
 - Le site client sur `main` n’est pas modifié.
-- Les images clients ne sont jamais envoyées à une API de détourage tierce.
+- En mode `local`, les images ne quittent jamais le serveur. Les modes `photoroom` et `removebg` transmettent l’image uniquement au prestataire explicitement configuré.
 
 ## Capacités
 
+- façade unique sans inscription : import, aperçu, détourage, DPI, retouche et téléchargement sur la même page ;
 - import direct ou par morceaux, jusqu’à 25 fichiers ;
 - contrôle de la signature, du MIME, de la taille et des dimensions ;
 - PNG, JPEG, WebP, TIFF, BMP, PDF/AI-PDF, SVG nettoyé et PSD ;
@@ -54,6 +55,40 @@ Copy-Item .env.example .env
 ```
 
 Remplacer au minimum dans `.env` : `POSTGRES_PASSWORD`, `SIGNING_SECRET`, `ADMIN_TOKEN` et `BACKGROUND_MODEL_SHA256`. Ne jamais committer `.env`, le modèle ou des fichiers clients.
+
+## Choisir le moteur de détourage
+
+Le studio accepte trois configurations. Une seule est active à la fois :
+
+```dotenv
+# Local, privé, nécessite le modèle ONNX
+BACKGROUND_PROVIDER=local
+NEXT_PUBLIC_BACKGROUND_PROVIDER=local
+```
+
+```dotenv
+# PhotoRoom, consomme les crédits du compte configuré
+BACKGROUND_PROVIDER=photoroom
+NEXT_PUBLIC_BACKGROUND_PROVIDER=photoroom
+PHOTOROOM_API_KEY=VOTRE_CLE_LIVE
+```
+
+```dotenv
+# remove.bg, consomme les crédits du compte configuré
+BACKGROUND_PROVIDER=removebg
+NEXT_PUBLIC_BACKGROUND_PROVIDER=removebg
+REMOVEBG_API_KEY=VOTRE_CLE
+```
+
+Ne jamais publier une clé dans Git, une capture d’écran ou une conversation. Après tout changement de fournisseur, reconstruire le frontend et recréer les services :
+
+```powershell
+docker compose build --no-cache frontend api worker
+docker compose up -d --force-recreate frontend api worker proxy
+docker compose ps
+```
+
+L’interface affiche le fournisseur réellement intégré au build et avertit lorsqu’un prestataire externe reçoit l’image.
 
 ## Modèle BiRefNet local
 
@@ -315,3 +350,16 @@ docker compose up -d --build --force-recreate api worker frontend proxy
 La clé PhotoRoom reste exclusivement dans les services backend. TransferLab
 conserve les pixels RGB originaux et applique localement le canal alpha renvoyé
 par PhotoRoom.
+
+## Parcours autonome sur une seule façade
+
+La page `http://localhost:8080/` ne présente ni inscription, ni panier, ni administration. Le parcours principal est volontairement direct :
+
+1. déposer ou sélectionner une image ;
+2. choisir l’un des 13 profils, ou garder **Automatique** ;
+3. cliquer sur **Supprimer le fond** ;
+4. voir le résultat transparent apparaître à gauche dès que le job est terminé ;
+5. régler la largeur d’impression pour lire le DPI réel ;
+6. télécharger le PNG ou ouvrir la retouche non destructive dans la même page.
+
+Les anciennes routes techniques restent dans le dépôt pour préserver la compatibilité de l’API et des données, mais elles ne sont plus proposées dans la façade autonome.
