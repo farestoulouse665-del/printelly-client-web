@@ -76,9 +76,14 @@ function formatBytes(bytes: number) {
 }
 
 function AssetPreview({ asset }: { asset: Asset }) {
-  const [position, setPosition] = useState(50);
+  const [position, setPosition] = useState(asset.final_download_url ? 100 : 0);
   const original = asset.original_download_url;
   const result = asset.final_download_url;
+
+  useEffect(() => {
+    setPosition(result ? 100 : 0);
+  }, [asset.id, result]);
+
   return (
     <div className="asset-preview checkerboard">
       {original ? <img src={original} alt={`Original de ${asset.name}`} /> : <FileImage size={40} />}
@@ -106,6 +111,7 @@ function AssetPreview({ asset }: { asset: Asset }) {
 }
 
 function UploadZone() {
+  const queryClient = useQueryClient();
   const addAsset = useStudio((state) => state.addAsset);
   const uploads = useStudio((state) => state.uploads);
   const updateUpload = useStudio((state) => state.updateUpload);
@@ -134,6 +140,7 @@ function UploadZone() {
             );
             addAsset(asset);
             updateUpload({ id, fileName: file.name, progress: 100, state: "completed" });
+            void queryClient.invalidateQueries({ queryKey: ["assets"] });
           } catch (error) {
             const cancelled = error instanceof DOMException && error.name === "AbortError";
             updateUpload({
@@ -150,7 +157,7 @@ function UploadZone() {
       }
       await Promise.all(Array.from({ length: Math.min(3, files.length) }, () => worker()));
     },
-    [addAsset, updateUpload],
+    [addAsset, queryClient, updateUpload],
   );
 
   useEffect(() => {
@@ -170,7 +177,11 @@ function UploadZone() {
         hidden
         multiple
         accept=".png,.jpg,.jpeg,.webp,.tif,.tiff,.bmp,.pdf,.svg,.psd,.ai"
-        onChange={(event) => void processFiles(Array.from(event.target.files ?? []))}
+        onChange={(event) => {
+          const files = Array.from(event.currentTarget.files ?? []);
+          event.currentTarget.value = "";
+          void processFiles(files);
+        }}
       />
       <div
         className={`upload-zone ${dragging ? "dragging" : ""}`}
@@ -334,7 +345,11 @@ function ProcessingPanel({ asset }: { asset: Asset }) {
       setJob(completed);
       if (completed.state === "completed") {
         const refreshed = await apiFetch<Asset>(`/assets/${asset.id}`);
-        patchAsset(asset.id, refreshed);
+        patchAsset(asset.id, {
+          ...refreshed,
+          final_download_url:
+            refreshed.final_download_url ?? completed.download_url,
+        });
         await queryClient.invalidateQueries({ queryKey: ["assets"] });
       } else if (completed.error_message) {
         setError(completed.error_message);
@@ -379,7 +394,17 @@ function ProcessingPanel({ asset }: { asset: Asset }) {
           <Sparkles size={18} /> Supprimer le fond
         </button>
       )}
-      {asset.final_download_url && <Link className="secondary-button full editor-link" href={`/editor/${asset.id}`}><Edit3 size={17} /> Corriger le masque manuellement</Link>}
+      {asset.final_download_url && (
+        <>
+          <p className="action-message" role="status">
+            <CheckCircle2 size={17} />
+            Résultat prêt : l’aperçu transparent est affiché à gauche.
+          </p>
+          <Link className="secondary-button full editor-link" href={`/editor/${asset.id}`}>
+            <Edit3 size={17} /> Corriger le masque manuellement
+          </Link>
+        </>
+      )}
       {error && <p className="inline-error"><AlertCircle size={17} /> {error}</p>}
     </div>
   );
@@ -409,7 +434,10 @@ export function ImportStage() {
       {selected && (
         <div className="selected-workspace">
           <div className="asset-inspector">
-            <AssetPreview asset={selected} />
+            <AssetPreview
+              key={`${selected.id}:${selected.final_download_url ?? "original"}:${selected.updated_at}`}
+              asset={selected}
+            />
             <div className="asset-meta">
               <div><strong>{selected.name}</strong><span>{formatBytes(selected.byte_size)}</span></div>
               <dl>
