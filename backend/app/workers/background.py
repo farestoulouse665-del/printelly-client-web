@@ -136,6 +136,18 @@ def _make_preview(png: bytes, maximum: int = 1400) -> bytes:
         return output.getvalue()
 
 
+def _delete_partial_results(keys: list[str]) -> None:
+    for key in reversed(keys):
+        try:
+            storage.delete(key)
+        except Exception:
+            logger.warning(
+                "Impossible de nettoyer le fichier partiel %s.",
+                key,
+                exc_info=True,
+            )
+
+
 def process_background_job(job_id: str) -> dict:
     """Run the configured provider and persist every observable state."""
     image: Image.Image | None = None
@@ -272,14 +284,15 @@ def process_background_job(job_id: str) -> dict:
                 76,
                 "Contrôle conservateur des halos et petits résidus…",
             )
+            if _cancelled(database, job):
+                _delete_partial_results(created_storage_keys)
+                return {"state": "cancelled"}
 
             upscale_mode = str(job.parameters.get("upscale_mode", "off"))
             final_png = result.png
             upscale_result = None
             result_key = cutout_key
             if upscale_mode != "off":
-                if _cancelled(database, job):
-                    return {"state": "cancelled"}
                 record_event(
                     database,
                     job,
@@ -289,6 +302,9 @@ def process_background_job(job_id: str) -> dict:
                     {"mode": upscale_mode},
                 )
                 upscale_result = get_upscale_runtime().upscale(result.png, upscale_mode)
+                if _cancelled(database, job):
+                    _delete_partial_results(created_storage_keys)
+                    return {"state": "cancelled"}
                 final_png = upscale_result.png
                 safe_mode = upscale_mode.replace(".", "-")
                 result_key = (
@@ -408,15 +424,7 @@ def process_background_job(job_id: str) -> dict:
             }
         except Exception as exc:
             logger.exception("Background job failed id=%s", job_id)
-            for created_key in reversed(created_storage_keys):
-                try:
-                    storage.delete(created_key)
-                except Exception:
-                    logger.warning(
-                        "Impossible de nettoyer le fichier partiel %s.",
-                        created_key,
-                        exc_info=True,
-                    )
+            _delete_partial_results(created_storage_keys)
             database.rollback()
             failed_job = database.get(ProcessingJob, job_id)
             if failed_job is not None:
