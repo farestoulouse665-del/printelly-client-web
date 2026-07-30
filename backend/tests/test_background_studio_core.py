@@ -272,7 +272,7 @@ def test_removebg_provider_uses_remote_alpha_but_preserves_original_dimensions()
 
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers["x-api-key"] == "test-secret"
-        assert request.url == "https://api.remove.bg/v1.0/removebg"
+        assert str(request.url) == "https://api.remove.bg/v1.0/removebg"
         return httpx.Response(
             200,
             content=_png(remote_result),
