@@ -1,7 +1,7 @@
 # PRINTELLY Client — TransferLab Studio IA
 
 Le site public reste un frontend statique GitHub Pages. En production, TransferLab appelle
-une Edge Function Supabase authentifiée qui protège la clé PhotoRoom, vérifie le pack actif,
+une Edge Function Supabase authentifiée qui protège la clé PhotoRoom, vérifie l’essai gratuit unique ou le pack actif,
 réserve un crédit, valide le PNG retourné puis consomme ou restitue le crédit de façon
 atomique. Le backend Python/BiRefNet présent dans ce dépôt reste une option locale autonome.
 
@@ -13,7 +13,7 @@ Compte PRINTELLY authentifié
   -> printelly-studio-billing : autorisation, validation MIME, stockage signé
   -> administrateur /studio-admin/ : vérification explicite
   -> transaction PostgreSQL : abonnement + lot de crédits + journal d'audit
-  -> /background-studio/ : contrôle du pack et des limites
+  -> /background-studio/ : essai gratuit unique, puis contrôle du pack et des limites
   -> réservation atomique d'un crédit
   -> PhotoRoom Remove Background via secret Supabase
   -> validation du vrai PNG et des dimensions
@@ -318,3 +318,26 @@ node --check studio-admin/app.js
 
 La GitHub Action exécute ces contrôles sur chaque pull request et ne déploie GitHub Pages
 que depuis `main`.
+
+
+## Essai gratuit et déverrouillage temps réel
+
+Chaque compte authentifié reçoit au maximum un crédit gratuit, créé par la fonction SQL
+`studio_entitlement_status`. Le frontend ne peut ni accorder ni réinitialiser cet essai.
+Avant PhotoRoom, `studio_reserve_credit` réserve le crédit dans une transaction. Un PNG
+valide le consomme ; une erreur fournisseur, réseau ou validation le rembourse.
+
+Après consommation, le bouton de détourage ouvre le catalogue Supabase. Une preuve CCP
+n’active rien : seule l’approbation atomique par l’administrateur crée le pack et les crédits.
+TransferLab vérifie les droits au chargement, au retour au premier plan et toutes les 15
+secondes ; un pack validé déverrouille donc le Studio sans nouvelle connexion.
+
+L’Admin PC V11.7 permet de gérer le réglage `free_trial` et de consulter les essais
+accordés, disponibles, consommés, en cours, remboursés et leur coût réel.
+
+### Déploiement appliqué le 30 juillet 2026
+
+- migration : `20260730140000_studio_free_trial_entitlements.sql`
+- Edge Function : `printelly-background-removal` version 10
+- Edge Function : `printelly-studio-billing` version 2
+- cache PWA : `printelly-client-v48`

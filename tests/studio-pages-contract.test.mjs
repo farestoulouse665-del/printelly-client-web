@@ -71,3 +71,54 @@ test("Studio client and admin refresh Supabase automatically", () => {
   // Both pages use the shared billing client; the transport owns cache policy.
   assert.match(read("studio-billing-api.js"), /cache:\s*"no-store"/);
 });
+
+
+test("one free trial is granted server-side and uses the atomic credit ledger", () => {
+  const source = read("supabase/migrations/20260730140000_studio_free_trial_entitlements.sql");
+  assert.match(source, /studio_credit_batches_one_free_trial_per_user/);
+  assert.match(source, /where source = 'free_trial'/);
+  assert.match(source, /studio_entitlement_status\(p_user_id uuid\)/);
+  assert.match(source, /on conflict\(user_id\) where source='free_trial' do nothing/i);
+  assert.match(source, /studio_reserve_credit[\s\S]*source='free_trial'/i);
+  assert.match(source, /trial_exhausted/);
+  assert.match(source, /revoke all on function public\.studio_entitlement_status[\s\S]*from public,anon,authenticated/i);
+  assert.match(source, /grant execute on function public\.studio_entitlement_status[\s\S]*to service_role/i);
+});
+
+test("Studio access is server-authoritative and refreshes without reconnecting", () => {
+  const edge = read("supabase/functions/printelly-background-removal/index.ts");
+  const client = read("background-remover.js");
+  assert.match(edge, /rpc\("studio_entitlement_status"/);
+  assert.match(edge, /access_allowed/);
+  assert.match(edge, /trial_available/);
+  assert.match(edge, /code: mapped\.code/);
+  assert.match(client, /refreshEntitlement/);
+  assert.match(client, /setInterval/);
+  assert.match(client, /15000/);
+  assert.match(client, /visibilitychange/);
+  assert.match(client, /openPackDialog/);
+  assert.match(client, /error\.status === 402/);
+});
+
+test("professional Studio layout removes the difficult-background assistant", () => {
+  const page = read("background-studio/index.html");
+  assert.doesNotMatch(page, /ASSISTANT FOND DIFFICILE/);
+  assert.doesNotMatch(page, /brDifficultBackgroundMenu/);
+  assert.match(page, /id="brStudioAccess"/);
+  assert.match(page, /id="brPackDialog"/);
+  assert.match(page, /id="brRemovalDiagnostics"|class="br-removal-diagnostics"/);
+  assert.match(page, /id="brPaletteMetrics"/);
+  assert.match(page, /id="brQualityVerdict"/);
+  assert.match(page, /id="brDownloadQualityReport"/);
+  assert.match(page, /studio-billing-api\.js/);
+});
+
+test("trial settings and statistics are available only through the admin service", () => {
+  const edge = read("supabase/functions/printelly-studio-billing/index.ts");
+  const api = read("studio-billing-api.js");
+  assert.match(edge, /async function saveSettings/);
+  assert.match(edge, /String\(body\.key \|\| ""\) !== "free_trial"/);
+  assert.match(edge, /if \(!isAdmin\(await profile\(adminId\)\)\)/);
+  assert.match(edge, /trial_stats/);
+  assert.match(api, /saveSettings/);
+});

@@ -195,36 +195,42 @@ async function activeCatalog(): Promise<{ plans: JsonRecord[]; payment_methods: 
 }
 
 async function dashboard(userId: string): Promise<JsonRecord> {
-  const [catalog, walletRows, subscriptions, orders, transactions, notifications, jobs] = await Promise.all([
+  const [catalog, entitlement, walletRows, subscriptions, orders, transactions, notifications, jobs, creditBatches] = await Promise.all([
     activeCatalog(),
+    rpc("studio_entitlement_status", { p_user_id: userId }),
     service("/rest/v1/studio_credit_wallets?select=available_credits,reserved_credits,consumed_credits,expired_credits,revision,updated_at&user_id=eq." + userId),
     service("/rest/v1/studio_subscriptions?select=id,plan_id,source_order_id,plan_snapshot,status,starts_at,expires_at,activated_at,created_at&user_id=eq." + userId + "&order=created_at.desc&limit=20"),
     service("/rest/v1/studio_orders?select=id,reference,plan_id,plan_snapshot,expected_amount_dzd,currency,status,proof_deadline_at,expires_at,declared_amount_dzd,receipt_reference,payer_name,payer_phone,payment_date,payment_channel,review_note,rejection_reason,revision,approved_at,receipt_number,created_at,updated_at&user_id=eq." + userId + "&order=created_at.desc&limit=50"),
     service("/rest/v1/studio_credit_transactions?select=id,operation,amount,available_balance_after,reserved_balance_after,reason,metadata,created_at&user_id=eq." + userId + "&order=created_at.desc&limit=100"),
     service("/rest/v1/studio_notifications?select=id,notification_type,title,message,data,read_at,created_at&user_id=eq." + userId + "&order=created_at.desc&limit=50"),
-    service("/rest/v1/studio_image_jobs?select=id,status,mime_type,file_size_bytes,width,height,cost_dzd,failure_code,created_at,completed_at&user_id=eq." + userId + "&order=created_at.desc&limit=100"),
+    service("/rest/v1/studio_image_jobs?select=id,status,credit_source,mime_type,file_size_bytes,width,height,cost_dzd,failure_code,created_at,completed_at&user_id=eq." + userId + "&order=created_at.desc&limit=100"),
+    service("/rest/v1/studio_credit_batches?select=id,source,original_credits,remaining_credits,reserved_credits,expires_at,status,created_at&user_id=eq." + userId + "&order=created_at.desc&limit=50"),
   ]);
   return {
     ...catalog,
+    entitlement,
     wallet: (walletRows as JsonRecord[])?.[0] || { available_credits: 0, reserved_credits: 0, consumed_credits: 0, expired_credits: 0 },
     subscriptions,
     orders,
     transactions,
     notifications,
     jobs,
+    credit_batches: creditBatches,
   };
 }
 
 async function adminDashboard(adminId: string): Promise<JsonRecord> {
   const adminProfile = await profile(adminId);
   if (!isAdmin(adminProfile)) throw new Error("admin_required");
-  const [plans, methods, orders, proofs, subscriptions, settings] = await Promise.all([
+  const [plans, methods, orders, proofs, subscriptions, settings, trialBatches, trialJobs] = await Promise.all([
     service("/rest/v1/studio_plans?select=*&order=display_order.asc,created_at.desc"),
     service("/rest/v1/studio_payment_methods?select=*&order=display_order.asc,created_at.desc"),
     service("/rest/v1/studio_orders?select=id,reference,user_id,plan_id,plan_snapshot,expected_amount_dzd,status,declared_amount_dzd,receipt_reference,payer_name,payer_phone,payment_date,payment_time,payment_channel,client_comment,review_note,rejection_reason,created_ip,user_agent,revision,approved_at,receipt_number,created_at,updated_at&order=created_at.desc&limit=200"),
     service("/rest/v1/studio_payment_proofs?select=id,order_id,user_id,original_name,mime_type,size_bytes,sha256,status,is_current,submitted_at,reviewed_at,review_note&is_current=eq.true&order=submitted_at.desc&limit=200"),
     service("/rest/v1/studio_subscriptions?select=id,user_id,plan_id,source_order_id,plan_snapshot,status,starts_at,expires_at,activated_at&order=created_at.desc&limit=200"),
     service("/rest/v1/studio_settings?select=key,value,updated_at&order=key.asc"),
+    service("/rest/v1/studio_credit_batches?select=id,user_id,source,original_credits,remaining_credits,reserved_credits,expires_at,status,created_at&source=eq.free_trial&order=created_at.desc&limit=500"),
+    service("/rest/v1/studio_image_jobs?select=id,user_id,credit_source,status,cost_dzd,created_at,completed_at&credit_source=eq.free_trial&order=created_at.desc&limit=1000"),
   ]);
   const orderList = orders as JsonRecord[];
   const ids = Array.from(new Set(orderList.map((order) => String(order.user_id || "")).filter(Boolean)));
@@ -232,7 +238,20 @@ async function adminDashboard(adminId: string): Promise<JsonRecord> {
   if (ids.length) {
     profiles = await service("/rest/v1/profiles?select=id,full_name,first_name,last_name,phone,email,client_email,role&id=in.(" + ids.join(",") + ")") as JsonRecord[];
   }
-  return { plans, payment_methods: methods, orders, proofs, subscriptions, settings, profiles };
+  const batches = trialBatches as JsonRecord[];
+  const jobs = trialJobs as JsonRecord[];
+  const trialStats = {
+    granted: batches.length,
+    available: batches.filter((batch) => Number(batch.remaining_credits || 0) > 0 && String(batch.status) === "active").length,
+    consumed: jobs.filter((job) => String(job.status) === "succeeded").length,
+    processing: jobs.filter((job) => ["reserved","processing"].includes(String(job.status))).length,
+    refunded: jobs.filter((job) => String(job.status) === "refunded").length,
+    cost_dzd: jobs.reduce((sum, job) => sum + Number(job.cost_dzd || 0), 0),
+  };
+  return {
+    plans, payment_methods: methods, orders, proofs, subscriptions, settings, profiles,
+    trial_batches: batches, trial_jobs: jobs, trial_stats: trialStats,
+  };
 }
 
 async function createOrder(req: Request, userId: string, body: JsonRecord): Promise<unknown> {
@@ -389,6 +408,27 @@ async function savePaymentMethod(adminId: string, body: JsonRecord): Promise<unk
   });
 }
 
+async function saveSettings(adminId: string, body: JsonRecord): Promise<unknown> {
+  if (!isAdmin(await profile(adminId))) throw new Error("admin_required");
+  if (String(body.key || "") !== "free_trial") throw new Error("Paramètre Studio AI non autorisé.");
+  const value = {
+    enabled: bool(body.enabled),
+    credits: Math.round(numeric(body.credits, 1, 10, 1)),
+    quality: ["standard","HD","ultra"].includes(String(body.quality)) ? String(body.quality) : "HD",
+    max_file_size_bytes: Math.round(numeric(body.max_file_size_bytes, 1048576, 52428800, 10485760)),
+    max_image_side: Math.round(numeric(body.max_image_side, 512, 16000, 6000)),
+    concurrent_jobs: Math.round(numeric(body.concurrent_jobs, 1, 4, 1)),
+    batch_allowed: bool(body.batch_allowed),
+    max_batch_images: Math.round(numeric(body.max_batch_images, 1, 25, 1)),
+    validity_days: Math.round(numeric(body.validity_days, 1, 3650, 3650)),
+  };
+  return service("/rest/v1/studio_settings?on_conflict=key", {
+    method: "POST",
+    headers: { "Prefer": "resolution=merge-duplicates,return=representation" },
+    body: JSON.stringify({ key: "free_trial", value, updated_by: adminId, updated_at: new Date().toISOString() }),
+  });
+}
+
 async function adminAction(adminId: string, body: JsonRecord): Promise<unknown> {
   if (!isAdmin(await profile(adminId))) throw new Error("admin_required");
   const action = String(body.admin_action || "");
@@ -452,6 +492,7 @@ Deno.serve(async (req: Request) => {
     if (action === "create_order") return json(origin, 200, await createOrder(req, user.id, body));
     if (action === "save_plan") return json(origin, 200, await savePlan(user.id, body));
     if (action === "save_payment_method") return json(origin, 200, await savePaymentMethod(user.id, body));
+    if (action === "save_settings") return json(origin, 200, await saveSettings(user.id, body));
     if (action === "admin_action") return json(origin, 200, await adminAction(user.id, body));
     if (action === "proof_url") return json(origin, 200, await proofUrl(user.id, body));
 

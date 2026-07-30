@@ -69,6 +69,7 @@
     },
     savePlan: function (payload) { return json("save_plan", payload); },
     savePaymentMethod: function (payload) { return json("save_payment_method", payload); },
+    saveSettings: function (payload) { return json("save_settings", payload); },
     adminAction: function (payload) {
       return json("admin_action", Object.assign({}, payload, { action_key: crypto.randomUUID() }));
     },

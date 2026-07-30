@@ -75,7 +75,7 @@ test("service worker excludes cross-origin private API responses from cache", as
   const worker = await readFile(new URL("../../sw.js", import.meta.url), "utf8");
   assert.match(worker, /url\.origin!==self\.location\.origin/);
   assert.match(worker, /pathname\.startsWith\("\/api\/"\)/);
-  assert.match(worker, /printelly-client-v47/);
+  assert.match(worker, /printelly-client-v48/);
 });
 
 test("production requests use the authenticated Supabase Edge Function", () => {
@@ -83,4 +83,24 @@ test("production requests use the authenticated Supabase Edge Function", () => {
   assert.match(source, /Authorization/);
   assert.match(source, /printelly_session/);
   assert.doesNotMatch(source, /SUPABASE_SERVICE_ROLE/);
+});
+
+
+test("entitlement errors preserve status and machine-readable code", async () => {
+  const context = contextWith(async () => new Response(
+    JSON.stringify({ detail: "Votre essai gratuit est terminé.", code: "trial_exhausted" }),
+    { status: 402, headers: { "content-type": "application/json" } }
+  ));
+  vm.runInNewContext(source, context);
+  await assert.rejects(
+    () => context.window.PrintellyBackgroundApi.health("http://localhost:8000"),
+    (error) => error.status === 402 && error.code === "trial_exhausted"
+  );
+});
+
+test("professional Studio browser scripts are syntactically valid", async () => {
+  for (const relative of ["../../background-remover.js", "../../background-quality.js"]) {
+    const script = await readFile(new URL(relative, import.meta.url), "utf8");
+    assert.doesNotThrow(() => new vm.Script(script, { filename: relative }));
+  }
 });

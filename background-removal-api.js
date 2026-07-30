@@ -49,26 +49,38 @@
 
   function publishCredits(payload) {
     var quota = payload && payload.quota ? payload.quota : payload;
+    var entitlement = payload && payload.entitlement ? payload.entitlement : quota || {};
     if (!quota) return;
-    window.dispatchEvent(new CustomEvent("printelly:credits-updated", { detail: {
+    var detail = {
       available: Number(quota.available == null ? quota.availableCredits : quota.available),
       reserved: Number(quota.reserved == null ? quota.reservedCredits : quota.reserved),
       plan: quota.plan || "",
-      expiresAt: quota.expires_at || null
-    }}));
+      expiresAt: quota.expires_at || null,
+      accessAllowed: entitlement.access_allowed !== false && Number(quota.available == null ? quota.availableCredits : quota.available) > 0,
+      accessReason: entitlement.access_reason || quota.access_reason || "",
+      trialAvailable: Number(entitlement.trial_available == null ? quota.trial_available : entitlement.trial_available) || 0,
+      trialConsumed: Number(entitlement.trial_consumed || 0),
+      paidAvailable: Number(entitlement.paid_available == null ? quota.paid_available : entitlement.paid_available) || 0,
+      subscriptionActive: Boolean(entitlement.subscription_active)
+    };
+    window.dispatchEvent(new CustomEvent("printelly:credits-updated", { detail: detail }));
+    window.dispatchEvent(new CustomEvent("printelly:studio-entitlement", { detail: detail }));
   }
 
   async function apiError(response) {
     var headerReference = response.headers.get("x-request-id") || "";
-    try {
-      var body = await response.json();
-      var message = typeof body.detail === "string"
-        ? body.detail
-        : "Erreur du service " + response.status + ".";
-      return new Error(withRequestReference(message, headerReference || body.request_id));
-    } catch (_) {
-      return new Error(withRequestReference("Erreur du service " + response.status + ".", headerReference));
-    }
+    var body = {};
+    try { body = await response.json(); } catch (_) {}
+    var message = typeof body.detail === "string"
+      ? body.detail
+      : "Erreur du service " + response.status + ".";
+    var error = new Error(withRequestReference(message, headerReference || body.request_id));
+    error.status = response.status;
+    error.code = body.code || (response.status === 402 ? "pack_required" : "service_error");
+    error.requestId = headerReference || body.request_id || "";
+    error.creditRefunded = body.credit_refunded === true;
+    error.data = body;
+    return error;
   }
 
   window.PrintellyBackgroundApi = {

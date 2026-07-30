@@ -101,20 +101,18 @@ test("expanded canvas mode keeps editor side panels and is user controlled", () 
   assert.doesNotMatch(css, /body\.br-studio-active \.br-right-controls[^}]*display:none/);
 });
 
-test("difficult-background assistant replaces layers and snapshots", () => {
+test("difficult-background assistant is removed while professional tools stay available", () => {
   assert.doesNotMatch(html, /id="brLayersMenu"/);
   assert.doesNotMatch(html, /id="brSnapshotsMenu"/);
-  assert.doesNotMatch(html, /id="brCreateSnapshot"/);
-  assert.match(html, /id="brDifficultBackgroundMenu"/);
-  assert.match(html, /id="brScanResidues"/);
-  assert.match(html, /id="brForgottenClick"/);
-  assert.match(html, /id="brMultiPoint"/);
-  assert.match(html, /id="brAssistantStatus"/);
-  assert.match(editor, /multiPointMode: false/);
-  assert.match(editor, /method === "manual" \|\| remover\.multiPointMode/);
+  assert.doesNotMatch(html, /id="brDifficultBackgroundMenu"/);
+  assert.doesNotMatch(html, /id="brScanResidues"/);
+  assert.doesNotMatch(html, /ASSISTANT FOND DIFFICILE/);
+  assert.doesNotMatch(editor, /ui\.forgottenClick\.addEventListener/);
+  assert.doesNotMatch(editor, /ui\.multiPoint\.addEventListener/);
+  assert.match(html, /id="brRemovalMenu"/);
+  assert.match(html, /id="brPaletteMenu"/);
+  assert.match(html, /data-br-tool="manual-background"/);
   assert.match(editor, /runQualityInspection\(false\)/);
-  assert.match(editor, /ui\.forgottenClick\.addEventListener/);
-  assert.match(editor, /ui\.multiPoint\.addEventListener/);
 });
 
 test("professional keyboard shortcuts ignore editable fields", () => {
