@@ -86,7 +86,13 @@ const tools: Array<{ value: Tool; label: string; icon: typeof Brush }> = [
   { value: "lasso_protect", label: "Lasso protéger", icon: LassoSelect },
 ];
 
-export function MaskEditor({ assetId }: { assetId: string }) {
+export function MaskEditor({
+  assetId,
+  onResultChange,
+}: {
+  assetId: string;
+  onResultChange?: (resultUrl: string) => void;
+}) {
   const container = useRef<HTMLDivElement>(null);
   const stage = useRef<Konva.Stage>(null);
   const [asset, setAsset] = useState<Asset | null>(null);
@@ -178,7 +184,9 @@ export function MaskEditor({ assetId }: { assetId: string }) {
           parameters: kind === "edge_refine" ? { smooth: 1.2, contract: 0, expand: 0 } : {},
         }),
       });
-      setResultUrl(`${version.download_url}&v=${encodeURIComponent(version.id)}`);
+      const nextResultUrl = `${version.download_url}&v=${encodeURIComponent(version.id)}`;
+      setResultUrl(nextResultUrl);
+      onResultChange?.(nextResultUrl);
       setPoints([]);
       setMessage(`Version ${version.operation_count} enregistrée sans modifier les couleurs.`);
     } catch (error) {
@@ -193,7 +201,9 @@ export function MaskEditor({ assetId }: { assetId: string }) {
     setBusy(true);
     try {
       const version = await apiFetch<MaskVersion>(`/masks/${asset.id}/${action}`, { method: "POST" });
-      setResultUrl(`${version.download_url}&v=${encodeURIComponent(version.id)}`);
+      const nextResultUrl = `${version.download_url}&v=${encodeURIComponent(version.id)}`;
+      setResultUrl(nextResultUrl);
+      onResultChange?.(nextResultUrl);
       setPoints([]);
       setMessage(action === "undo" ? "Dernière correction annulée." : "Correction rétablie.");
     } catch (error) {
