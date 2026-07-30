@@ -43,6 +43,7 @@ jobs:
           node --check studio-credit-badge.js
           node --check studio-packs/app.js
           node --check studio-admin/app.js
+          node --test tests/studio-pages-contract.test.mjs
           grep -Fq "jitxplfujyypfepiajgz.supabase.co" studio-billing-api.js
           if grep -Eqi "service_role|SUPABASE_SERVICE_ROLE" index.html app.js background-removal-api.js studio-billing-api.js studio-credit-badge.js studio-packs/*.html studio-packs/*.js studio-admin/*.html studio-admin/*.js; then
             echo "Privileged Supabase key detected in public frontend"
