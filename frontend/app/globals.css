@@ -275,6 +275,10 @@ button:disabled { cursor: not-allowed; opacity: 0.48; }
 .preview-label { position: absolute; z-index: 3; top: 12px; padding: 6px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.86); font-size: 9px; font-weight: 900; }
 .preview-label.before { left: 12px; }
 .preview-label.after { right: 12px; }
+.preview-switch { position: absolute; z-index: 6; right: 14px; bottom: 14px; display: flex; gap: 4px; padding: 4px; border: 1px solid rgba(20, 27, 45, 0.12); border-radius: 10px; background: rgba(255, 255, 255, 0.94); box-shadow: var(--shadow-sm); }
+.preview-switch button { min-height: 32px; padding: 0 12px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); font-size: 10px; font-weight: 850; cursor: pointer; }
+.preview-switch button.active { color: #fff; background: var(--blue); }
+.preview-load-error { position: absolute; z-index: 7; left: 50%; bottom: 62px; display: flex; width: min(90%, 430px); align-items: center; justify-content: center; gap: 7px; margin: 0; padding: 10px 12px; border: 1px solid rgba(217, 71, 71, 0.25); border-radius: 10px; color: #8f2828; background: rgba(255, 245, 245, 0.96); font-size: 11px; transform: translateX(-50%); }
 .asset-meta { padding: 16px; }
 .asset-meta > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .asset-meta > div strong { overflow: hidden; text-overflow: ellipsis; font-size: 14px; white-space: nowrap; }
