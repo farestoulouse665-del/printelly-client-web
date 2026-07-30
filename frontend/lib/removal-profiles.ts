@@ -17,6 +17,7 @@ const BASE_PARAMETERS: Record<string, unknown> = {
   feather: 1,
   edge_shift: 0,
   output_original_size: true,
+  high_precision: true,
 };
 
 export const REMOVAL_PROFILES: RemovalProfileDefinition[] = [
